@@ -88,6 +88,49 @@ class LeetCodeAnalyzer {
     };
   }
   
+    /**
+   * Analyzes when the user codes based on submission times (IST).
+   * Prints a breakdown of time-of-day coding habits.
+   */
+  getCodingClockStats() {
+    const buckets = {
+      "Early Bird (4AM–9AM)": 0,
+      "9-to-5 Coder (9AM–5PM)": 0,
+      "Evening Coder (5PM–10PM)": 0,
+      "Night Owl (10PM–4AM)": 0,
+    };
+
+    // Go through each problem and each submission
+    for (const { submissions } of this.processedData.values()) {
+      for (const { timestamp } of submissions) {
+        const date = new Date((timestamp + 19800) * 1000); // Convert to IST (UTC +5:30)
+        const hour = date.getUTCHours();
+
+        if (hour >= 4 && hour < 9) {
+          buckets["Early Bird (4AM–9AM)"]++;
+        } else if (hour >= 9 && hour < 17) {
+          buckets["9-to-5 Coder (9AM–5PM)"]++;
+        } else if (hour >= 17 && hour < 22) {
+          buckets["Evening Coder (5PM–10PM)"]++;
+        } else {
+          buckets["Night Owl (10PM–4AM)"]++;
+        }
+      }
+    }
+
+    console.log("\n🕒 Coding Clock:");
+    for (const [label, count] of Object.entries(buckets)) {
+      console.log(`- ${label}: ${count} submissions`);
+    }
+
+    // Determine dominant category
+    const maxLabel = Object.entries(buckets).reduce((a, b) => (a[1] > b[1] ? a : b))[0];
+    console.log(`\n🎯 You are a: ${maxLabel.split(" ")[0]} Coder!\n`);
+
+    return buckets;
+  }
+
+
   // You can add more analysis functions here later!
   // e.g., getNemesisProblem(), getErrorSignature(), etc.
 }
@@ -104,6 +147,7 @@ const analyzer = new LeetCodeAnalyzer(submissionsData);
 
 //Now you can call the analysis functions.
 const firstTryStats = analyzer.getSolvedOnFirstTry();
+const clockStats = analyzer.getCodingClockStats();
 
 console.log(`You have solved ${firstTryStats.count} problems on the first try!`);
 console.log("Here they are:");
