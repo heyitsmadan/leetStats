@@ -160,6 +160,36 @@ class LeetCodeAnalyzer {
     return rageProblem;
   }
 
+    /**
+   * Finds the problem that was eventually solved (has an Accepted submission),
+   * but took the highest number of total submissions.
+   * Called the "Nemesis" problem.
+   */
+  getNemesisProblem() {
+    let nemesis = null;
+    let maxAttempts = 0;
+
+    for (const [slug, data] of this.processedData.entries()) {
+      const { title, submissions } = data;
+      const wasSolved = submissions.some(sub => sub.status === STATUS_CODES.ACCEPTED);
+      if (!wasSolved) continue;
+
+      const attemptCount = submissions.length;
+      if (attemptCount > maxAttempts) {
+        maxAttempts = attemptCount;
+        nemesis = { title, attemptCount };
+      }
+    }
+
+    if (nemesis) {
+      console.log(`😤 Nemesis Conquered: '${nemesis.title}' took ${nemesis.attemptCount} attempts to solve\n`);
+    } else {
+      console.log("🔎 No Nemesis found — maybe you haven’t struggled long enough? 😅");
+    }
+
+    return nemesis;
+  }
+
   // You can add more analysis functions here later!
   // e.g., getNemesisProblem(), getErrorSignature(), etc.
 }
@@ -177,6 +207,7 @@ const analyzer = new LeetCodeAnalyzer(submissionsData);
 //Now you can call the analysis functions.
 const firstTryStats = analyzer.getSolvedOnFirstTry();
 const clockStats = analyzer.getCodingClockStats();
+const nemesis = analyzer.getNemesisProblem();
 const rageQuit = analyzer.getRageQuitProblem();
 
 console.log(`You have solved ${firstTryStats.count} problems on the first try!`);
