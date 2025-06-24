@@ -130,6 +130,35 @@ class LeetCodeAnalyzer {
     return buckets;
   }
 
+   /**
+   * Finds the problem with the most failed submissions and zero accepted ones.
+   * Called the "Rage Quit" problem.
+   */
+  getRageQuitProblem() {
+    let rageProblem = null;
+    let maxFails = 0;
+
+    for (const [slug, data] of this.processedData.entries()) {
+      const { title, submissions } = data;
+      const hasAccepted = submissions.some(sub => sub.status === STATUS_CODES.ACCEPTED);
+      if (hasAccepted) continue;
+
+      const failCount = submissions.length;
+      if (failCount > maxFails) {
+        maxFails = failCount;
+        rageProblem = { title, failCount };
+      }
+    }
+
+    if (rageProblem) {
+      console.log(`💥 Rage Quit Detected! You tried '${rageProblem.title}' ${rageProblem.failCount} times... and never solved it.\n`);
+
+    } else {
+      console.log("🎉 No Rage Quits found — you've always eventually succeeded!");
+    }
+
+    return rageProblem;
+  }
 
   // You can add more analysis functions here later!
   // e.g., getNemesisProblem(), getErrorSignature(), etc.
@@ -148,6 +177,7 @@ const analyzer = new LeetCodeAnalyzer(submissionsData);
 //Now you can call the analysis functions.
 const firstTryStats = analyzer.getSolvedOnFirstTry();
 const clockStats = analyzer.getCodingClockStats();
+const rageQuit = analyzer.getRageQuitProblem();
 
 console.log(`You have solved ${firstTryStats.count} problems on the first try!`);
 console.log("Here they are:");
