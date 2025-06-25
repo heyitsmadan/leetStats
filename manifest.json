@@ -9,9 +9,6 @@
     "https://leetcode.com/*"
   ],
   "action": {
-    "default_popup": "popup.html",
-    "default_icon": {
-      "16": "icon.png"
-    }
+    "default_popup": "popup.html"
   }
 }
