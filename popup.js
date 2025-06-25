@@ -1,4 +1,4 @@
-async function fetchAllSubmissions(updateUICallback) {
+async function fetchAllSubmissions(updateUICallback, minTimestamp = 0) {
   const graphqlUrl = 'https://leetcode.com/graphql';
   const query = `
     query submissionList($offset: Int!, $limit: Int!) {
@@ -17,8 +17,8 @@ async function fetchAllSubmissions(updateUICallback) {
   let hasNext = true;
   let page = 1;
 
-  console.log('📡 Fetching all submissions...');
-  updateUICallback('📡 Fetching all submissions...'); // Initial UI update
+  console.log(`📡 Fetching submissions after timestamp ${minTimestamp}...`);
+  updateUICallback('📡 Fetching new submissions...');
 
   while (hasNext) {
     try {
@@ -26,8 +26,7 @@ async function fetchAllSubmissions(updateUICallback) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ query, variables: { offset, limit } }),
-        // 'include' is crucial for sending your LeetCode login cookies
-        credentials: 'include' 
+        credentials: 'include'
       });
 
       const json = await res.json();
@@ -39,26 +38,35 @@ async function fetchAllSubmissions(updateUICallback) {
         break;
       }
 
-      allSubmissions.push(...pageData.submissions);
-      hasNext = pageData.hasNext;
-      offset += limit;
-      
-      // Update the UI with progress
-      updateUICallback(`📥 Fetched ${allSubmissions.length} submissions... (Page ${page})`);
+      // Filter submissions newer than minTimestamp
+      const newSubmissions = pageData.submissions.filter(
+        s => parseInt(s.timestamp, 10) > minTimestamp
+      );
+
+      allSubmissions.push(...newSubmissions);
+
+      // If all submissions on this page are old, stop early
+      if (newSubmissions.length < pageData.submissions.length) {
+        hasNext = false;
+      } else {
+        hasNext = pageData.hasNext;
+        offset += limit;
+      }
+
+      updateUICallback(`📥 Fetched ${allSubmissions.length} new submissions... (Page ${page})`);
       page++;
 
-      // Small delay to be kind to the server
+      // Small delay to reduce server load
       await new Promise(r => setTimeout(r, 200));
 
     } catch (err) {
-        console.error('❌ Error during fetch:', err);
-        updateUICallback('❌ Error during fetch. Check console for details.');
-        // Re-throw the error to be caught by runAnalysis
-        throw err;
+      console.error('❌ Error during fetch:', err);
+      updateUICallback('❌ Error during fetch. Check console for details.');
+      throw err;
     }
   }
 
-  console.log(`🏁 Done. Total submissions fetched: ${allSubmissions.length}`);
+  console.log(`🏁 Done. Total new submissions fetched: ${allSubmissions.length}`);
   return allSubmissions;
 }
 
@@ -69,12 +77,18 @@ async function runAnalysis() {
   };
 
   try {
-    const submissions = await fetchAllSubmissions(updateUI);
+    const { submissions: cachedSubmissions = [], latestFetchedTimestamp = 0 } = await loadSubmissionsFromStorage();
+
+    updateUI('📡 Fetching new submissions...');
+    const newSubmissions = await fetchAllSubmissions(updateUI, latestFetchedTimestamp);
+
+    const allSubmissions = [...cachedSubmissions, ...newSubmissions];
+    saveSubmissionsToStorage(allSubmissions); // Save updated list
+
     updateUI('⚙️ Analyzing data...');
-    // Give the browser a moment to render the "Analyzing..." message
     await new Promise(r => setTimeout(r, 50));
 
-    const analyzer = new window.LeetCodeAnalyzer(submissions);
+    const analyzer = new window.LeetCodeAnalyzer(allSubmissions);
 
     const firstTry = analyzer.getSolvedOnFirstTry();
     const rage = analyzer.getRageQuitProblem();
@@ -114,6 +128,22 @@ async function runAnalysis() {
     outputElement.textContent = "⚠️ Error fetching or analyzing data. See browser console.";
     console.error(e);
   }
+}
+
+function saveSubmissionsToStorage(submissions) {
+  const latestTimestamp = Math.max(...submissions.map(s => parseInt(s.timestamp)));
+  chrome.storage.local.set({ 
+    submissions,
+    latestFetchedTimestamp: latestTimestamp 
+  });
+}
+
+function loadSubmissionsFromStorage() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['submissions', 'latestFetchedTimestamp'], (data) => {
+      resolve(data);
+    });
+  });
 }
 
 // THIS IS THE MISSING PIECE:
