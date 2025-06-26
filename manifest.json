@@ -1,14 +1,26 @@
 {
   "manifest_version": 3,
-  "name": "LeetCode Analyzer",
+  "name": "LeetCode Stats Extension (Vite)",
   "version": "1.0",
+  "description": "Fetches, caches, and analyzes LeetCode submission history using Vite and TS.",
   "permissions": [
-    "storage" 
+    "storage"
   ],
   "host_permissions": [
     "https://leetcode.com/*"
   ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://leetcode.com/*"
+      ],
+      "js": [
+        "src/ui/inject.ts"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
   "action": {
-    "default_popup": "popup.html"
+    "default_title": "LeetCode Stats"
   }
 }

@@ -1,0 +1,113 @@
+import type { RawSubmission, SubmissionListResponse, ProblemMetadata } from '../types';
+
+/**
+ * Fetches all submissions from the LeetCode API newer than a given timestamp.
+ */
+export async function fetchAllSubmissions(
+  updateUICallback: (message: string) => void,
+  minTimestamp: number = 0
+): Promise<RawSubmission[]> {
+  const graphqlUrl = 'https://leetcode.com/graphql';
+  const query = `
+    query submissionList($offset: Int!, $limit: Int!) {
+      submissionList(offset: $offset, limit: $limit) {
+        hasNext
+        submissions { id, title, titleSlug, status, lang, timestamp }
+      }
+    }
+  `;
+
+  const limit = 20;
+  let offset = 0;
+  let allNewSubmissions: RawSubmission[] = [];
+  let hasNext = true;
+  let page = 1;
+
+  console.log(`📡 Fetching submissions after timestamp ${minTimestamp}...`);
+  updateUICallback('📡 Fetching new submissions...');
+
+  while (hasNext) {
+    try {
+      const res = await fetch(graphqlUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query, variables: { offset, limit } }),
+        credentials: 'include',
+      });
+
+      const json: SubmissionListResponse = await res.json();
+      const pageData = json?.data?.submissionList;
+
+      if (!pageData) {
+        console.error('⚠️ Unexpected response:', json);
+        updateUICallback('⚠️ Unexpected response format. Check console.');
+        break;
+      }
+      
+      const recentSubmissions = pageData.submissions.filter(
+        s => parseInt(s.timestamp, 10) > minTimestamp
+      );
+      
+      allNewSubmissions.push(...recentSubmissions);
+
+      if (recentSubmissions.length < pageData.submissions.length || !pageData.hasNext) {
+        hasNext = false;
+      } else {
+        offset += limit;
+      }
+      
+      updateUICallback(`📥 Fetched ${allNewSubmissions.length} new submissions... (Page ${page})`);
+      page++;
+      await new Promise(r => setTimeout(r, 200));
+
+    } catch (err) {
+      console.error('❌ Error during fetch:', err);
+      updateUICallback('❌ Error during fetch. Check console for details.');
+      throw err;
+    }
+  }
+
+  console.log(`🏁 Done. Total new submissions fetched: ${allNewSubmissions.length}`);
+  return allNewSubmissions;
+}
+
+
+/**
+ * Fetches metadata for a single problem if it's not already cached.
+ */
+export async function fetchProblemMetadata(slug: string): Promise<ProblemMetadata | null> {
+  const graphqlUrl = 'https://leetcode.com/graphql';
+  const query = `
+    query getQuestionMetadata($titleSlug: String!) {
+      question(titleSlug: $titleSlug) {
+        titleSlug, difficulty, topicTags { name, slug }
+      }
+    }
+  `;
+
+  try {
+    const res = await fetch(graphqlUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables: { titleSlug: slug } }),
+      credentials: 'include',
+    });
+
+    const json = await res.json();
+    const question = json?.data?.question;
+
+    if (!question) {
+      console.warn(`❌ No metadata found for problem slug: ${slug}`);
+      return null;
+    }
+
+    return {
+      slug: question.titleSlug,
+      difficulty: question.difficulty,
+      topics: question.topicTags.map((tag: { slug: string }) => tag.slug),
+    };
+  } catch (err) {
+    console.error(`❌ Error fetching metadata for ${slug}:`, err);
+    return null;
+  }
+}

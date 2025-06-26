@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "strict": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["ESNext", "DOM"],
+    "types": ["chrome"]
+    },
+    "include": ["src/**/*.ts"]
+}
