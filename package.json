@@ -17,5 +17,8 @@
     "@types/chrome": "^0.0.326",
     "typescript": "^5.8.3",
     "vite": "^7.0.0"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.0"
   }
 }
