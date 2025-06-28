@@ -41,6 +41,7 @@ export interface CachedMetadata {
 export type Difficulty = 'All' | 'Easy' | 'Medium' | 'Hard';
 export type TimeRange = 'All Time' | 'Last 30 Days' | 'Last Year';
 export type ClockView = 'HourOfDay' | 'DayOfWeek';
+export type CumulativeView = 'Daily' | 'Monthly' | 'Yearly'; // <-- ADD THIS
 
 // --- Processed Data Shapes ---
 export interface ProcessedSubmission extends RawSubmission {
@@ -51,4 +52,16 @@ export interface ProcessedSubmission extends RawSubmission {
 export interface ProcessedData {
   submissions: ProcessedSubmission[];
   problemMap: Map<string, ProcessedSubmission[]>;
+}
+
+// For the new Cumulative Chart // <-- ADD THIS SECTION
+export interface CumulativeChartStats {
+    labels: string[];
+    datasets: {
+        label: string; // e.g., 'Total Submissions', 'Easy Solved'
+        data: number[];
+        borderColor: string;
+        fill: boolean;
+        tension: number; // For bezier curves
+    }[];
 }
