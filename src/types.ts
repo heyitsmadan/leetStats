@@ -36,3 +36,19 @@ export interface CachedSubmissions {
 export interface CachedMetadata {
   [slug: string]: ProblemMetadata;
 }
+
+// --- Filter Types ---
+export type Difficulty = 'All' | 'Easy' | 'Medium' | 'Hard';
+export type TimeRange = 'All Time' | 'Last 30 Days' | 'Last Year';
+export type ClockView = 'HourOfDay' | 'DayOfWeek';
+
+// --- Processed Data Shapes ---
+export interface ProcessedSubmission extends RawSubmission {
+  date: Date;
+  metadata?: ProblemMetadata;
+}
+
+export interface ProcessedData {
+  submissions: ProcessedSubmission[];
+  problemMap: Map<string, ProcessedSubmission[]>;
+}
