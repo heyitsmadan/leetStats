@@ -1,20 +1,23 @@
-import type { ProcessedData, Difficulty, TimeRange, ClockView, CumulativeView } from '../types'; // <-- Add CumulativeView
+import type { ProcessedData, Difficulty, TimeRange, ClockView, CumulativeView } from '../types';
 import { getCodingClockStats } from '../analysis/stats/getCodingClockStats';
-import { getCumulativeStats } from '../analysis/stats/getCumulativeStats'; // <-- ADD THIS
+import { getCumulativeStats } from '../analysis/stats/getCumulativeStats';
+import { getSubmissionSignatureStats } from '../analysis/stats/getSubmissionSignatureStats'; // <-- ADD THIS
 import { renderOrUpdateStackedBarChart, CodingClockChartInstance } from './components/StackedBarChart';
-import { renderOrUpdateCumulativeLineChart, CumulativeLineChartInstance } from './components/CumulativeLineChart'; // <-- ADD THIS
+import { renderOrUpdateCumulativeLineChart, CumulativeLineChartInstance } from './components/CumulativeLineChart';
+import { renderOrUpdateDoughnutChart, DoughnutChartInstance } from './components/DoughnutChart'; // <-- ADD THIS
 
 // --- Constants ---
 const ACTIVE_INNER_DIV_CLASSES = 'text-label-1 dark:text-dark-label-1 bg-fill-3 dark:bg-dark-fill-3'.split(' ');
 
 // --- State Management ---
 let codingClockChart: CodingClockChartInstance | undefined;
-let cumulativeLineChart: CumulativeLineChartInstance | undefined; // <-- ADD THIS
+let cumulativeLineChart: CumulativeLineChartInstance | undefined;
+let signatureChart: DoughnutChartInstance | undefined; // <-- ADD THIS
 let currentFilters = {
     timeRange: 'All Time' as TimeRange,
     difficulty: 'All' as Difficulty,
     clockView: 'HourOfDay' as ClockView,
-    cumulativeView: 'Monthly' as CumulativeView, // <-- ADD THIS
+    cumulativeView: 'Monthly' as CumulativeView,
 };
 
 /**
@@ -23,7 +26,6 @@ let currentFilters = {
 export function renderPageLayout(processedData: ProcessedData) {
   const tabBar = document.querySelector('div.lc-lg\\:max-w-\\[calc\\(100\\%_-_316px\\)\\] a[href="/submissions/"]')?.closest('div.flex.w-full');
   const contentSection = tabBar?.parentElement;
-
   if (!tabBar || !contentSection || document.getElementById('lc-stats-tab')) return;
 
   const statsTab = createStatsTab(tabBar);
@@ -32,95 +34,94 @@ export function renderPageLayout(processedData: ProcessedData) {
   const statsPane = createStatsPaneWithGrid();
   contentSection.appendChild(statsPane);
   
-  renderCodingClock(processedData);
-  renderCumulativeChart(processedData); // <-- ADD THIS
+  // Render all charts initially
+  renderAllCharts(processedData);
+
   setupTabLogic(statsTab, tabBar, contentSection, statsPane);
   setupFilterListeners(processedData);
 }
 
 /**
- * Handles all logic for rendering or updating the Coding Clock chart.
+ * A master function to render or update all charts at once.
  */
+function renderAllCharts(processedData: ProcessedData) {
+    renderCodingClock(processedData);
+    renderCumulativeChart(processedData);
+    renderSubmissionSignature(processedData); // <-- ADD THIS
+}
+
 function renderCodingClock(processedData: ProcessedData) {
     const canvas = document.getElementById('coding-clock-chart') as HTMLCanvasElement;
     if (!canvas) return;
-
-    const chartData = getCodingClockStats(processedData, {
-        timeRange: currentFilters.timeRange,
-        difficulty: currentFilters.difficulty,
-        view: currentFilters.clockView,
-    });
-    // **FIX:** Call the corrected function name.
-    codingClockChart = renderOrUpdateStackedBarChart(canvas, chartData, codingClockChart);
+    const chartData = getCodingClockStats(processedData, currentFilters);
+    if(chartData) {
+        canvas.style.display = 'block';
+        codingClockChart = renderOrUpdateStackedBarChart(canvas, chartData, codingClockChart);
+    } else {
+        canvas.style.display = 'none';
+    }
 }
 
-/**
- * Handles all logic for rendering or updating the Cumulative Chart.  // <-- ADD THIS ENTIRE FUNCTION
- */
 function renderCumulativeChart(processedData: ProcessedData) {
     const canvas = document.getElementById('cumulative-chart') as HTMLCanvasElement;
     if (!canvas) return;
-
-    const chartData = getCumulativeStats(processedData, {
-        timeRange: currentFilters.timeRange,
-        difficulty: currentFilters.difficulty,
-        view: currentFilters.cumulativeView,
-    });
-    
-    cumulativeLineChart = renderOrUpdateCumulativeLineChart(canvas, chartData, cumulativeLineChart);
+    const chartData = getCumulativeStats(processedData, currentFilters);
+    if (chartData) {
+        canvas.style.display = 'block';
+        cumulativeLineChart = renderOrUpdateCumulativeLineChart(canvas, chartData, cumulativeLineChart);
+    } else {
+        canvas.style.display = 'none';
+    }
 }
 
 /**
- * Sets up listeners for the dropdowns and toggles.
+ * Handles logic for rendering or updating the Submission Signature chart. // <-- ADD THIS
  */
+function renderSubmissionSignature(processedData: ProcessedData) {
+    const canvas = document.getElementById('submission-signature-chart') as HTMLCanvasElement;
+    if (!canvas) return;
+    const chartData = getSubmissionSignatureStats(processedData, currentFilters);
+    if (chartData) {
+        canvas.style.display = 'block';
+        signatureChart = renderOrUpdateDoughnutChart(canvas, chartData, currentFilters, signatureChart);
+    } else {
+        canvas.style.display = 'none';
+    }
+}
+
 function setupFilterListeners(processedData: ProcessedData) {
     const timeRangeSelect = document.getElementById('time-range-filter') as HTMLSelectElement;
     const difficultySelect = document.getElementById('difficulty-filter') as HTMLSelectElement;
     const clockViewToggle = document.getElementById('clock-view-toggle') as HTMLButtonElement;
-    const cumulativeViewToggle = document.getElementById('cumulative-view-toggle') as HTMLDivElement; // <-- ADD THIS
+    const cumulativeViewToggle = document.getElementById('cumulative-view-toggle') as HTMLDivElement;
 
     timeRangeSelect.addEventListener('change', () => {
         currentFilters.timeRange = timeRangeSelect.value as TimeRange;
-        renderCodingClock(processedData);
-        renderCumulativeChart(processedData); // <-- ADD THIS
+        renderAllCharts(processedData); // <-- Use master render function
     });
 
     difficultySelect.addEventListener('change', () => {
         currentFilters.difficulty = difficultySelect.value as Difficulty;
-        renderCodingClock(processedData);
-        renderCumulativeChart(processedData); // <-- ADD THIS
+        renderAllCharts(processedData); // <-- Use master render function
     });
 
     clockViewToggle.addEventListener('click', () => {
         currentFilters.clockView = currentFilters.clockView === 'HourOfDay' ? 'DayOfWeek' : 'HourOfDay';
         clockViewToggle.textContent = `View by ${currentFilters.clockView === 'HourOfDay' ? 'Day' : 'Hour'}`;
-        renderCodingClock(processedData);
+        renderCodingClock(processedData); // This filter is specific to one chart
     });
 
-    // Cumulative View Toggle (Specific to second chart) // <-- ADD THIS
     cumulativeViewToggle.addEventListener('click', (e) => {
         const target = e.target as HTMLButtonElement;
         if (target.tagName !== 'BUTTON' || target.dataset.view === currentFilters.cumulativeView) return;
-
-        // Update state
         currentFilters.cumulativeView = target.dataset.view as CumulativeView;
-
-        // Update button styles
         cumulativeViewToggle.querySelectorAll('button').forEach(btn => {
-            if (btn.dataset.view === currentFilters.cumulativeView) {
-                btn.classList.add('bg-fill-3', 'dark:bg-dark-fill-3');
-            } else {
-                btn.classList.remove('bg-fill-3', 'dark:bg-dark-fill-3');
-            }
+            btn.classList.toggle('bg-fill-3', btn.dataset.view === currentFilters.cumulativeView);
+            btn.classList.toggle('dark:bg-dark-fill-3', btn.dataset.view === currentFilters.cumulativeView);
         });
-        
-        // Re-render the chart
-        renderCumulativeChart(processedData);
+        renderCumulativeChart(processedData); // This filter is specific to one chart
     });
 }
-
-// (The rest of the helper functions: createStatsPaneWithGrid, setupTabLogic, etc. remain the same)
-// ... all other helper functions from the previous version go here ...
 
 function createStatsPaneWithGrid(): HTMLElement {
     const statsPane = document.createElement('div');
@@ -144,19 +145,20 @@ function createStatsPaneWithGrid(): HTMLElement {
         </select>
       </div>
 
-      <!-- 2x2 GRID -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <!-- **FIX:** Changed lg:grid-cols-2 to md:grid-cols-2 for better responsiveness -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <!-- TOP-LEFT: CODING CLOCK -->
         <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
           <div class="flex justify-between items-center mb-4">
             <h3 class="text-md font-medium text-label-1 dark:text-dark-label-1">Coding Clock</h3>
             <button id="clock-view-toggle" class="text-xs bg-layer-2 dark:bg-dark-layer-2 px-2 py-1 rounded-md text-label-2 dark:text-dark-label-2 hover:bg-fill-3 dark:hover:bg-dark-fill-3">View by Day</button>
           </div>
-          <div class="h-80 w-full">
+          <div class="relative h-80 w-full">
             <canvas id="coding-clock-chart"></canvas>
           </div>
         </div>
-        <!-- Other grid items will go here -->
+        
+        <!-- TOP-RIGHT: CUMULATIVE PROGRESS -->
         <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
           <div class="flex justify-between items-center mb-4">
             <h3 class="text-md font-medium text-label-1 dark:text-dark-label-1">Cumulative Progress</h3>
@@ -166,11 +168,20 @@ function createStatsPaneWithGrid(): HTMLElement {
                 <button data-view="Yearly" class="px-2 py-0.5 rounded-md">Yearly</button>
             </div>
           </div>
-          <div class="h-80 w-full">
+          <div class="relative h-80 w-full">
             <canvas id="cumulative-chart"></canvas>
           </div>
         </div>
-        <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4 h-96"></div>
+
+        <!-- BOTTOM-LEFT: SUBMISSION SIGNATURE -->
+        <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
+            <h3 class="text-md font-medium text-label-1 dark:text-dark-label-1 mb-4">Submission Signature</h3>
+            <div class="relative h-80 w-full">
+                <canvas id="submission-signature-chart"></canvas>
+            </div>
+        </div>
+
+        <!-- BOTTOM-RIGHT: Empty for now -->
         <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4 h-96"></div>
       </div>
     </div>
@@ -178,6 +189,8 @@ function createStatsPaneWithGrid(): HTMLElement {
     return statsPane;
 }
 
+// (The rest of the helper functions: setupTabLogic, createStatsTab, etc. remain the same)
+// ... all other helper functions from the previous version go here ...
 function setupTabLogic(statsTab: HTMLElement, tabBar: Element, contentSection: Element, statsPane: HTMLElement) {
     const originalTabs = Array.from(tabBar.querySelectorAll('div.cursor-pointer:not(#lc-stats-tab)'));
     let lastVisibleLeetCodePane: HTMLElement | null = findVisibleLeetCodePane(contentSection, tabBar, statsPane);

@@ -23,10 +23,10 @@ const formatDate = (date: Date, view: CumulativeView): string => {
 
 export function getCumulativeStats(
     processedData: ProcessedData,
-    filters: { timeRange: TimeRange; difficulty: Difficulty; view: CumulativeView }
+    filters: { timeRange: TimeRange; difficulty: Difficulty; cumulativeView: CumulativeView }
 ): CumulativeChartStats {
 
-    const { timeRange, difficulty, view } = filters;
+    const { timeRange, difficulty, cumulativeView } = filters;
     const { submissions } = processedData;
 
     // 1. Filter submissions based on TimeRange and Difficulty
@@ -67,9 +67,9 @@ export function getCumulativeStats(
         let key: string;
         const date = sub.date;
 
-        if (view === 'Daily') {
+        if (cumulativeView === 'Daily') {
             key = new Date(date.getFullYear(), date.getMonth(), date.getDate()).toISOString();
-        } else if (view === 'Monthly') {
+        } else if (cumulativeView === 'Monthly') {
             key = new Date(date.getFullYear(), date.getMonth(), 1).toISOString();
         } else { // Yearly
             key = new Date(date.getFullYear(), 0, 1).toISOString();
@@ -115,7 +115,7 @@ export function getCumulativeStats(
         group.mediumSolved.forEach(slug => solvedMedium.add(slug));
         group.hardSolved.forEach(slug => solvedHard.add(slug));
 
-        labels.push(formatDate(date, view));
+        labels.push(formatDate(date, cumulativeView));
         totalSubmissionsData.push(cumulativeSubmissions);
         easyData.push(solvedEasy.size);
         mediumData.push(solvedMedium.size);

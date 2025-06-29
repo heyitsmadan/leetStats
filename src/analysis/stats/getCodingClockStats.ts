@@ -17,10 +17,10 @@ const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
  */
 export function getCodingClockStats(
   processedData: ProcessedData,
-  filters: { timeRange: TimeRange; difficulty: Difficulty; view: ClockView }
+  filters: { timeRange: TimeRange; difficulty: Difficulty; clockView: ClockView }
 ) {
   const { submissions } = processedData;
-  const { timeRange, difficulty, view } = filters;
+  const { timeRange, difficulty, clockView } = filters;
 
   const now = new Date();
   const filteredSubmissions = submissions.filter(sub => {
@@ -36,7 +36,7 @@ export function getCodingClockStats(
     return true;
   });
 
-  const isHourView = view === 'HourOfDay';
+  const isHourView = clockView === 'HourOfDay';
   const numBuckets = isHourView ? 24 : 7;
   const buckets = Array.from({ length: numBuckets }, () => ({ accepted: 0, failed: 0 }));
 
