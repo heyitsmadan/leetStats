@@ -65,3 +65,37 @@ export interface CumulativeChartStats {
         tension: number; // For bezier curves
     }[];
 }
+
+// Add these interfaces to your existing types.ts
+
+export interface TrophyData {
+  id: string;
+  title: string;
+  subtitle: string;
+  problemTitle: string;
+  problemSlug: string;
+  icon: string;
+  stat: number;
+  personalNote?: string;
+}
+
+export interface MilestoneData {
+  type: 'problems_solved' | 'submissions' | 'easy' | 'medium' | 'hard';
+  milestone: number;
+  date: Date;
+  problemTitle?: string;
+  problemSlug?: string;
+}
+
+export interface RecordData {
+  name: string;
+  value: string | number;
+  subStats?: { easy: number; medium: number; hard: number };
+  isHighlight?: boolean;
+}
+
+export interface LegacyStats {
+  trophies: TrophyData[];
+  milestones: MilestoneData[];
+  records: RecordData[];
+}
