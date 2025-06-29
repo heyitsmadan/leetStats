@@ -35,15 +35,17 @@ function filterSubmissionsByTimeRange(submissions: any[], timeRange: TimeRange) 
 function calculateTrophies(processedData: ProcessedData, submissions: any[]): TrophyData[] {
   const trophies: TrophyData[] = [];
   
-  // Helper: Get problem stats
+  // Helper: Get problem stats with proper chronological tracking
   const problemStats = new Map<string, {
     submissions: number;
     accepted: number;
     firstSubmission: Date;
     firstAccepted?: Date;
     difficulty?: string;
+    allSubmissions: any[]; // Keep track of all submissions for this problem
   }>();
 
+  // First pass: collect all submissions per problem
   for (const sub of submissions) {
     const slug = sub.titleSlug;
     if (!problemStats.has(slug)) {
@@ -51,20 +53,32 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
         submissions: 0,
         accepted: 0,
         firstSubmission: sub.date,
-        difficulty: sub.metadata?.difficulty
+        difficulty: sub.metadata?.difficulty,
+        allSubmissions: []
       });
     }
-    
     const stats = problemStats.get(slug)!;
-    stats.submissions++;
-    if (sub.status === 10) { // Accepted
-      stats.accepted++;
-      if (!stats.firstAccepted) {
-        stats.firstAccepted = sub.date;
-      }
+    stats.allSubmissions.push(sub);
+  }
+
+  // Second pass: process each problem's submissions chronologically
+  for (const [slug, stats] of problemStats) {
+    // Sort submissions for this problem chronologically
+    stats.allSubmissions.sort((a, b) => a.date.getTime() - b.date.getTime());
+    
+    stats.submissions = stats.allSubmissions.length;
+    stats.firstSubmission = stats.allSubmissions[0].date;
+    
+    // Find first accepted submission
+    const firstAcceptedSub = stats.allSubmissions.find(sub => sub.status === 10);
+    if (firstAcceptedSub) {
+      stats.accepted = stats.allSubmissions.filter(sub => sub.status === 10).length;
+      stats.firstAccepted = firstAcceptedSub.date;
     }
   }
 
+  // Rest of the trophy calculations remain the same until Phoenix...
+  
   // 1. Nemesis - Eventually solved with most submissions
   let maxSubmissionsForSolved = 0;
   let nemesisProblem: any = null;
@@ -205,14 +219,15 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
     });
   }
 
-  // 7. The Phoenix - Biggest time gap between first submission and acceptance
+  // 7. The Phoenix - FIXED: Biggest time gap between first submission and acceptance
   let maxTimeGap = 0;
   let phoenixProblem: any = null;
   
   for (const [slug, stats] of problemStats) {
     if (stats.accepted > 0 && stats.firstAccepted) {
       const timeGap = stats.firstAccepted.getTime() - stats.firstSubmission.getTime();
-      if (timeGap > maxTimeGap) {
+      // Only consider it if there was actually a gap (not solved on first try)
+      if (timeGap > maxTimeGap && timeGap > 0) {
         maxTimeGap = timeGap;
         phoenixProblem = { slug, stats, timeGap };
       }
@@ -222,20 +237,25 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
   if (phoenixProblem && maxTimeGap > 0) {
     const problemData = submissions.find(s => s.titleSlug === phoenixProblem.slug);
     const days = Math.floor(maxTimeGap / (1000 * 60 * 60 * 24));
-    trophies.push({
-      id: 'phoenix',
-      title: 'The Phoenix',
-      subtitle: `Rose from the ashes after ${days} days`,
-      problemTitle: problemData?.title || phoenixProblem.slug,
-      problemSlug: phoenixProblem.slug,
-      icon: '🔥',
-      stat: days,
-      personalNote: `...patience paid off`
-    });
+    
+    // Only show if it's at least 1 day gap
+    if (days > 0) {
+      trophies.push({
+        id: 'phoenix',
+        title: 'The Phoenix',
+        subtitle: `Rose from the ashes after ${days} days`,
+        problemTitle: problemData?.title || phoenixProblem.slug,
+        problemSlug: phoenixProblem.slug,
+        icon: '🔥',
+        stat: days,
+        personalNote: `...patience paid off`
+      });
+    }
   }
 
   return trophies;
 }
+
 
 function calculateMilestones(submissions: any[]): MilestoneData[] {
   const milestones: MilestoneData[] = [];
@@ -324,35 +344,11 @@ function calculateMilestones(submissions: any[]): MilestoneData[] {
 function calculateRecords(processedData: ProcessedData, submissions: any[]): RecordData[] {
   const records: RecordData[] = [];
   
-  // 1. Longest submission streak
-  let currentStreak = 0;
-  let maxStreak = 0;
-  let lastDate: Date | null = null;
-  
-  const sortedSubmissions = [...submissions].sort((a, b) => a.date.getTime() - b.date.getTime());
-  
-  for (const sub of sortedSubmissions) {
-    const currentDate = new Date(sub.date.getFullYear(), sub.date.getMonth(), sub.date.getDate());
-    
-    if (lastDate) {
-      const dayDiff = Math.floor((currentDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
-      if (dayDiff === 1) {
-        currentStreak++;
-      } else if (dayDiff > 1) {
-        maxStreak = Math.max(maxStreak, currentStreak);
-        currentStreak = 1;
-      }
-    } else {
-      currentStreak = 1;
-    }
-    
-    lastDate = currentDate;
-  }
-  maxStreak = Math.max(maxStreak, currentStreak);
-  
+  // 1. Longest submission streak with ending date
+  const streakData = calculateLongestStreak(submissions);
   records.push({
     name: 'Longest Submission Streak',
-    value: `${maxStreak} days`
+    value: `${streakData.length} days ending on ${formatDate(streakData.endDate)}`
   });
   
   // 2. Problems solved on first try
@@ -393,29 +389,185 @@ function calculateRecords(processedData: ProcessedData, submissions: any[]): Rec
   
   records.push({
     name: 'Busiest Day',
-    value: `${maxDaySubmissions} submissions on ${new Date(busiestDay).toLocaleDateString()}`
+    value: `${maxDaySubmissions} submissions on ${formatDate(new Date(busiestDay))}`
   });
   
-  // 4. Longest break
-  let maxBreak = 0;
-  for (let i = 1; i < sortedSubmissions.length; i++) {
-    const gap = sortedSubmissions[i].date.getTime() - sortedSubmissions[i-1].date.getTime();
-    maxBreak = Math.max(maxBreak, gap);
-  }
-  
-  const breakDays = Math.floor(maxBreak / (1000 * 60 * 60 * 24));
+  // 4. Longest break with start and end dates
+  const breakData = calculateLongestBreak(submissions);
   records.push({
     name: 'Longest Break',
-    value: `${breakDays} days`
+    value: `${formatDuration(breakData.days)} (${formatDate(breakData.startDate)} - ${formatDate(breakData.endDate)})`
   });
   
-  // 5-8. Best periods (simplified)
+  // 5-7. Best periods - calculate unique problems solved (removed best week)
+  const bestPeriods = calculateBestPeriods(submissions);
+  
   records.push(
-    { name: 'Best Day', value: `${maxDaySubmissions} submissions`, isHighlight: true },
-    { name: 'Best Week', value: 'Coming soon...', isHighlight: true },
-    { name: 'Best Month', value: 'Coming soon...', isHighlight: true },
-    { name: 'Best Year', value: 'Coming soon...', isHighlight: true }
+    { name: 'Best Day', value: `${bestPeriods.bestDay.count} problems solved on ${formatDate(bestPeriods.bestDay.date)}`, isHighlight: true },
+    { name: 'Best Month', value: `${bestPeriods.bestMonth.count} problems solved in ${formatMonthYear(bestPeriods.bestMonth.date)}`, isHighlight: true },
+    { name: 'Best Year', value: `${bestPeriods.bestYear.count} problems solved in ${bestPeriods.bestYear.date.getFullYear()}`, isHighlight: true }
   );
   
   return records;
+}
+
+// Helper function to format date as day/month/year
+function formatDate(date: Date): string {
+  const day = date.getDate().toString().padStart(2, '0');
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
+}
+
+// Helper function to format month/year
+function formatMonthYear(date: Date): string {
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  return `${months[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+// Helper function to calculate longest submission streak
+function calculateLongestStreak(submissions: any[]): { length: number; endDate: Date } {
+  const sortedSubmissions = [...submissions].sort((a, b) => a.date.getTime() - b.date.getTime());
+  
+  let currentStreak = 0;
+  let maxStreak = 0;
+  let lastDate: Date | null = null;
+  let maxStreakEndDate: Date = new Date();
+  let currentStreakEndDate: Date = new Date();
+  
+  for (const sub of sortedSubmissions) {
+    const currentDate = new Date(sub.date.getFullYear(), sub.date.getMonth(), sub.date.getDate());
+    
+    if (lastDate) {
+      const dayDiff = Math.floor((currentDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
+      if (dayDiff === 1) {
+        currentStreak++;
+        currentStreakEndDate = currentDate;
+      } else if (dayDiff > 1) {
+        if (currentStreak > maxStreak) {
+          maxStreak = currentStreak;
+          maxStreakEndDate = currentStreakEndDate;
+        }
+        currentStreak = 1;
+        currentStreakEndDate = currentDate;
+      }
+    } else {
+      currentStreak = 1;
+      currentStreakEndDate = currentDate;
+    }
+    
+    lastDate = currentDate;
+  }
+  
+  if (currentStreak > maxStreak) {
+    maxStreak = currentStreak;
+    maxStreakEndDate = currentStreakEndDate;
+  }
+  
+  return { length: maxStreak, endDate: maxStreakEndDate };
+}
+
+// Helper function to calculate longest break
+function calculateLongestBreak(submissions: any[]): { days: number; startDate: Date; endDate: Date } {
+  const sortedSubmissions = [...submissions].sort((a, b) => a.date.getTime() - b.date.getTime());
+  
+  let maxBreak = 0;
+  let maxBreakStart: Date = new Date();
+  let maxBreakEnd: Date = new Date();
+  
+  for (let i = 1; i < sortedSubmissions.length; i++) {
+    const gap = sortedSubmissions[i].date.getTime() - sortedSubmissions[i-1].date.getTime();
+    if (gap > maxBreak) {
+      maxBreak = gap;
+      maxBreakStart = sortedSubmissions[i-1].date;
+      maxBreakEnd = sortedSubmissions[i].date;
+    }
+  }
+  
+  const breakDays = Math.floor(maxBreak / (1000 * 60 * 60 * 24));
+  return { days: breakDays, startDate: maxBreakStart, endDate: maxBreakEnd };
+}
+
+// Updated best periods calculation (removed week)
+function calculateBestPeriods(sortedSubmissions: any[]) {
+  const countProblemsInPeriod = (startDate: Date, endDate: Date): number => {
+    const solvedProblems = new Set<string>();
+    for (const sub of sortedSubmissions) {
+      if (sub.date >= startDate && sub.date <= endDate && sub.status === 10) {
+        solvedProblems.add(sub.titleSlug);
+      }
+    }
+    return solvedProblems.size;
+  };
+  
+  const now = new Date();
+  const oneDay = 24 * 60 * 60 * 1000;
+  const oneMonth = 30 * oneDay;
+  const oneYear = 365 * oneDay;
+  
+  // Calculate best day
+  let bestDay = { count: 0, date: new Date() };
+  for (let i = 0; i < 365; i++) {
+    const day = new Date(now.getTime() - i * oneDay);
+    const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+    const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59, 59);
+    const count = countProblemsInPeriod(dayStart, dayEnd);
+    if (count > bestDay.count) {
+      bestDay = { count, date: dayStart };
+    }
+  }
+  
+  // Calculate best month
+  let bestMonth = { count: 0, date: new Date() };
+  for (let i = 0; i < 365; i++) {
+    const start = new Date(now.getTime() - i * oneDay);
+    const end = new Date(start.getTime() + oneMonth - 1);
+    const count = countProblemsInPeriod(start, end);
+    if (count > bestMonth.count) {
+      bestMonth = { count, date: start };
+    }
+  }
+  
+  // Calculate best year
+  let bestYear = { count: 0, date: new Date() };
+  for (let i = 0; i < 365; i++) {
+    const start = new Date(now.getTime() - i * oneDay);
+    const end = new Date(start.getTime() + oneYear - 1);
+    const count = countProblemsInPeriod(start, end);
+    if (count > bestYear.count) {
+      bestYear = { count, date: start };
+    }
+  }
+  
+  return { bestDay, bestMonth, bestYear };
+}
+
+
+
+
+// Helper function to format duration
+function formatDuration(days: number): string {
+  if (days < 30) {
+    return `${days} days`;
+  }
+  
+  const years = Math.floor(days / 365);
+  const remainingAfterYears = days % 365;
+  const months = Math.floor(remainingAfterYears / 30);
+  const remainingDays = remainingAfterYears % 30;
+  
+  let result = '';
+  if (years > 0) {
+    result += `${years} year${years > 1 ? 's' : ''}`;
+  }
+  if (months > 0) {
+    if (result) result += ' ';
+    result += `${months} month${months > 1 ? 's' : ''}`;
+  }
+  if (remainingDays > 0 && years === 0) {
+    if (result) result += ' ';
+    result += `${remainingDays} day${remainingDays > 1 ? 's' : ''}`;
+  }
+  
+  return result;
 }

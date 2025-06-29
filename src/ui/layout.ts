@@ -8,6 +8,7 @@ import { renderOrUpdateCumulativeLineChart, CumulativeLineChartInstance } from '
 import { renderOrUpdateDoughnutChart, DoughnutChartInstance } from './components/DoughnutChart'; // <-- ADD THIS
 import { renderOrUpdateHorizontalBarChart, HorizontalBarChartInstance } from './components/HorizontalBarChart'; // <-- ADD THIS
 import { getLegacyStats } from '../analysis/stats/getLegacyStats';
+import { renderOrUpdateMiniBarChart, MiniBarChartInstance } from './components/MiniBarChart';
 
 // --- Constants ---
 const ACTIVE_INNER_DIV_CLASSES = 'text-label-1 dark:text-dark-label-1 bg-fill-3 dark:bg-dark-fill-3'.split(' ');
@@ -17,6 +18,7 @@ let codingClockChart: CodingClockChartInstance | undefined;
 let cumulativeLineChart: CumulativeLineChartInstance | undefined;
 let signatureChart: DoughnutChartInstance | undefined; // <-- ADD THIS
 let languageChart: HorizontalBarChartInstance | undefined; // <-- ADD THIS
+let miniBarCharts: Map<string, MiniBarChartInstance> = new Map();
 let legacyStats: any = null;
 let currentFilters = {
     timeRange: 'All Time' as TimeRange,
@@ -45,6 +47,8 @@ export function renderPageLayout(processedData: ProcessedData) {
   setupFilterListeners(processedData);
 }
 
+
+
 /**
  * A master function to render or update all charts at once.
  */
@@ -54,6 +58,19 @@ function renderAllCharts(processedData: ProcessedData) {
     renderCumulativeChart(processedData);
     renderSubmissionSignature(processedData); // <-- ADD THIS
     renderLanguageChart(processedData); // <-- ADD THIS
+    setTimeout(() => {
+  legacyStats.records.forEach((record: any) => {
+    if (record.subStats) {
+      const canvasId = `mini-chart-${record.name.replace(/\s+/g, '-').toLowerCase()}`;
+      const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+      if (canvas) {
+        const existingChart = miniBarCharts.get(canvasId);
+        const newChart = renderOrUpdateMiniBarChart(canvas, record.subStats, existingChart);
+        miniBarCharts.set(canvasId, newChart);
+      }
+    }
+  });
+}, 100);
 }
 
 function renderLegacySection(processedData: ProcessedData) {
@@ -79,10 +96,10 @@ function renderLegacySection(processedData: ProcessedData) {
                 <!-- Content -->
                 <div class="ml-10">
                   <div class="text-sm font-medium text-label-1 dark:text-dark-label-1">
-                    ${milestone.milestone}${getOrdinalSuffix(milestone.milestone)} ${milestone.type.replace('_', ' ')}
+                    ${milestone.milestone}${getOrdinalSuffix(milestone.milestone)} ${formatMilestoneType(milestone.type)}
                   </div>
                   <div class="text-xs text-label-2 dark:text-dark-label-2">
-                    ${milestone.date.toLocaleDateString()}
+                    ${milestone.date.toLocaleDateString('en-GB')}
                   </div>
                   ${milestone.problemTitle ? `
                     <a href="https://leetcode.com/problems/${milestone.problemSlug}/" 
@@ -97,56 +114,68 @@ function renderLegacySection(processedData: ProcessedData) {
         </div>
       </div>
       
-      <!-- Right Half -->
-      <div class="flex-1 flex flex-col gap-4">
-        <!-- Trophy Room -->
-        <div class="flex-1 rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-          <h3 class="text-lg font-medium text-label-1 dark:text-dark-label-1 mb-4">Trophy Room</h3>
-          <div class="space-y-3">
-            ${legacyStats.trophies.map((trophy: any) => `
-              <div class="flex items-center space-x-3 p-3 rounded-md bg-fill-3 dark:bg-dark-fill-3">
-                <span class="text-2xl">${trophy.icon}</span>
-                <div class="flex-1">
-                  <div class="font-medium text-label-1 dark:text-dark-label-1">${trophy.title}</div>
-                  <div class="text-sm text-label-2 dark:text-dark-label-2">${trophy.subtitle}</div>
-                  <a href="https://leetcode.com/problems/${trophy.problemSlug}/" 
-                     class="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300">
-                    ${trophy.problemTitle}
-                  </a>
-                  ${trophy.personalNote ? `
-                    <div class="text-xs italic text-label-3 dark:text-dark-label-3 mt-1">
-                      ${trophy.personalNote}
-                    </div>
-                  ` : ''}
-                </div>
+      
+<!-- Right Half -->
+<div class="flex-1 flex flex-col gap-4">
+  <!-- Trophy Room - takes as much space as it needs -->
+  <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
+    <h3 class="text-lg font-medium text-label-1 dark:text-dark-label-1 mb-4">Trophy Room</h3>
+    <div class="space-y-3">
+      ${legacyStats.trophies.map((trophy: any) => `
+        <div class="flex items-center space-x-3 p-3 rounded-md bg-fill-3 dark:bg-dark-fill-3">
+          <span class="text-2xl">${trophy.icon}</span>
+          <div class="flex-1">
+            <div class="font-medium text-label-1 dark:text-dark-label-1">${trophy.title}</div>
+            <div class="text-sm text-label-2 dark:text-dark-label-2">${trophy.subtitle}</div>
+            <a href="https://leetcode.com/problems/${trophy.problemSlug}/" 
+               class="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300">
+              ${trophy.problemTitle}
+            </a>
+            ${trophy.personalNote ? `
+              <div class="text-xs italic text-label-3 dark:text-dark-label-3 mt-1">
+                ${trophy.personalNote}
               </div>
-            `).join('')}
+            ` : ''}
           </div>
         </div>
-        
-        <!-- Records -->
-        <div class="flex-1 rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-          <h3 class="text-lg font-medium text-label-1 dark:text-dark-label-1 mb-4">Records</h3>
-          <div class="space-y-2">
-            ${legacyStats.records.map((record: any) => `
-              <div class="flex justify-between items-center p-2 rounded-md ${record.isHighlight ? 'border border-yellow-500/30 bg-yellow-500/10' : ''}">
-                <span class="text-sm text-label-1 dark:text-dark-label-1">${record.name}</span>
-                <div class="text-right">
-                  <span class="text-sm font-medium text-label-1 dark:text-dark-label-1">${record.value}</span>
-                  ${record.subStats ? `
-                    <div class="flex space-x-1 mt-1">
-                      <div class="w-6 h-2 bg-green-500 rounded-full opacity-70" title="Easy: ${record.subStats.easy}"></div>
-                      <div class="w-6 h-2 bg-yellow-500 rounded-full opacity-70" title="Medium: ${record.subStats.medium}"></div>
-                      <div class="w-6 h-2 bg-red-500 rounded-full opacity-70" title="Hard: ${record.subStats.hard}"></div>
-                    </div>
-                  ` : ''}
-                </div>
-              </div>
-            `).join('')}
-          </div>
+      `).join('')}
+    </div>
+  </div>
+  
+<!-- Records - takes remaining space -->
+<div class="flex-1 rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
+  <h3 class="text-lg font-medium text-label-1 dark:text-dark-label-1 mb-4">Records</h3>
+  <div class="space-y-2">
+    ${legacyStats.records.filter((record: any) => !record.isHighlight).map((record: any) => `
+      <div class="flex justify-between items-center p-2 rounded-md">
+        <span class="text-sm text-label-1 dark:text-dark-label-1">${record.name}</span>
+        <div class="text-right flex items-center">
+          <span class="text-sm font-medium text-label-1 dark:text-dark-label-1">${record.value}</span>
+          ${record.subStats ? `
+            <div class="ml-2 w-12 h-6">
+              <canvas id="mini-chart-${record.name.replace(/\s+/g, '-').toLowerCase()}" width="48" height="24"></canvas>
+            </div>
+          ` : ''}
         </div>
       </div>
+    `).join('')}
+    
+    <!-- Best periods section with single border -->
+    <div class="border border-yellow-500/30 bg-yellow-500/10 rounded-md p-3 mt-4">
+      <div class="text-sm font-medium text-label-1 dark:text-dark-label-1 mb-2">Best Periods</div>
+      <div class="space-y-2">
+        ${legacyStats.records.filter((record: any) => record.isHighlight).map((record: any) => `
+          <div class="flex justify-between items-center">
+            <span class="text-sm text-label-1 dark:text-dark-label-1">${record.name}</span>
+            <span class="text-sm font-medium text-label-1 dark:text-dark-label-1">${record.value}</span>
+          </div>
+        `).join('')}
+      </div>
     </div>
+  </div>
+</div>
+
+
   `;
 }
 
@@ -382,4 +411,17 @@ function findVisibleLeetCodePane(contentSection: Element, tabBar: Element, stats
         }
     }
     return null;
+}
+
+// Add this helper function to layout.ts
+function formatMilestoneType(type: string): string {
+  const typeMap: { [key: string]: string } = {
+    'problems_solved': 'Problem',
+    'submissions': 'Submission',
+    'easy': 'Easy',
+    'medium': 'Medium',
+    'hard': 'Hard'
+  };
+  
+  return typeMap[type] || type;
 }

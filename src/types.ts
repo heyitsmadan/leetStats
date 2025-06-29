@@ -92,7 +92,9 @@ export interface RecordData {
   value: string | number;
   subStats?: { easy: number; medium: number; hard: number };
   isHighlight?: boolean;
+  chartId?: string; // Add this line
 }
+
 
 export interface LegacyStats {
   trophies: TrophyData[];
