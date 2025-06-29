@@ -1,21 +1,21 @@
 import type { ProcessedData, LegacyStats, TrophyData, MilestoneData, RecordData, Difficulty, TimeRange } from '../../types';
 
-export function getLegacyStats(
-  processedData: ProcessedData,
-  filters: { timeRange: TimeRange; difficulty: Difficulty }
-): LegacyStats | null {
-  if (!processedData.submissions.length) return null;
+export function getLegacyStats(processedData: ProcessedData): LegacyStats | null {
+  // Always use ALL submissions for legacy stats, ignore filters
+  const allSubmissions = processedData.submissions;
+  
+  if (!allSubmissions.length) return null;
 
-  // Filter submissions based on time range
-  const filteredSubmissions = filterSubmissionsByTimeRange(processedData.submissions, filters.timeRange);
-  if (!filteredSubmissions.length) return null;
-
-  const trophies = calculateTrophies(processedData, filteredSubmissions);
-  const milestones = calculateMilestones(filteredSubmissions);
-  const records = calculateRecords(processedData, filteredSubmissions);
+  const trophies = calculateTrophies(processedData, allSubmissions);
+  const milestones = calculateMilestones(allSubmissions);
+  const records = calculateRecords(processedData, allSubmissions);
 
   return { trophies, milestones, records };
 }
+
+// Remove the filterSubmissionsByTimeRange function completely
+// Remove any references to filters in the helper functions
+
 
 function filterSubmissionsByTimeRange(submissions: any[], timeRange: TimeRange) {
   if (timeRange === 'All Time') return submissions;

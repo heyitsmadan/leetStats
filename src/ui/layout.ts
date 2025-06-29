@@ -73,8 +73,17 @@ function renderAllCharts(processedData: ProcessedData) {
 }, 100);
 }
 
+// Add a new function for rendering only the filtered charts
+function renderFilteredCharts(processedData: ProcessedData) {
+    renderCodingClock(processedData);
+    renderCumulativeChart(processedData);
+    renderSubmissionSignature(processedData);
+    renderLanguageChart(processedData);
+    // Legacy section is NOT included here
+}
+
 function renderLegacySection(processedData: ProcessedData) {
-  legacyStats = getLegacyStats(processedData, currentFilters);
+  legacyStats = getLegacyStats(processedData);
   const legacyContainer = document.getElementById('legacy-section');
   if (!legacyContainer || !legacyStats) return;
   
@@ -245,12 +254,12 @@ function setupFilterListeners(processedData: ProcessedData) {
 
     timeRangeSelect.addEventListener('change', () => {
         currentFilters.timeRange = timeRangeSelect.value as TimeRange;
-        renderAllCharts(processedData);
+        renderFilteredCharts(processedData);
     });
 
     difficultySelect.addEventListener('change', () => {
         currentFilters.difficulty = difficultySelect.value as Difficulty;
-        renderAllCharts(processedData);
+        renderFilteredCharts(processedData);
     });
 
     clockViewToggle.addEventListener('click', () => {
@@ -278,6 +287,13 @@ function createStatsPaneWithGrid(): HTMLElement {
     statsPane.className = 'w-full';
     statsPane.innerHTML = `
     <div class="space-y-4">
+
+       <!-- YOUR LEGACY SECTION -->
+      <div class="rounded-lg bg-layer-2 dark:bg-dark-layer-2 p-4">
+        <h2 class="text-xl font-bold text-label-1 dark:text-dark-label-1 mb-4">Your Legacy</h2>
+        <div id="legacy-section" class="min-h-96"></div>
+      </div>
+
       <!-- FILTERS -->
       <div class="flex items-center space-x-4 p-4 bg-layer-1 dark:bg-dark-layer-1 rounded-lg">
         <select id="time-range-filter" class="bg-layer-2 dark:bg-dark-layer-2 rounded-md p-2 text-sm text-label-1 dark:text-dark-label-1">
@@ -291,12 +307,6 @@ function createStatsPaneWithGrid(): HTMLElement {
           <option>Medium</option>
           <option>Hard</option>
         </select>
-      </div>
-
-       <!-- YOUR LEGACY SECTION -->
-      <div class="rounded-lg bg-layer-2 dark:bg-dark-layer-2 p-4">
-        <h2 class="text-xl font-bold text-label-1 dark:text-dark-label-1 mb-4">Your Legacy</h2>
-        <div id="legacy-section" class="min-h-96"></div>
       </div>
 
       <!-- **FIX:** Changed lg:grid-cols-2 to md:grid-cols-2 for better responsiveness -->
