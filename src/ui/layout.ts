@@ -2,9 +2,11 @@ import type { ProcessedData, Difficulty, TimeRange, ClockView, CumulativeView } 
 import { getCodingClockStats } from '../analysis/stats/getCodingClockStats';
 import { getCumulativeStats } from '../analysis/stats/getCumulativeStats';
 import { getSubmissionSignatureStats } from '../analysis/stats/getSubmissionSignatureStats'; // <-- ADD THIS
+import { getLanguageStats } from '../analysis/stats/getLanguageStats'; // <-- ADD THIS
 import { renderOrUpdateStackedBarChart, CodingClockChartInstance } from './components/StackedBarChart';
 import { renderOrUpdateCumulativeLineChart, CumulativeLineChartInstance } from './components/CumulativeLineChart';
 import { renderOrUpdateDoughnutChart, DoughnutChartInstance } from './components/DoughnutChart'; // <-- ADD THIS
+import { renderOrUpdateHorizontalBarChart, HorizontalBarChartInstance } from './components/HorizontalBarChart'; // <-- ADD THIS
 
 // --- Constants ---
 const ACTIVE_INNER_DIV_CLASSES = 'text-label-1 dark:text-dark-label-1 bg-fill-3 dark:bg-dark-fill-3'.split(' ');
@@ -13,6 +15,7 @@ const ACTIVE_INNER_DIV_CLASSES = 'text-label-1 dark:text-dark-label-1 bg-fill-3 
 let codingClockChart: CodingClockChartInstance | undefined;
 let cumulativeLineChart: CumulativeLineChartInstance | undefined;
 let signatureChart: DoughnutChartInstance | undefined; // <-- ADD THIS
+let languageChart: HorizontalBarChartInstance | undefined; // <-- ADD THIS
 let currentFilters = {
     timeRange: 'All Time' as TimeRange,
     difficulty: 'All' as Difficulty,
@@ -34,7 +37,6 @@ export function renderPageLayout(processedData: ProcessedData) {
   const statsPane = createStatsPaneWithGrid();
   contentSection.appendChild(statsPane);
   
-  // Render all charts initially
   renderAllCharts(processedData);
 
   setupTabLogic(statsTab, tabBar, contentSection, statsPane);
@@ -48,6 +50,7 @@ function renderAllCharts(processedData: ProcessedData) {
     renderCodingClock(processedData);
     renderCumulativeChart(processedData);
     renderSubmissionSignature(processedData); // <-- ADD THIS
+    renderLanguageChart(processedData); // <-- ADD THIS
 }
 
 function renderCodingClock(processedData: ProcessedData) {
@@ -89,6 +92,19 @@ function renderSubmissionSignature(processedData: ProcessedData) {
     }
 }
 
+function renderLanguageChart(processedData: ProcessedData) {
+    const canvas = document.getElementById('language-stats-chart') as HTMLCanvasElement;
+    if (!canvas) return;
+    const chartData = getLanguageStats(processedData, currentFilters);
+    if (chartData) {
+        canvas.style.display = 'block';
+        languageChart = renderOrUpdateHorizontalBarChart(canvas, chartData, currentFilters, languageChart);
+    } else {
+        canvas.style.display = 'none';
+    }
+}
+
+
 function setupFilterListeners(processedData: ProcessedData) {
     const timeRangeSelect = document.getElementById('time-range-filter') as HTMLSelectElement;
     const difficultySelect = document.getElementById('difficulty-filter') as HTMLSelectElement;
@@ -97,12 +113,12 @@ function setupFilterListeners(processedData: ProcessedData) {
 
     timeRangeSelect.addEventListener('change', () => {
         currentFilters.timeRange = timeRangeSelect.value as TimeRange;
-        renderAllCharts(processedData); // <-- Use master render function
+        renderAllCharts(processedData);
     });
 
     difficultySelect.addEventListener('change', () => {
         currentFilters.difficulty = difficultySelect.value as Difficulty;
-        renderAllCharts(processedData); // <-- Use master render function
+        renderAllCharts(processedData);
     });
 
     clockViewToggle.addEventListener('click', () => {
@@ -181,8 +197,13 @@ function createStatsPaneWithGrid(): HTMLElement {
             </div>
         </div>
 
-        <!-- BOTTOM-RIGHT: Empty for now -->
-        <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4 h-96"></div>
+        <!-- BOTTOM-RIGHT: LANGUAGE STATS -->
+        <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
+            <h3 class="text-md font-medium text-label-1 dark:text-dark-label-1 mb-4">Language Stats</h3>
+            <div class="relative h-80 w-full">
+                <canvas id="language-stats-chart"></canvas>
+            </div>
+        </div>
       </div>
     </div>
   `;
