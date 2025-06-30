@@ -9,6 +9,8 @@ import { renderOrUpdateDoughnutChart, DoughnutChartInstance } from './components
 import { renderOrUpdateHorizontalBarChart, HorizontalBarChartInstance } from './components/HorizontalBarChart'; // <-- ADD THIS
 import { getLegacyStats } from '../analysis/stats/getLegacyStats';
 import { renderOrUpdateMiniBarChart, MiniBarChartInstance } from './components/MiniBarChart';
+import { getDNAStrandStats } from '../analysis/stats/getDNAStrandStats';
+import { renderOrUpdateDNAStrandChart, DNAStrandChartInstance } from './components/DNAStrandChart';
 
 // --- Constants ---
 const ACTIVE_INNER_DIV_CLASSES = 'text-label-1 dark:text-dark-label-1 bg-fill-3 dark:bg-dark-fill-3'.split(' ');
@@ -20,6 +22,13 @@ let signatureChart: DoughnutChartInstance | undefined; // <-- ADD THIS
 let languageChart: HorizontalBarChartInstance | undefined; // <-- ADD THIS
 let miniBarCharts: Map<string, MiniBarChartInstance> = new Map();
 let legacyStats: any = null;
+let dnaStrandChart: DNAStrandChartInstance | undefined;
+let dnaStrandOptions = {
+  viewMode: 'problems' as 'problems' | 'submissions',
+  stackMode: 'difficulty' as 'difficulty' | 'language',
+  timeRange: 'daily' as 'daily' | 'weekly' | 'monthly',
+};
+
 let currentFilters = {
     timeRange: 'All Time' as TimeRange,
     difficulty: 'All' as Difficulty,
@@ -53,6 +62,7 @@ export function renderPageLayout(processedData: ProcessedData) {
  * A master function to render or update all charts at once.
  */
 function renderAllCharts(processedData: ProcessedData) {
+    renderDNAStrand(processedData); // Add this line
     renderLegacySection(processedData); // Add this line
     renderCodingClock(processedData);
     renderCumulativeChart(processedData);
@@ -75,11 +85,26 @@ function renderAllCharts(processedData: ProcessedData) {
 
 // Add a new function for rendering only the filtered charts
 function renderFilteredCharts(processedData: ProcessedData) {
+    renderDNAStrand(processedData); // Add this line
     renderCodingClock(processedData);
     renderCumulativeChart(processedData);
     renderSubmissionSignature(processedData);
     renderLanguageChart(processedData);
     // Legacy section is NOT included here
+}
+
+// Update the DNA Strand render function
+function renderDNAStrand(processedData: ProcessedData) {
+    const container = document.getElementById('dna-strand-container') as HTMLElement;
+    if (!container) return;
+    
+    const chartData = getDNAStrandStats(processedData, currentFilters, dnaStrandOptions);
+    if (chartData) {
+        container.style.display = 'block';
+        dnaStrandChart = renderOrUpdateDNAStrandChart(container, chartData, dnaStrandOptions, dnaStrandChart);
+    } else {
+        container.style.display = 'none';
+    }
 }
 
 function renderLegacySection(processedData: ProcessedData) {
@@ -278,7 +303,71 @@ function setupFilterListeners(processedData: ProcessedData) {
         });
         renderCumulativeChart(processedData); // This filter is specific to one chart
     });
-}
+
+    // Fix 1: Proper DNA Strand listeners with debugging
+    document.getElementById('dna-problems-btn')?.addEventListener('click', () => {
+        console.log('Problems button clicked'); // Debug
+        dnaStrandOptions.viewMode = 'problems';
+        updateDNAButtons();
+        if (dnaStrandChart) {
+            dnaStrandChart.updateOptions(dnaStrandOptions);
+        }
+    });
+    
+    document.getElementById('dna-submissions-btn')?.addEventListener('click', () => {
+        console.log('Submissions button clicked'); // Debug
+        dnaStrandOptions.viewMode = 'submissions';
+        updateDNAButtons();
+        if (dnaStrandChart) {
+            dnaStrandChart.updateOptions(dnaStrandOptions);
+        }
+    });
+    
+    document.getElementById('dna-difficulty-btn')?.addEventListener('click', () => {
+        console.log('Difficulty button clicked'); // Debug
+        dnaStrandOptions.stackMode = 'difficulty';
+        updateDNAButtons();
+        if (dnaStrandChart) {
+            dnaStrandChart.updateOptions(dnaStrandOptions);
+        }
+    });
+    
+    document.getElementById('dna-language-btn')?.addEventListener('click', () => {
+        console.log('Language button clicked'); // Debug
+        dnaStrandOptions.stackMode = 'language';
+        updateDNAButtons();
+        if (dnaStrandChart) {
+            dnaStrandChart.updateOptions(dnaStrandOptions);
+        }
+    });
+    
+    document.getElementById('dna-daily-btn')?.addEventListener('click', () => {
+        console.log('Daily button clicked'); // Debug
+        dnaStrandOptions.timeRange = 'daily';
+        updateDNAButtons();
+        if (dnaStrandChart) {
+            dnaStrandChart.updateOptions(dnaStrandOptions);
+        }
+    });
+    
+    document.getElementById('dna-weekly-btn')?.addEventListener('click', () => {
+        console.log('Weekly button clicked'); // Debug
+        dnaStrandOptions.timeRange = 'weekly';
+        updateDNAButtons();
+        if (dnaStrandChart) {
+            dnaStrandChart.updateOptions(dnaStrandOptions);
+        }
+    });
+    
+    document.getElementById('dna-monthly-btn')?.addEventListener('click', () => {
+        console.log('Monthly button clicked'); // Debug
+        dnaStrandOptions.timeRange = 'monthly';
+        updateDNAButtons();
+        if (dnaStrandChart) {
+            dnaStrandChart.updateOptions(dnaStrandOptions);
+        }
+    });
+    }
 
 function createStatsPaneWithGrid(): HTMLElement {
     const statsPane = document.createElement('div');
@@ -287,6 +376,29 @@ function createStatsPaneWithGrid(): HTMLElement {
     statsPane.className = 'w-full';
     statsPane.innerHTML = `
     <div class="space-y-4">
+<!-- DNA STRAND SECTION - FIXED CONTAINER -->
+      <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-xl font-bold text-label-1 dark:text-dark-label-1">DNA Strand</h2>
+          <div class="flex space-x-2">
+            <div class="flex text-xs bg-layer-2 dark:bg-dark-layer-2 p-1 rounded-md">
+              <button id="dna-problems-btn" class="px-2 py-0.5 rounded-md bg-fill-3 dark:bg-dark-fill-3">Problems</button>
+              <button id="dna-submissions-btn" class="px-2 py-0.5 rounded-md">Submissions</button>
+            </div>
+            <div class="flex text-xs bg-layer-2 dark:bg-dark-layer-2 p-1 rounded-md">
+              <button id="dna-difficulty-btn" class="px-2 py-0.5 rounded-md bg-fill-3 dark:bg-dark-fill-3">Difficulty</button>
+              <button id="dna-language-btn" class="px-2 py-0.5 rounded-md">Language</button>
+            </div>
+            <div class="flex text-xs bg-layer-2 dark:bg-dark-layer-2 p-1 rounded-md">
+              <button id="dna-daily-btn" class="px-2 py-0.5 rounded-md bg-fill-3 dark:bg-dark-fill-3">Daily</button>
+              <button id="dna-weekly-btn" class="px-2 py-0.5 rounded-md">Weekly</button>
+              <button id="dna-monthly-btn" class="px-2 py-0.5 rounded-md">Monthly</button>
+            </div>
+          </div>
+        </div>
+        <!-- FIXED: Ensure container has explicit dimensions and proper styling -->
+        <div id="dna-strand-container" style="width: 100%; height: 384px; min-height: 384px; position: relative; display: block;"></div>
+      </div>
 
        <!-- YOUR LEGACY SECTION -->
       <div class="rounded-lg bg-layer-2 dark:bg-dark-layer-2 p-4">
@@ -434,4 +546,24 @@ function formatMilestoneType(type: string): string {
   };
   
   return typeMap[type] || type;
+}
+
+function updateDNAButtons() {
+    // Update view mode buttons
+    document.querySelectorAll('#dna-problems-btn, #dna-submissions-btn').forEach(btn => {
+        btn.classList.toggle('bg-fill-3', btn.id.includes(dnaStrandOptions.viewMode));
+        btn.classList.toggle('dark:bg-dark-fill-3', btn.id.includes(dnaStrandOptions.viewMode));
+    });
+    
+    // Update stack mode buttons  
+    document.querySelectorAll('#dna-difficulty-btn, #dna-language-btn').forEach(btn => {
+        btn.classList.toggle('bg-fill-3', btn.id.includes(dnaStrandOptions.stackMode));
+        btn.classList.toggle('dark:bg-dark-fill-3', btn.id.includes(dnaStrandOptions.stackMode));
+    });
+    
+    // Update time range buttons
+    document.querySelectorAll('#dna-daily-btn, #dna-weekly-btn, #dna-monthly-btn').forEach(btn => {
+        btn.classList.toggle('bg-fill-3', btn.id.includes(dnaStrandOptions.timeRange));
+        btn.classList.toggle('dark:bg-dark-fill-3', btn.id.includes(dnaStrandOptions.timeRange));
+    });
 }
