@@ -453,8 +453,15 @@ if (localOpts.split) {
     }
 
     function formatMetricValue(value: number, metric: string): string {
-        return metric === 'avgTries' ? value.toFixed(1) : `${value.toFixed(0)}%`;
+    if (metric === 'avgTries') {
+        if (value === Infinity) {
+            return '∞'; // or 'N/A' if you prefer
+        }
+        return value.toFixed(1);
     }
+    return `${value.toFixed(0)}%`;
+}
+
 
     const instance: SkillMatrixHeatmapInstance = {
         update: (newData, newOptions) => {
