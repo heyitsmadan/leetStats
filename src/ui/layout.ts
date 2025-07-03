@@ -11,7 +11,9 @@ import { getLegacyStats } from '../analysis/stats/getLegacyStats';
 import { renderOrUpdateMiniBarChart, MiniBarChartInstance } from './components/MiniBarChart';
 import { getDNAStrandStats } from '../analysis/stats/getDNAStrandStats';
 import { renderOrUpdateDNAStrandChart, DNAStrandChartInstance } from './components/DNAStrandChart';
-
+// Add these imports at the top
+import { getSkillMatrixStats } from '../analysis/stats/getSkillMatrixStats';
+import { renderOrUpdateSkillMatrixHeatmap, SkillMatrixHeatmapInstance } from './components/SkillMatrixHeatmap';
 // --- Constants ---
 const ACTIVE_INNER_DIV_CLASSES = 'text-label-1 dark:text-dark-label-1 bg-fill-3 dark:bg-dark-fill-3'.split(' ');
 
@@ -28,12 +30,19 @@ let dnaStrandOptions = {
   stackMode: 'difficulty' as 'difficulty' | 'language',
   timeRange: 'daily' as 'daily' | 'weekly' | 'monthly',
 };
-
 let currentFilters = {
     timeRange: 'All Time' as TimeRange,
     difficulty: 'All' as Difficulty,
     clockView: 'HourOfDay' as ClockView,
     cumulativeView: 'Monthly' as CumulativeView,
+};
+// Add this to your state management section
+let skillMatrixHeatmap: SkillMatrixHeatmapInstance | undefined;
+let skillMatrixOptions = {
+  timeRange: 'All Time' as 'Last 30 Days' | 'Last 90 Days' | 'Last 365 Days' | 'All Time',
+  chartView: 'Monthly' as 'Daily' | 'Monthly' | 'Yearly',
+  showDifficultySplit: false,
+  selectedMetric: 'acceptanceRate' as 'acceptanceRate' | 'avgTries' | 'firstAceRate'
 };
 
 /**
@@ -68,6 +77,7 @@ function renderAllCharts(processedData: ProcessedData) {
     renderCumulativeChart(processedData);
     renderSubmissionSignature(processedData); // <-- ADD THIS
     renderLanguageChart(processedData); // <-- ADD THIS
+    renderSkillMatrix(processedData); // Add this line
     setTimeout(() => {
   legacyStats.records.forEach((record: any) => {
     if (record.subStats) {
@@ -270,6 +280,25 @@ function renderLanguageChart(processedData: ProcessedData) {
     }
 }
 
+// Add this function to render the skill matrix
+function renderSkillMatrix(processedData: ProcessedData) {
+  const container = document.getElementById('skill-matrix-container') as HTMLElement;
+  if (!container) return;
+  
+  const skillMatrixData = getSkillMatrixStats(processedData, currentFilters);
+  if (skillMatrixData) {
+    container.style.display = 'block';
+    skillMatrixHeatmap = renderOrUpdateSkillMatrixHeatmap(
+      container, 
+      skillMatrixData, 
+      skillMatrixOptions, 
+      skillMatrixHeatmap
+    );
+  } else {
+    container.style.display = 'none';
+  }
+}
+
 
 function setupFilterListeners(processedData: ProcessedData) {
     const timeRangeSelect = document.getElementById('time-range-filter') as HTMLSelectElement;
@@ -367,6 +396,13 @@ function setupFilterListeners(processedData: ProcessedData) {
             dnaStrandChart.updateOptions(dnaStrandOptions);
         }
     });
+
+    const skillMatrixContainer = document.getElementById('skill-matrix-container');
+  skillMatrixContainer?.addEventListener('skillMatrixUpdate', (e: any) => {
+    Object.assign(skillMatrixOptions, e.detail);
+    renderSkillMatrix(processedData);
+  });
+
     }
 
 function createStatsPaneWithGrid(): HTMLElement {
@@ -464,6 +500,10 @@ function createStatsPaneWithGrid(): HTMLElement {
                 <canvas id="language-stats-chart"></canvas>
             </div>
         </div>
+      </div>
+      <!-- SKILL MATRIX SECTION -->
+      <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
+        <div id="skill-matrix-container"></div>
       </div>
     </div>
   `;

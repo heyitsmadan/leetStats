@@ -39,7 +39,7 @@ export interface CachedMetadata {
 
 // --- Filter Types ---
 export type Difficulty = 'All' | 'Easy' | 'Medium' | 'Hard';
-export type TimeRange = 'All Time' | 'Last 30 Days' | 'Last Year';
+export type TimeRange = 'All Time' | 'Last 30 Days' | 'Last 90 Days' | 'Last 365 Days';
 export type ClockView = 'HourOfDay' | 'DayOfWeek';
 export type CumulativeView = 'Daily' | 'Monthly' | 'Yearly'; // <-- ADD THIS
 
@@ -100,4 +100,37 @@ export interface LegacyStats {
   trophies: TrophyData[];
   milestones: MilestoneData[];
   records: RecordData[];
+}
+
+// Add these interfaces to your existing types.ts
+
+export interface SkillMatrixData {
+  topics: string[];
+  metrics: {
+    acceptanceRate: { [topic: string]: number };
+    avgTries: { [topic: string]: number };
+    firstAceRate: { [topic: string]: number };
+  };
+  timeSeriesData: {
+    [topic: string]: {
+      acceptanceRate: TimeSeriesPoint[];
+      avgTries: TimeSeriesPoint[];
+      firstAceRate: TimeSeriesPoint[];
+    };
+  };
+}
+
+export interface TimeSeriesPoint {
+  date: string;
+  value: number;
+  easy?: number;
+  medium?: number;
+  hard?: number;
+}
+
+export interface SkillMatrixOptions {
+  timeRange: 'Last 30 Days' | 'Last 90 Days' | 'Last 365 Days' | 'All Time';
+  chartView: 'Daily' | 'Monthly' | 'Yearly';
+  showDifficultySplit: boolean;
+  selectedMetric: 'acceptanceRate' | 'avgTries' | 'firstAceRate';
 }

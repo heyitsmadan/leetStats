@@ -24,17 +24,20 @@ export function getCodingClockStats(
 
   const now = new Date();
   const filteredSubmissions = submissions.filter(sub => {
-    if (timeRange === 'Last 30 Days') {
-      if (now.getTime() - sub.date.getTime() > 30 * ONE_DAY_MS) return false;
-    } else if (timeRange === 'Last Year') {
-      if (now.getTime() - sub.date.getTime() > 365 * ONE_DAY_MS) return false;
-    }
-    
-    if (difficulty !== 'All' && sub.metadata?.difficulty !== difficulty) {
-      return false;
-    }
-    return true;
-  });
+  if (timeRange === 'Last 30 Days') {
+    if (now.getTime() - sub.date.getTime() > 30 * ONE_DAY_MS) return false;
+  } else if (timeRange === 'Last 90 Days') {
+    if (now.getTime() - sub.date.getTime() > 90 * ONE_DAY_MS) return false;
+  } else if (timeRange === 'Last 365 Days') {
+    if (now.getTime() - sub.date.getTime() > 365 * ONE_DAY_MS) return false;
+  }
+
+  if (difficulty !== 'All' && sub.metadata?.difficulty !== difficulty) {
+    return false;
+  }
+
+  return true;
+});
 
   const isHourView = clockView === 'HourOfDay';
   const numBuckets = isHourView ? 24 : 7;

@@ -30,16 +30,29 @@ export function getSubmissionSignatureStats(
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
   
   const filteredSubmissions = submissions.filter(sub => {
+  const submissionTime = sub.date.getTime();
+  const nowTime = now.getTime();
+
+  if (timeRange !== 'All Time') {
+    let maxAgeInDays = 0;
     if (timeRange === 'Last 30 Days') {
-      if (now.getTime() - sub.date.getTime() > 30 * ONE_DAY_MS) return false;
-    } else if (timeRange === 'Last Year') {
-      if (now.getTime() - sub.date.getTime() > 365 * ONE_DAY_MS) return false;
+      maxAgeInDays = 30;
+    } else if (timeRange === 'Last 90 Days') {
+      maxAgeInDays = 90;
+    } else if (timeRange === 'Last 365 Days') {
+      maxAgeInDays = 365;
     }
-    if (difficulty !== 'All' && sub.metadata?.difficulty !== difficulty) {
+    if (nowTime - submissionTime > maxAgeInDays * ONE_DAY_MS) {
       return false;
     }
-    return true;
-  });
+  }
+
+  if (difficulty !== 'All' && sub.metadata?.difficulty !== difficulty) {
+    return false;
+  }
+
+  return true;
+});
   
   const totalSubmissions = filteredSubmissions.length;
   if (totalSubmissions === 0) {
