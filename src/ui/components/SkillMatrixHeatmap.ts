@@ -325,12 +325,18 @@ export function renderOrUpdateSkillMatrixHeatmap(
     const datasets: any[] = [];
     const colors = { easy: '#00af8c', medium: '#ffb800', hard: '#ff375f', aggregate: '#58b8b9' };
     
-    if (localOpts.split) {
-        (['easy', 'medium', 'hard'] as const).forEach(diff => {
-            const diffData = validData.map(p => ({ 
+    // In the renderChart function, update the dataset creation:
+if (localOpts.split) {
+    (['easy', 'medium', 'hard'] as const).forEach(diff => {
+        const diffData = validData
+            .filter(p => p[diff] !== undefined) // ✅ FIXED: Filter out undefined values
+            .map(p => ({ 
                 x: p.date, 
-                y: typeof p[diff] === 'number' && !isNaN(p[diff]) ? p[diff] : 0 
+                y: p[diff] 
             }));
+        
+        // Only create dataset if we have data
+        if (diffData.length > 0) {
             datasets.push({
                 label: diff.charAt(0).toUpperCase() + diff.slice(1),
                 data: diffData,
@@ -338,17 +344,19 @@ export function renderOrUpdateSkillMatrixHeatmap(
                 tension: 0.4,
                 pointRadius: 2,
             });
-        });
-    } else {
-        const overallData = validData.map(p => ({ x: p.date, y: p.value }));
-        datasets.push({
-            label: 'Overall',
-            data: overallData,
-            borderColor: colors.aggregate,
-            tension: 0.4,
-            pointRadius: 2,
-        });
-    }
+        }
+    });
+} else {
+    const overallData = validData.map(p => ({ x: p.date, y: p.value }));
+    datasets.push({
+        label: 'Overall',
+        data: overallData, 
+        borderColor: colors.aggregate,
+        tension: 0.4,
+        pointRadius: 2,
+    });
+}
+
 
     console.log(`[Heatmap] Created ${datasets.length} datasets`);
     console.log(`[Heatmap] Sample dataset structure:`, JSON.stringify(datasets[0], null, 2));

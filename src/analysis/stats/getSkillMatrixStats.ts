@@ -107,42 +107,62 @@ function generateTimeSeriesForTopic(submissions: ProcessedSubmission[]) {
         const nextDate = (i + 1 < sortedSubs.length) ? sortedSubs[i + 1].date.toISOString().split('T')[0] : null;
 
         if (currentDate !== nextDate) {
-            // Calculate submission-based acceptance rate
-            const overallAcceptanceRate = cumulativeSubmissions > 0 ? (cumulativeAccepted / cumulativeSubmissions) * 100 : 0;
+            // ✅ FIXED: Only include data points when there's meaningful data
             
-            // Calculate difficulty-specific rates
-            const easyMetrics = calculateMetricsFromGroups(problemGroups.easy);
-            const mediumMetrics = calculateMetricsFromGroups(problemGroups.medium);
-            const hardMetrics = calculateMetricsFromGroups(problemGroups.hard);
-            const overallMetrics = calculateMetricsFromGroups(problemGroups.overall);
+            // Calculate overall metrics (only if we have enough data)
+            if (cumulativeSubmissions >= 3) { // Minimum threshold
+                const overallAcceptanceRate = (cumulativeAccepted / cumulativeSubmissions) * 100;
+                const overallMetrics = calculateMetricsFromGroups(problemGroups.overall);
 
-            metricsOverTime.acceptanceRate.push({ 
-                date: currentDate, 
-                value: overallAcceptanceRate, 
-                easy: easyMetrics.acceptanceRate, 
-                medium: mediumMetrics.acceptanceRate, 
-                hard: hardMetrics.acceptanceRate 
-            });
-            
-            metricsOverTime.avgTries.push({ 
-                date: currentDate, 
-                value: overallMetrics.avgTries, 
-                easy: easyMetrics.avgTries, 
-                medium: mediumMetrics.avgTries, 
-                hard: hardMetrics.avgTries 
-            });
-            
-            metricsOverTime.firstAceRate.push({ 
-                date: currentDate, 
-                value: overallMetrics.firstAceRate, 
-                easy: easyMetrics.firstAceRate, 
-                medium: mediumMetrics.firstAceRate, 
-                hard: hardMetrics.firstAceRate 
-            });
+                metricsOverTime.acceptanceRate.push({ 
+                    date: currentDate, 
+                    value: overallAcceptanceRate,
+                    easy: getValidMetricValue(problemGroups.easy, 'acceptanceRate'),
+                    medium: getValidMetricValue(problemGroups.medium, 'acceptanceRate'),
+                    hard: getValidMetricValue(problemGroups.hard, 'acceptanceRate')
+                });
+                
+                metricsOverTime.avgTries.push({ 
+                    date: currentDate, 
+                    value: overallMetrics.avgTries,
+                    easy: getValidMetricValue(problemGroups.easy, 'avgTries'),
+                    medium: getValidMetricValue(problemGroups.medium, 'avgTries'),
+                    hard: getValidMetricValue(problemGroups.hard, 'avgTries')
+                });
+                
+                metricsOverTime.firstAceRate.push({ 
+                    date: currentDate, 
+                    value: overallMetrics.firstAceRate,
+                    easy: getValidMetricValue(problemGroups.easy, 'firstAceRate'),
+                    medium: getValidMetricValue(problemGroups.medium, 'firstAceRate'),
+                    hard: getValidMetricValue(problemGroups.hard, 'firstAceRate')
+                });
+            }
         }
     }
 
     return metricsOverTime;
+}
+
+// ✅ NEW: Helper function to return valid metric values or undefined
+function getValidMetricValue(
+    problemGroups: Map<string, ProcessedSubmission[]>, 
+    metric: 'acceptanceRate' | 'avgTries' | 'firstAceRate'
+): number | undefined {
+    if (problemGroups.size === 0) {
+        return undefined; // Don't include this difficulty in the chart yet
+    }
+    
+    // Calculate total submissions for this difficulty
+    const totalSubmissions = Array.from(problemGroups.values()).flat().length;
+    
+    // Require minimum data points before showing
+    if (totalSubmissions < 2) {
+        return undefined;
+    }
+    
+    const metrics = calculateMetricsFromGroups(problemGroups);
+    return metrics[metric];
 }
 
 
