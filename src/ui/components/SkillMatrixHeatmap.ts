@@ -239,6 +239,60 @@ export function renderOrUpdateSkillMatrixHeatmap(
         });
     }
 
+function aggregateTimeSeriesData(
+    data: TimeSeriesPoint[], 
+    view: 'Daily' | 'Monthly' | 'Yearly'
+): TimeSeriesPoint[] {
+    if (view === 'Daily') return data;
+    
+    const grouped = new Map<string, TimeSeriesPoint[]>();
+    
+    data.forEach(point => {
+        const date = new Date(point.date);
+        let key: string;
+        
+        if (view === 'Monthly') {
+            key = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+        } else { // Yearly
+            key = date.getFullYear().toString();
+        }
+        
+        if (!grouped.has(key)) {
+            grouped.set(key, []);
+        }
+        grouped.get(key)!.push(point);
+    });
+    
+    // For each period, take the LAST value (most recent state)
+    const aggregated: TimeSeriesPoint[] = [];
+    
+    for (const [period, points] of grouped.entries()) {
+        const sortedPoints = points.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const lastPoint = sortedPoints[sortedPoints.length - 1];
+        
+        // Create period-end date for proper chart display
+        let periodDate: string;
+        if (view === 'Monthly') {
+            const [year, month] = period.split('-');
+            const lastDayOfMonth = new Date(parseInt(year), parseInt(month), 0).getDate();
+            periodDate = `${year}-${month}-${lastDayOfMonth.toString().padStart(2, '0')}`;
+        } else {
+            periodDate = `${period}-12-31`;
+        }
+        
+        aggregated.push({
+            date: periodDate,
+            value: lastPoint.value,
+            easy: lastPoint.easy,
+            medium: lastPoint.medium,
+            hard: lastPoint.hard
+        });
+    }
+    
+    return aggregated.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+}
+
+
  function renderChart(topic: string) {
     console.log(`[Heatmap] Starting renderChart for topic: "${topic}"`);
     
@@ -289,7 +343,7 @@ export function renderOrUpdateSkillMatrixHeatmap(
 
     // **CRITICAL**: Detailed data inspection
     console.log(`[Heatmap] Raw sample data points:`, JSON.stringify(metricData.slice(0, 3), null, 2));
-    
+    const aggregatedData = aggregateTimeSeriesData(metricData, localOpts.view);
     // Validate and sanitize data
     // const validData = metricData.filter(point => {
     //     const date = new Date(point.date);
@@ -326,36 +380,35 @@ export function renderOrUpdateSkillMatrixHeatmap(
     const colors = { easy: '#00af8c', medium: '#ffb800', hard: '#ff375f', aggregate: '#58b8b9' };
     
     // In the renderChart function, update the dataset creation:
-if (localOpts.split) {
-    (['easy', 'medium', 'hard'] as const).forEach(diff => {
-        const diffData = validData
-            .filter(p => p[diff] !== undefined) // ✅ FIXED: Filter out undefined values
-            .map(p => ({ 
-                x: p.date, 
-                y: p[diff] 
-            }));
-        
-        // Only create dataset if we have data
-        if (diffData.length > 0) {
-            datasets.push({
-                label: diff.charAt(0).toUpperCase() + diff.slice(1),
-                data: diffData,
-                borderColor: colors[diff],
-                tension: 0.4,
-                pointRadius: 2,
-            });
-        }
-    });
-} else {
-    const overallData = validData.map(p => ({ x: p.date, y: p.value }));
-    datasets.push({
-        label: 'Overall',
-        data: overallData, 
-        borderColor: colors.aggregate,
-        tension: 0.4,
-        pointRadius: 2,
-    });
-}
+    if (localOpts.split) {
+        (['easy', 'medium', 'hard'] as const).forEach(diff => {
+            const diffData = aggregatedData
+                .filter(p => p[diff] !== undefined)
+                .map(p => ({ 
+                    x: p.date, 
+                    y: p[diff] 
+                }));
+            
+            if (diffData.length > 0) {
+                datasets.push({
+                    label: diff.charAt(0).toUpperCase() + diff.slice(1),
+                    data: diffData,
+                    borderColor: colors[diff],
+                    tension: 0.4,
+                    pointRadius: 2,
+                });
+            }
+        });
+    } else {
+        const overallData = aggregatedData.map(p => ({ x: p.date, y: p.value }));
+        datasets.push({
+            label: 'Overall',
+            data: overallData, 
+            borderColor: colors.aggregate,
+            tension: 0.4,
+            pointRadius: 2,
+        });
+    }
 
 
     console.log(`[Heatmap] Created ${datasets.length} datasets`);
@@ -363,7 +416,16 @@ if (localOpts.split) {
 
     // **SIMPLIFIED CHART CONFIG FOR TESTING**
     console.log(`[Heatmap] About to create Chart.js instance...`);
-    
+    // In renderChart function, update the time scale configuration
+const timeScaleConfig = {
+    'Daily': { unit: 'day', tooltipFormat: 'MMM dd, yyyy' },
+    'Monthly': { unit: 'month', tooltipFormat: 'MMM yyyy' },
+    'Yearly': { unit: 'year', tooltipFormat: 'yyyy' }
+} as const;
+
+const scaleConfig = timeScaleConfig[localOpts.view];
+
+// Apply aggregation to your data
     try {
         const chart = new Chart(ctx, {
             type: 'line',
@@ -380,8 +442,8 @@ if (localOpts.split) {
                     x: {
                         type: 'time',
                         time: {
-                            unit: 'day',  // Force to day unit for testing
-                            tooltipFormat: 'MMM dd, yyyy'
+                            unit: scaleConfig.unit,
+                tooltipFormat: scaleConfig.tooltipFormat
                         }
                     },
                     y: {
