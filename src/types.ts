@@ -134,3 +134,13 @@ export interface SkillMatrixOptions {
   showDifficultySplit: boolean;
   selectedMetric: 'acceptanceRate' | 'avgTries' | 'firstAceRate';
 }
+
+// In types.ts - update the DNA strand specific type
+export type DNATimeRange = 'daily' | 'monthly' | 'yearly'; // Changed from weekly to yearly
+
+// Update the options interface
+export interface DNAStrandOptions {
+  viewMode: 'problems' | 'submissions';
+  stackMode: 'difficulty' | 'language';
+  timeRange: DNATimeRange; // Use the new type
+}
