@@ -17,21 +17,6 @@ export function getLegacyStats(processedData: ProcessedData): LegacyStats | null
 // Remove any references to filters in the helper functions
 
 
-function filterSubmissionsByTimeRange(submissions: any[], timeRange: TimeRange) {
-  if (timeRange === 'All Time') return submissions;
-  
-  const now = new Date();
-  const cutoffDate = new Date();
-  
-  if (timeRange === 'Last 30 Days') {
-    cutoffDate.setDate(now.getDate() - 30);
-  } else if (timeRange === 'Last Year') {
-    cutoffDate.setFullYear(now.getFullYear() - 1);
-  }
-  
-  return submissions.filter(sub => sub.date >= cutoffDate);
-}
-
 function calculateTrophies(processedData: ProcessedData, submissions: any[]): TrophyData[] {
   const trophies: TrophyData[] = [];
   

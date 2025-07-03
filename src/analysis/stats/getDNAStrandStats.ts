@@ -133,14 +133,17 @@ function passesTimeRangeFilter(date: Date, timeRange: TimeRange): boolean {
   
   switch (timeRange) {
     case 'All Time':
-      return true;
+        return true;
     case 'Last 30 Days':
-      return (now.getTime() - date.getTime()) <= (30 * msInDay);
-    case 'Last Year':
-      return (now.getTime() - date.getTime()) <= (365 * msInDay);
+        return (now.getTime() - date.getTime()) <= (30 * msInDay);
+    case 'Last 90 Days':
+        return (now.getTime() - date.getTime()) <= (90 * msInDay);
+    case 'Last 365 Days':
+        return (now.getTime() - date.getTime()) <= (365 * msInDay);
     default:
-      return true;
-  }
+        return true;
+}
+
 }
 
 function getWeekNumber(date: Date): number {

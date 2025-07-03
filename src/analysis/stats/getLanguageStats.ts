@@ -24,16 +24,19 @@ export function getLanguageStats(
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
   const filteredSubmissions = submissions.filter(sub => {
-    if (timeRange === 'Last 30 Days') {
-      if (now.getTime() - sub.date.getTime() > 30 * ONE_DAY_MS) return false;
-    } else if (timeRange === 'Last Year') {
-      if (now.getTime() - sub.date.getTime() > 365 * ONE_DAY_MS) return false;
-    }
+    const ageMs = now.getTime() - sub.date.getTime();
+
+    if (timeRange === 'Last 30 Days' && ageMs > 30 * ONE_DAY_MS) return false;
+    if (timeRange === 'Last 90 Days' && ageMs > 90 * ONE_DAY_MS) return false;
+    if (timeRange === 'Last 365 Days' && ageMs > 365 * ONE_DAY_MS) return false;
+
     if (difficulty !== 'All' && sub.metadata?.difficulty !== difficulty) {
-      return false;
+        return false;
     }
+
     return true;
-  });
+});
+
 
   if (filteredSubmissions.length === 0) {
       return null;

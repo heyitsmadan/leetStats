@@ -452,10 +452,12 @@ function createStatsPaneWithGrid(): HTMLElement {
       <!-- FILTERS -->
       <div class="flex items-center space-x-4 p-4 bg-layer-1 dark:bg-dark-layer-1 rounded-lg">
         <select id="time-range-filter" class="bg-layer-2 dark:bg-dark-layer-2 rounded-md p-2 text-sm text-label-1 dark:text-dark-label-1">
-          <option>All Time</option>
-          <option>Last 30 Days</option>
-          <option>Last Year</option>
-        </select>
+    <option>All Time</option>
+    <option>Last 30 Days</option>
+    <option>Last 90 Days</option>
+    <option>Last 365 Days</option>
+</select>
+
         <select id="difficulty-filter" class="bg-layer-2 dark:bg-dark-layer-2 rounded-md p-2 text-sm text-label-1 dark:text-dark-label-1">
           <option>All</option>
           <option>Easy</option>

@@ -32,24 +32,35 @@ export function getCumulativeStats(
     // 1. Filter submissions based on TimeRange and Difficulty
     const now = new Date();
     const filteredSubmissions = submissions.filter(sub => {
-        const submissionDate = sub.date;
-        let inTimeRange = false;
-        if (timeRange === 'All Time') {
+    const submissionDate = sub.date;
+    let inTimeRange = false;
+
+    const getPastDate = (days: number) => {
+        const date = new Date(now);
+        date.setDate(now.getDate() - days);
+        return date;
+    };
+
+    switch (timeRange) {
+        case 'All Time':
             inTimeRange = true;
-        } else if (timeRange === 'Last 30 Days') {
-            const thirtyDaysAgo = new Date(now);
-            thirtyDaysAgo.setDate(now.getDate() - 30);
-            inTimeRange = submissionDate >= thirtyDaysAgo;
-        } else if (timeRange === 'Last Year') {
-            const oneYearAgo = new Date(now);
-            oneYearAgo.setFullYear(now.getFullYear() - 1);
-            inTimeRange = submissionDate >= oneYearAgo;
-        }
+            break;
+        case 'Last 30 Days':
+            inTimeRange = submissionDate >= getPastDate(30);
+            break;
+        case 'Last 90 Days':
+            inTimeRange = submissionDate >= getPastDate(90);
+            break;
+        case 'Last 365 Days':
+            inTimeRange = submissionDate >= getPastDate(365);
+            break;
+    }
 
-        const inDifficulty = difficulty === 'All' || sub.metadata?.difficulty === difficulty;
+    const inDifficulty = difficulty === 'All' || sub.metadata?.difficulty === difficulty;
 
-        return inTimeRange && inDifficulty;
-    });
+    return inTimeRange && inDifficulty;
+});
+
 
     if (filteredSubmissions.length === 0) {
         return { labels: [], datasets: [] };
