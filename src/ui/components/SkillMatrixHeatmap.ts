@@ -415,8 +415,8 @@ export function renderOrUpdateSkillMatrixHeatmap(
 
     // Helper Functions
     function getHeatmapColor(value: number, metric: 'acceptanceRate' | 'avgTries' | 'firstAceRate'): string {
-        const lcGreen = { r: 88, g: 184, b: 185 };
-        const lcRed = { r: 226, g: 74, b: 65 };
+        const lcGreen = { r: 93, g: 184, b: 103 };   // #5db867
+        const lcRed = { r: 230, g: 107, b: 98 };  // #e66b62
         
         let percent = 0;
         if (metric === 'avgTries') {

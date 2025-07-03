@@ -285,7 +285,7 @@ function renderSkillMatrix(processedData: ProcessedData) {
   const container = document.getElementById('skill-matrix-container') as HTMLElement;
   if (!container) return;
   
-  const skillMatrixData = getSkillMatrixStats(processedData, currentFilters);
+  const skillMatrixData = getSkillMatrixStats(processedData, currentFilters, skillMatrixOptions.timeRange );
   if (skillMatrixData) {
     container.style.display = 'block';
     skillMatrixHeatmap = renderOrUpdateSkillMatrixHeatmap(
@@ -397,11 +397,18 @@ function setupFilterListeners(processedData: ProcessedData) {
         }
     });
 
-    const skillMatrixContainer = document.getElementById('skill-matrix-container');
-  skillMatrixContainer?.addEventListener('skillMatrixUpdate', (e: any) => {
-    Object.assign(skillMatrixOptions, e.detail);
-    renderSkillMatrix(processedData);
-  });
+  //   const skillMatrixContainer = document.getElementById('skill-matrix-container');
+  // skillMatrixContainer?.addEventListener('skillMatrixUpdate', (e: any) => {
+  //   Object.assign(skillMatrixOptions, e.detail);
+  //   renderSkillMatrix(processedData);
+  // });
+
+  // Add skill matrix global time filter listener
+    const skillMatrixTimeFilter = document.getElementById('skill-matrix-time-filter') as HTMLSelectElement;
+    skillMatrixTimeFilter?.addEventListener('change', () => {
+        skillMatrixOptions.timeRange = skillMatrixTimeFilter.value as 'Last 30 Days' | 'Last 90 Days' | 'Last 365 Days' | 'All Time';
+        renderSkillMatrix(processedData);
+    });
 
     }
 
@@ -501,6 +508,16 @@ function createStatsPaneWithGrid(): HTMLElement {
             </div>
         </div>
       </div>
+      <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
+  <div class="flex justify-between items-center mb-4">
+    <h3 class="text-lg font-medium text-label-1 dark:text-dark-label-1">Skill Matrix</h3>
+    <select id="skill-matrix-time-filter" class="bg-layer-2 dark:bg-dark-layer-2 rounded-md p-2 text-sm text-label-1 dark:text-dark-label-1 border border-divider-3 dark:border-dark-divider-3">
+      <option value="All Time">All Time</option>
+      <option value="Last 365 Days">Last 365 Days</option>
+      <option value="Last 90 Days">Last 90 Days</option>
+      <option value="Last 30 Days">Last 30 Days</option>
+    </select>
+  </div>
       <!-- SKILL MATRIX SECTION -->
       <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
         <div id="skill-matrix-container"></div>

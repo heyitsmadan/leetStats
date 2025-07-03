@@ -20,20 +20,41 @@ function calculateMetricsFromGroups(problemGroups: Map<string, ProcessedSubmissi
         return { acceptanceRate: 0, avgTries: 0, firstAceRate: 0 };
     }
 
+    // Get all submissions across all problems in this topic
+    const allSubmissions = Array.from(problemGroups.values()).flat();
+    const totalSubmissions = allSubmissions.length;
+    
+    if (totalSubmissions === 0) {
+        return { acceptanceRate: 0, avgTries: 0, firstAceRate: 0 };
+    }
+
+    // Count accepted submissions (status === 10)
+    const acceptedSubmissions = allSubmissions.filter(sub => sub.status === 10);
+    const acceptedCount = acceptedSubmissions.length;
+
+    // Calculate submission-based acceptance rate
+    const acceptanceRate = (acceptedCount / totalSubmissions) * 100;
+
+    // Get solved problems for other metrics
     const solvedProblems = Array.from(problemGroups.values()).filter(subs => 
         subs.some(s => s.status === 10)
     );
     
+    // Calculate average tries (only for solved problems)
     const totalTriesForSolved = solvedProblems.reduce((sum, subs) => sum + subs.length, 0);
+    const avgTries = solvedProblems.length > 0 ? totalTriesForSolved / solvedProblems.length : 0;
 
+    // Calculate first try rate (problems solved on first attempt / total attempted problems)
     const firstAces = solvedProblems.filter(subs => subs.length > 0 && subs[0].status === 10).length;
+    const firstAceRate = problemGroups.size > 0 ? (firstAces / problemGroups.size) * 100 : 0;
 
     return {
-        acceptanceRate: problemGroups.size > 0 ? (solvedProblems.length / problemGroups.size) * 100 : 0,
-        avgTries: solvedProblems.length > 0 ? totalTriesForSolved / solvedProblems.length : 0,
-        firstAceRate: solvedProblems.length > 0 ? (firstAces / solvedProblems.length) * 100 : 0,
+        acceptanceRate,
+        avgTries,
+        firstAceRate,
     };
 }
+
 
 // Generates cumulative time series data efficiently in a single pass.
 function generateTimeSeriesForTopic(submissions: ProcessedSubmission[]) {
@@ -42,13 +63,15 @@ function generateTimeSeriesForTopic(submissions: ProcessedSubmission[]) {
     }
 
     const sortedSubs = submissions.sort((a, b) => a.date.getTime() - b.date.getTime());
-
     const metricsOverTime: { [key in 'acceptanceRate' | 'avgTries' | 'firstAceRate']: TimeSeriesPoint[] } = {
         acceptanceRate: [],
         avgTries: [],
         firstAceRate: [],
     };
 
+    // Track cumulative data
+    let cumulativeSubmissions = 0;
+    let cumulativeAccepted = 0;
     const problemGroups = {
         overall: new Map<string, ProcessedSubmission[]>(),
         easy: new Map<string, ProcessedSubmission[]>(),
@@ -61,6 +84,11 @@ function generateTimeSeriesForTopic(submissions: ProcessedSubmission[]) {
         const slug = sub.titleSlug;
         const difficulty = sub.metadata?.difficulty;
 
+        // Update cumulative counters
+        cumulativeSubmissions++;
+        if (sub.status === 10) cumulativeAccepted++;
+
+        // Update problem groups
         if (!problemGroups.overall.has(slug)) problemGroups.overall.set(slug, []);
         problemGroups.overall.get(slug)!.push(sub);
 
@@ -79,14 +107,38 @@ function generateTimeSeriesForTopic(submissions: ProcessedSubmission[]) {
         const nextDate = (i + 1 < sortedSubs.length) ? sortedSubs[i + 1].date.toISOString().split('T')[0] : null;
 
         if (currentDate !== nextDate) {
-            const overallMetrics = calculateMetricsFromGroups(problemGroups.overall);
+            // Calculate submission-based acceptance rate
+            const overallAcceptanceRate = cumulativeSubmissions > 0 ? (cumulativeAccepted / cumulativeSubmissions) * 100 : 0;
+            
+            // Calculate difficulty-specific rates
             const easyMetrics = calculateMetricsFromGroups(problemGroups.easy);
             const mediumMetrics = calculateMetricsFromGroups(problemGroups.medium);
             const hardMetrics = calculateMetricsFromGroups(problemGroups.hard);
+            const overallMetrics = calculateMetricsFromGroups(problemGroups.overall);
 
-            metricsOverTime.acceptanceRate.push({ date: currentDate, value: overallMetrics.acceptanceRate, easy: easyMetrics.acceptanceRate, medium: mediumMetrics.acceptanceRate, hard: hardMetrics.acceptanceRate });
-            metricsOverTime.avgTries.push({ date: currentDate, value: overallMetrics.avgTries, easy: easyMetrics.avgTries, medium: mediumMetrics.avgTries, hard: hardMetrics.avgTries });
-            metricsOverTime.firstAceRate.push({ date: currentDate, value: overallMetrics.firstAceRate, easy: easyMetrics.firstAceRate, medium: mediumMetrics.firstAceRate, hard: hardMetrics.firstAceRate });
+            metricsOverTime.acceptanceRate.push({ 
+                date: currentDate, 
+                value: overallAcceptanceRate, 
+                easy: easyMetrics.acceptanceRate, 
+                medium: mediumMetrics.acceptanceRate, 
+                hard: hardMetrics.acceptanceRate 
+            });
+            
+            metricsOverTime.avgTries.push({ 
+                date: currentDate, 
+                value: overallMetrics.avgTries, 
+                easy: easyMetrics.avgTries, 
+                medium: mediumMetrics.avgTries, 
+                hard: hardMetrics.avgTries 
+            });
+            
+            metricsOverTime.firstAceRate.push({ 
+                date: currentDate, 
+                value: overallMetrics.firstAceRate, 
+                easy: easyMetrics.firstAceRate, 
+                medium: mediumMetrics.firstAceRate, 
+                hard: hardMetrics.firstAceRate 
+            });
         }
     }
 
@@ -96,7 +148,7 @@ function generateTimeSeriesForTopic(submissions: ProcessedSubmission[]) {
 
 export function getSkillMatrixStats(
     data: ProcessedData,
-    filters: { timeRange: TimeRange; difficulty: Difficulty }
+    filters: { timeRange: TimeRange; difficulty: Difficulty }, skillMatrixTimeRange?: 'Last 30 Days' | 'Last 90 Days' | 'Last 365 Days' | 'All Time'
 ): SkillMatrixData | null {
     console.log('[SkillMatrix] Starting stat calculation...');
     const startTime = performance.now();
@@ -106,9 +158,11 @@ export function getSkillMatrixStats(
         return null;
     }
 
+    const effectiveTimeRange = skillMatrixTimeRange || filters.timeRange;
+
     // Filter submissions based on the global filters for the main table.
     const filteredSubmissions = data.submissions.filter(sub => {
-        const passesTime = passesTimeRangeFilter(sub.date, filters.timeRange);
+        const passesTime = passesTimeRangeFilter(sub.date, effectiveTimeRange);
         const passesDiff = filters.difficulty === 'All' || sub.metadata?.difficulty === filters.difficulty;
         return passesTime && passesDiff && sub.metadata?.topics?.length;
     });
@@ -131,19 +185,29 @@ export function getSkillMatrixStats(
     // OPTIMIZATION: Pre-group all submissions by topic ONCE.
     // This avoids repeatedly filtering the entire submission list inside the loop below.
     // ====================================================================================
-    console.log('[SkillMatrix] Pre-grouping all submissions by topic for time series generation...');
-    const submissionsByTopic = new Map<string, ProcessedSubmission[]>();
-    for (const sub of data.submissions) {
-        if (sub.metadata?.topics) {
-            for (const topic of sub.metadata.topics) {
-                if (!submissionsByTopic.has(topic)) {
-                    submissionsByTopic.set(topic, []);
-                }
-                submissionsByTopic.get(topic)!.push(sub);
+    // ✅ FIXED: Pre-group FILTERED submissions by topic
+console.log('[SkillMatrix] Pre-grouping filtered submissions by topic for time series generation...');
+const submissionsByTopic = new Map<string, ProcessedSubmission[]>();
+
+// Apply the same filters used for metrics to the time series data
+const filteredSubmissionsForCharts = data.submissions.filter(sub => {
+    const passesTime = passesTimeRangeFilter(sub.date, effectiveTimeRange);
+    const passesDiff = filters.difficulty === 'All' || sub.metadata?.difficulty === filters.difficulty;
+    return passesTime && passesDiff && sub.metadata?.topics?.length;
+});
+
+for (const sub of filteredSubmissionsForCharts) { // <-- Use filtered submissions
+    if (sub.metadata?.topics) {
+        for (const topic of sub.metadata.topics) {
+            if (!submissionsByTopic.has(topic)) {
+                submissionsByTopic.set(topic, []);
             }
+            submissionsByTopic.get(topic)!.push(sub);
         }
     }
-    console.log('[SkillMatrix] Finished pre-grouping.');
+}
+console.log('[SkillMatrix] Finished pre-grouping filtered submissions.');
+
 
 
     const metrics: SkillMatrixData['metrics'] = {
