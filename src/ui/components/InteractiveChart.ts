@@ -315,34 +315,23 @@ export function renderOrUpdateInteractiveChart(
 
 
   function updateMainChart() {
-    if (!mainChart) return;
+  if (!mainChart) return;
 
-    const chartData = getInteractiveChartStats(processedData, currentFilters);
-    if (!chartData) return;
+  const chartData = getInteractiveChartStats(processedData, currentFilters);
+  if (!chartData) return;
 
-    // Handle ghost bars animation
-    if (currentFilters.primaryView === 'Submissions') {
-      // Show submissions in foreground, problems as ghost bars
-      mainChart.data.datasets = chartData.datasets.map(dataset => ({
-        ...dataset,
-        backgroundColor: dataset.backgroundColor,
-        borderColor: dataset.borderColor,
-        borderWidth: 1
-      }));
-    } else {
-      // Show problems in foreground, submissions as ghost bars
-      // This would require additional logic to calculate problems solved data
-      mainChart.data.datasets = chartData.datasets.map(dataset => ({
-        ...dataset,
-        backgroundColor: dataset.backgroundColor,
-        borderColor: dataset.borderColor,
-        borderWidth: 1
-      }));
-    }
+  // Update the chart data
+  mainChart.data.labels = chartData.labels;
+  mainChart.data.datasets = chartData.datasets;
 
-    mainChart.data.labels = chartData.labels;
-    mainChart.update('active');
+  // Update the chart title based on the current mode
+  if (mainChart.options.plugins?.title) {
+    mainChart.options.plugins.title.text = `${currentFilters.primaryView} by ${currentFilters.secondaryView}`;
   }
+
+  mainChart.update('active');
+}
+
 
   function setupEventListeners() {
     // Primary toggle listeners

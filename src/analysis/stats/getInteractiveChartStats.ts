@@ -1,3 +1,39 @@
+// Helper functions to generate complete time intervals
+function generateAllIntervals(
+  startDate: Date, 
+  endDate: Date, 
+  aggregationLevel: 'Daily' | 'Monthly' | 'Yearly'
+): string[] {
+  const intervals: string[] = [];
+  const current = new Date(startDate);
+  
+  while (current <= endDate) {
+    let key: string;
+    
+    if (aggregationLevel === 'Daily') {
+      key = current.toISOString().split('T')[0];
+      current.setDate(current.getDate() + 1);
+    } else if (aggregationLevel === 'Monthly') {
+      key = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
+      current.setMonth(current.getMonth() + 1);
+    } else {
+      key = current.getFullYear().toString();
+      current.setFullYear(current.getFullYear() + 1);
+    }
+    
+    intervals.push(key);
+  }
+  
+  return intervals;
+}
+
+function fillMissingIntervals(
+  dataMap: { [key: string]: number },
+  allIntervals: string[]
+): number[] {
+  return allIntervals.map(interval => dataMap[interval] || 0);
+}
+
 import type { 
   ProcessedData, 
   InteractiveChartData, 
@@ -65,20 +101,40 @@ export function getBrushChartData(processedData: ProcessedData): BrushChartData 
   const { submissions } = processedData;
   if (!submissions.length) return null;
 
-  // Always show daily data for brush chart
-  const dailyGroups = groupByTimePeriod(submissions, 'Daily');
-  const labels = Object.keys(dailyGroups).sort();
-  const data = labels.map(date => dailyGroups[date].length);
+  // Get the full date range
+  const allDates = submissions.map(s => s.date);
+  const startDate = new Date(Math.min(...allDates.map(d => d.getTime())));
+  const endDate = new Date(Math.max(...allDates.map(d => d.getTime())));
+
+  // Generate daily intervals for the entire range
+  const allIntervals = generateAllIntervals(startDate, endDate, 'Daily');
+  
+  // Group submissions by day
+  const dailyGroups: { [key: string]: any[] } = {};
+  submissions.forEach(sub => {
+    const key = sub.date.toISOString().split('T')[0];
+    if (!dailyGroups[key]) dailyGroups[key] = [];
+    dailyGroups[key].push(sub);
+  });
+
+  // Fill missing days with zero
+  const data = fillMissingIntervals(
+    Object.fromEntries(
+      Object.entries(dailyGroups).map(([date, subs]) => [date, subs.length])
+    ),
+    allIntervals
+  );
 
   return {
-    labels,
+    labels: allIntervals,
     data,
     fullTimeRange: {
-      start: new Date(Math.min(...submissions.map(s => s.date.getTime()))),
-      end: new Date(Math.max(...submissions.map(s => s.date.getTime())))
+      start: startDate,
+      end: endDate
     }
   };
 }
+
 
 export function getTooltipData(
   processedData: ProcessedData,
@@ -109,19 +165,46 @@ export function getTooltipData(
   
   if (filters.secondaryView === 'Difficulty') {
     ['Easy', 'Medium', 'Hard'].forEach(difficulty => {
-      breakdown[difficulty] = periodSubmissions
-        .filter(sub => sub.metadata?.difficulty === difficulty)
-        .length;
+      if (filters.primaryView === 'Submissions') {
+        breakdown[difficulty] = periodSubmissions
+          .filter(sub => sub.metadata?.difficulty === difficulty)
+          .length;
+      } else {
+        // Count unique problems solved with this difficulty
+        const solvedProblems = new Set<string>();
+        periodSubmissions.forEach(sub => {
+          if (sub.status === 10 && sub.metadata?.difficulty === difficulty) {
+            solvedProblems.add(sub.titleSlug);
+          }
+        });
+        breakdown[difficulty] = solvedProblems.size;
+      }
     });
   } else if (filters.secondaryView === 'Status') {
-    breakdown['Accepted'] = periodSubmissions.filter(sub => sub.status === 10).length;
-    breakdown['Failed'] = periodSubmissions.filter(sub => sub.status !== 10).length;
+    if (filters.primaryView === 'Submissions') {
+      breakdown['Accepted'] = periodSubmissions.filter(sub => sub.status === 10).length;
+      breakdown['Failed'] = periodSubmissions.filter(sub => sub.status !== 10).length;
+    } else {
+      // For problems solved, only show accepted (fully green)
+      breakdown['Accepted'] = uniqueProblems.size;
+      breakdown['Failed'] = 0;
+    }
   } else if (filters.secondaryView === 'Language') {
-    const langCount: { [key: string]: number } = {};
-    periodSubmissions.forEach(sub => {
-      langCount[sub.lang] = (langCount[sub.lang] || 0) + 1;
+    const allLanguages = new Set(periodSubmissions.map(sub => sub.lang));
+    allLanguages.forEach(lang => {
+      if (filters.primaryView === 'Submissions') {
+        breakdown[lang] = periodSubmissions.filter(sub => sub.lang === lang).length;
+      } else {
+        // Count unique problems solved in this language
+        const solvedProblems = new Set<string>();
+        periodSubmissions.forEach(sub => {
+          if (sub.status === 10 && sub.lang === lang) {
+            solvedProblems.add(sub.titleSlug);
+          }
+        });
+        breakdown[lang] = solvedProblems.size;
+      }
     });
-    Object.assign(breakdown, langCount);
   }
 
   return {
@@ -131,6 +214,7 @@ export function getTooltipData(
     breakdown
   };
 }
+
 
 function getAggregationLevel(submissions: any[]): 'Daily' | 'Monthly' | 'Yearly' {
   if (!submissions.length) return 'Daily';
@@ -171,15 +255,58 @@ function createChartData(
   aggregationLevel: 'Daily' | 'Monthly' | 'Yearly'
 ): InteractiveChartData {
   
-  const labels = Object.keys(timeGroups).sort();
+  // Determine the full time range from submissions
+  const allDates = Object.keys(timeGroups);
+  if (allDates.length === 0) {
+    return {
+      labels: [],
+      datasets: [],
+      aggregationLevel,
+      timeRange: { start: new Date(), end: new Date() }
+    };
+  }
+  
+  // Get start and end dates
+  const sortedDates = allDates.sort();
+  const startDate = new Date(sortedDates[0]);
+  const endDate = new Date(sortedDates[sortedDates.length - 1]);
+  
+  // Adjust dates based on aggregation level for proper boundaries
+  if (aggregationLevel === 'Monthly') {
+    startDate.setDate(1); // Start of month
+    endDate.setMonth(endDate.getMonth() + 1, 0); // End of month
+  } else if (aggregationLevel === 'Yearly') {
+    startDate.setMonth(0, 1); // Start of year
+    endDate.setMonth(11, 31); // End of year
+  }
+  
+  // Generate all intervals in the range
+  const allIntervals = generateAllIntervals(startDate, endDate, aggregationLevel);
   const datasets: any[] = [];
   
   if (filters.secondaryView === 'Difficulty') {
     ['Easy', 'Medium', 'Hard'].forEach(difficulty => {
-      const data = labels.map(date => {
+      const dataMap: { [key: string]: number } = {};
+      
+      // Populate data map with actual values
+      Object.keys(timeGroups).forEach(date => {
         const submissions = timeGroups[date] || [];
-        return submissions.filter(sub => sub.metadata?.difficulty === difficulty).length;
+        
+        if (filters.primaryView === 'Submissions') {
+          dataMap[date] = submissions.filter(sub => sub.metadata?.difficulty === difficulty).length;
+        } else {
+          const solvedProblems = new Set<string>();
+          submissions.forEach(sub => {
+            if (sub.status === 10 && sub.metadata?.difficulty === difficulty) {
+              solvedProblems.add(sub.titleSlug);
+            }
+          });
+          dataMap[date] = solvedProblems.size;
+        }
       });
+      
+      // Fill missing intervals with zeros
+      const data = fillMissingIntervals(dataMap, allIntervals);
       
       datasets.push({
         label: difficulty,
@@ -190,15 +317,38 @@ function createChartData(
       });
     });
   } else if (filters.secondaryView === 'Status') {
-    const acceptedData = labels.map(date => {
+    // Accepted data
+    const acceptedDataMap: { [key: string]: number } = {};
+    Object.keys(timeGroups).forEach(date => {
       const submissions = timeGroups[date] || [];
-      return submissions.filter(sub => sub.status === 10).length;
+      
+      if (filters.primaryView === 'Submissions') {
+        acceptedDataMap[date] = submissions.filter(sub => sub.status === 10).length;
+      } else {
+        const solvedProblems = new Set<string>();
+        submissions.forEach(sub => {
+          if (sub.status === 10) {
+            solvedProblems.add(sub.titleSlug);
+          }
+        });
+        acceptedDataMap[date] = solvedProblems.size;
+      }
     });
     
-    const failedData = labels.map(date => {
+    // Failed data
+    const failedDataMap: { [key: string]: number } = {};
+    Object.keys(timeGroups).forEach(date => {
       const submissions = timeGroups[date] || [];
-      return submissions.filter(sub => sub.status !== 10).length;
+      
+      if (filters.primaryView === 'Submissions') {
+        failedDataMap[date] = submissions.filter(sub => sub.status !== 10).length;
+      } else {
+        failedDataMap[date] = 0; // For problems solved mode, failed should be 0
+      }
     });
+    
+    const acceptedData = fillMissingIntervals(acceptedDataMap, allIntervals);
+    const failedData = fillMissingIntervals(failedDataMap, allIntervals);
     
     datasets.push(
       {
@@ -211,15 +361,13 @@ function createChartData(
       {
         label: 'Failed',
         data: failedData,
-        backgroundColor: STATUS_COLORS.Failed,
-        borderColor: STATUS_COLORS.Failed,
+        backgroundColor: filters.primaryView === 'Problems Solved' ? '#d1e7dd' : STATUS_COLORS.Failed,
+        borderColor: filters.primaryView === 'Problems Solved' ? '#d1e7dd' : STATUS_COLORS.Failed,
         stack: 'main'
       }
     );
   } else if (filters.secondaryView === 'Language') {
-    const languageStats: { [key: string]: number[] } = {};
-    
-    // Collect all languages
+    // Collect all languages from all time groups
     const allLanguages = new Set<string>();
     Object.values(timeGroups).forEach(submissions => {
       submissions.forEach(sub => allLanguages.add(sub.lang));
@@ -227,10 +375,25 @@ function createChartData(
     
     // Create data for each language
     Array.from(allLanguages).forEach((lang, index) => {
-      const data = labels.map(date => {
+      const dataMap: { [key: string]: number } = {};
+      
+      Object.keys(timeGroups).forEach(date => {
         const submissions = timeGroups[date] || [];
-        return submissions.filter(sub => sub.lang === lang).length;
+        
+        if (filters.primaryView === 'Submissions') {
+          dataMap[date] = submissions.filter(sub => sub.lang === lang).length;
+        } else {
+          const solvedProblems = new Set<string>();
+          submissions.forEach(sub => {
+            if (sub.status === 10 && sub.lang === lang) {
+              solvedProblems.add(sub.titleSlug);
+            }
+          });
+          dataMap[date] = solvedProblems.size;
+        }
       });
+      
+      const data = fillMissingIntervals(dataMap, allIntervals);
       
       datasets.push({
         label: lang,
@@ -243,15 +406,17 @@ function createChartData(
   }
   
   return {
-    labels: labels.map(formatDateLabel),
+    labels: allIntervals.map(formatDateLabel),
     datasets,
     aggregationLevel,
     timeRange: {
-      start: new Date(labels[0]),
-      end: new Date(labels[labels.length - 1])
+      start: startDate,
+      end: endDate
     }
   };
 }
+
+
 
 function formatDateLabel(dateStr: string): string {
   if (dateStr.length === 4) {
