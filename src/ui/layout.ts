@@ -12,8 +12,17 @@ import { renderOrUpdateMiniBarChart, MiniBarChartInstance } from './components/M
 // Add these imports at the top
 import { getSkillMatrixStats } from '../analysis/stats/getSkillMatrixStats';
 import { renderOrUpdateSkillMatrixHeatmap, SkillMatrixHeatmapInstance } from './components/SkillMatrixHeatmap';
+import { renderOrUpdateInteractiveChart, InteractiveChartInstance } from './components/InteractiveChart';
+
 // --- Constants ---
 const ACTIVE_INNER_DIV_CLASSES = 'text-label-1 dark:text-dark-label-1 bg-fill-3 dark:bg-dark-fill-3'.split(' ');
+let interactiveChart: InteractiveChartInstance | undefined;
+let interactiveChartFilters = {
+  primaryView: 'Submissions' as 'Submissions' | 'Problems Solved',
+  secondaryView: 'Difficulty' as 'Difficulty' | 'Language' | 'Status',
+  timeRange: 'All Time' as TimeRange,
+  difficulty: 'All' as Difficulty,
+};
 
 // --- State Management ---
 let codingClockChart: CodingClockChartInstance | undefined;
@@ -63,6 +72,7 @@ export function renderPageLayout(processedData: ProcessedData) {
  * A master function to render or update all charts at once.
  */
 function renderAllCharts(processedData: ProcessedData) {
+   renderInteractiveChart(processedData); // Add this line BEFORE 
     renderLegacySection(processedData); // Add this line
     renderCodingClock(processedData);
     renderCumulativeChart(processedData);
@@ -93,6 +103,17 @@ function renderFilteredCharts(processedData: ProcessedData) {
     // Legacy section is NOT included here
 }
 
+function renderInteractiveChart(processedData: ProcessedData) {
+  const container = document.getElementById('interactive-chart-container') as HTMLElement;
+  if (!container) return;
+  
+  interactiveChart = renderOrUpdateInteractiveChart(
+    container,
+    processedData,
+    interactiveChartFilters,
+    interactiveChart
+  );
+}
 
 function renderLegacySection(processedData: ProcessedData) {
   legacyStats = getLegacyStats(processedData);
@@ -333,6 +354,11 @@ function createStatsPaneWithGrid(): HTMLElement {
     statsPane.className = 'w-full';
     statsPane.innerHTML = `
     <div class="space-y-4">
+    <!-- INTERACTIVE CHART SECTION - Add this BEFORE the legacy section -->
+      <div class="rounded-lg bg-layer-2 dark:bg-dark-layer-2 p-4">
+        <h2 class="text-xl font-bold text-label-1 dark:text-dark-label-1 mb-4">Interactive Timeline</h2>
+        <div id="interactive-chart-container"></div>
+      </div>
        <!-- YOUR LEGACY SECTION -->
       <div class="rounded-lg bg-layer-2 dark:bg-dark-layer-2 p-4">
         <h2 class="text-xl font-bold text-label-1 dark:text-dark-label-1 mb-4">Your Legacy</h2>

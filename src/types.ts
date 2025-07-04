@@ -135,12 +135,38 @@ export interface SkillMatrixOptions {
   selectedMetric: 'acceptanceRate' | 'avgTries' | 'firstAceRate';
 }
 
-// In types.ts - update the DNA strand specific type
-export type DNATimeRange = 'daily' | 'monthly' | 'yearly'; // Changed from weekly to yearly
+// Add these interfaces to your existing types.ts
 
-// Update the options interface
-export interface DNAStrandOptions {
-  viewMode: 'problems' | 'submissions';
-  stackMode: 'difficulty' | 'language';
-  timeRange: DNATimeRange; // Use the new type
+export interface InteractiveChartData {
+  labels: string[];
+  datasets: {
+    label: string;
+    data: number[];
+    backgroundColor: string;
+    borderColor: string;
+    stack?: string;
+  }[];
+  aggregationLevel: 'Daily' | 'Monthly' | 'Yearly';
+  timeRange: { start: Date; end: Date };
+}
+
+export interface BrushChartData {
+  labels: string[];
+  data: number[];
+  fullTimeRange: { start: Date; end: Date };
+}
+
+export interface InteractiveChartFilters {
+  primaryView: 'Submissions' | 'Problems Solved';
+  secondaryView: 'Difficulty' | 'Language' | 'Status';
+  timeRange: TimeRange;
+  difficulty: Difficulty;
+  brushWindow?: [Date, Date];
+}
+
+export interface TooltipData {
+  date: string;
+  totalSubmissions: number;
+  problemsSolved: number;
+  breakdown: { [key: string]: number };
 }
