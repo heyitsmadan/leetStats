@@ -342,16 +342,54 @@ function setupFilterListeners(processedData: ProcessedData) {
         }
     });
 
-    cumulativeViewToggle.addEventListener('click', (e) => {
-        const target = e.target as HTMLButtonElement;
-        if (target.tagName !== 'BUTTON' || target.dataset.view === currentFilters.cumulativeView) return;
-        currentFilters.cumulativeView = target.dataset.view as CumulativeView;
-        cumulativeViewToggle.querySelectorAll('button').forEach(btn => {
-            btn.classList.toggle('bg-fill-3', btn.dataset.view === currentFilters.cumulativeView);
-            btn.classList.toggle('dark:bg-dark-fill-3', btn.dataset.view === currentFilters.cumulativeView);
-        });
-        renderCumulativeChart(processedData); // This filter is specific to one chart
+    
+    // NEW: Three-button toggle logic for cumulative view
+    const dailyViewBtn = document.getElementById('daily-view-btn') as HTMLButtonElement;
+    const monthlyViewBtn = document.getElementById('monthly-view-btn') as HTMLButtonElement;
+    const yearlyViewBtn = document.getElementById('yearly-view-btn') as HTMLButtonElement;
+
+    // Daily button click handler
+    dailyViewBtn.addEventListener('click', () => {
+        if (currentFilters.cumulativeView !== 'Daily') {
+            currentFilters.cumulativeView = 'Daily';
+            
+            // Update button states
+            dailyViewBtn.setAttribute('data-state', 'active');
+            monthlyViewBtn.setAttribute('data-state', 'inactive');
+            yearlyViewBtn.setAttribute('data-state', 'inactive');
+            
+            renderCumulativeChart(processedData);
+        }
     });
+
+    // Monthly button click handler
+    monthlyViewBtn.addEventListener('click', () => {
+        if (currentFilters.cumulativeView !== 'Monthly') {
+            currentFilters.cumulativeView = 'Monthly';
+            
+            // Update button states
+            monthlyViewBtn.setAttribute('data-state', 'active');
+            dailyViewBtn.setAttribute('data-state', 'inactive');
+            yearlyViewBtn.setAttribute('data-state', 'inactive');
+            
+            renderCumulativeChart(processedData);
+        }
+    });
+
+    // Yearly button click handler
+    yearlyViewBtn.addEventListener('click', () => {
+        if (currentFilters.cumulativeView !== 'Yearly') {
+            currentFilters.cumulativeView = 'Yearly';
+            
+            // Update button states
+            yearlyViewBtn.setAttribute('data-state', 'active');
+            dailyViewBtn.setAttribute('data-state', 'inactive');
+            monthlyViewBtn.setAttribute('data-state', 'inactive');
+            
+            renderCumulativeChart(processedData);
+        }
+    });
+
 
     
   //   const skillMatrixContainer = document.getElementById('skill-matrix-container');
@@ -432,19 +470,35 @@ function createStatsPaneWithGrid(): HTMLElement {
         </div>
         
         <!-- TOP-RIGHT: CUMULATIVE PROGRESS -->
-        <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-          <div class="flex justify-between items-center mb-4">
-            <h3 class="text-md font-medium text-label-1 dark:text-dark-label-1">Cumulative Progress</h3>
-            <div id="cumulative-view-toggle" class="flex text-xs bg-layer-2 dark:bg-dark-layer-2 p-1 rounded-md text-label-2 dark:text-dark-label-2">
-                <button data-view="Daily" class="px-2 py-0.5 rounded-md">Daily</button>
-                <button data-view="Monthly" class="px-2 py-0.5 rounded-md bg-fill-3 dark:bg-dark-fill-3">Monthly</button>
-                <button data-view="Yearly" class="px-2 py-0.5 rounded-md">Yearly</button>
-            </div>
-          </div>
-          <div class="relative h-80 w-full">
-            <canvas id="cumulative-chart"></canvas>
-          </div>
-        </div>
+<div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
+  <div class="flex justify-between items-center mb-4">
+    <h3 class="text-md font-medium text-label-1 dark:text-dark-label-1">Cumulative Progress</h3>
+    <!-- NEW: Three-button toggle with same design as coding clock -->
+    <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
+      <button id="daily-view-btn" 
+              data-view="Daily"
+              data-state="inactive"
+              class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
+        Daily
+      </button>
+      <button id="monthly-view-btn" 
+              data-view="Monthly"
+              data-state="active"
+              class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
+        Monthly
+      </button>
+      <button id="yearly-view-btn" 
+              data-view="Yearly"
+              data-state="inactive"
+              class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
+        Yearly
+      </button>
+    </div>
+  </div>
+  <div class="relative h-80 w-full">
+    <canvas id="cumulative-chart"></canvas>
+  </div>
+</div>
 
         <!-- BOTTOM-LEFT: SUBMISSION SIGNATURE -->
         <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">

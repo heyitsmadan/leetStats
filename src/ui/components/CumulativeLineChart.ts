@@ -18,54 +18,65 @@ export function renderOrUpdateCumulativeLineChart(
             if (existingChart.data.datasets[index]) {
                 existingChart.data.datasets[index].data = newDataset.data;
                 existingChart.data.datasets[index].label = newDataset.label;
+                existingChart.data.datasets[index].borderColor = newDataset.borderColor;
             }
         });
         existingChart.update();
         return existingChart;
     }
 
+    // **UPDATED:** Add pointRadius: 0 to remove circles
+    const processedChartData = {
+        ...chartData,
+        datasets: chartData.datasets.map(dataset => ({
+            ...dataset,
+            pointRadius: 0, // **NEW:** Remove circles on data points
+            pointHoverRadius: 4, // **NEW:** Show small circle only on hover
+        }))
+    };
+
     const config: ChartConfiguration<'line', number[], string> = {
         type: 'line',
-        data: chartData,
+        data: processedChartData,
         options: {
             responsive: true,
             maintainAspectRatio: false,
             scales: {
                 x: {
+                    // **UPDATED:** Remove background grid lines
                     grid: {
-                        color: 'rgba(255, 255, 255, 0.1)',
+                        display: false,
                     },
                     ticks: {
-                        color: '#a0aec0', // Gray-400
+                        color: '#bdbeb3', // **UPDATED:** Numbers color
                     },
                 },
                 y: {
                     beginAtZero: true,
+                    // **UPDATED:** Remove background grid lines
                     grid: {
-                        color: 'rgba(255, 255, 255, 0.1)',
+                        display: false,
                     },
                     ticks: {
-                        color: '#a0aec0', // Gray-400
+                        color: '#bdbeb3', // **UPDATED:** Numbers color
                     },
                 },
             },
             plugins: {
+                // **UPDATED:** Remove legend
                 legend: {
-                    position: 'bottom',
-                    labels: {
-                        color: '#a0aec0',
-                        boxWidth: 20,
-                    },
+                    display: false,
                 },
                 tooltip: {
                     mode: 'index',
                     intersect: false,
                     position: 'nearest',
-                    backgroundColor: '#2d3748', // Gray-800
-                    titleColor: '#e2e8f0', // Gray-200
-                    bodyColor: '#e2e8f0',
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#bdbeb3',
+                    bodyColor: '#bdbeb3',
+                    borderColor: '#5db666',
+                    borderWidth: 1,
                     callbacks: {
-                        // Custom tooltip formatting
                         title: function (tooltipItems) {
                              return tooltipItems[0].label;
                         },

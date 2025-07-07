@@ -21,6 +21,26 @@ const formatDate = (date: Date, view: CumulativeView): string => {
     return date.toLocaleDateString(undefined, { year: 'numeric' });
 };
 
+// Helper to generate complete date range
+const generateDateRange = (startDate: Date, endDate: Date, view: CumulativeView): Date[] => {
+    const dates: Date[] = [];
+    const current = new Date(startDate);
+    
+    while (current <= endDate) {
+        dates.push(new Date(current));
+        
+        if (view === 'Daily') {
+            current.setDate(current.getDate() + 1);
+        } else if (view === 'Monthly') {
+            current.setMonth(current.getMonth() + 1);
+        } else { // Yearly
+            current.setFullYear(current.getFullYear() + 1);
+        }
+    }
+    
+    return dates;
+};
+
 export function getCumulativeStats(
     processedData: ProcessedData,
     filters: { timeRange: TimeRange; difficulty: Difficulty; cumulativeView: CumulativeView }
@@ -32,41 +52,58 @@ export function getCumulativeStats(
     // 1. Filter submissions based on TimeRange and Difficulty
     const now = new Date();
     const filteredSubmissions = submissions.filter(sub => {
-    const submissionDate = sub.date;
-    let inTimeRange = false;
+        const submissionDate = sub.date;
+        let inTimeRange = false;
 
-    const getPastDate = (days: number) => {
-        const date = new Date(now);
-        date.setDate(now.getDate() - days);
-        return date;
-    };
+        const getPastDate = (days: number) => {
+            const date = new Date(now);
+            date.setDate(now.getDate() - days);
+            return date;
+        };
 
-    switch (timeRange) {
-        case 'All Time':
-            inTimeRange = true;
-            break;
-        case 'Last 30 Days':
-            inTimeRange = submissionDate >= getPastDate(30);
-            break;
-        case 'Last 90 Days':
-            inTimeRange = submissionDate >= getPastDate(90);
-            break;
-        case 'Last 365 Days':
-            inTimeRange = submissionDate >= getPastDate(365);
-            break;
-    }
+        switch (timeRange) {
+            case 'All Time':
+                inTimeRange = true;
+                break;
+            case 'Last 30 Days':
+                inTimeRange = submissionDate >= getPastDate(30);
+                break;
+            case 'Last 90 Days':
+                inTimeRange = submissionDate >= getPastDate(90);
+                break;
+            case 'Last 365 Days':
+                inTimeRange = submissionDate >= getPastDate(365);
+                break;
+        }
 
-    const inDifficulty = difficulty === 'All' || sub.metadata?.difficulty === difficulty;
+        const inDifficulty = difficulty === 'All' || sub.metadata?.difficulty === difficulty;
 
-    return inTimeRange && inDifficulty;
-});
-
+        return inTimeRange && inDifficulty;
+    });
 
     if (filteredSubmissions.length === 0) {
         return { labels: [], datasets: [] };
     }
 
-    // 2. Group submissions by the selected view (Daily, Monthly, Yearly)
+    // 2. Determine date range for complete timeline
+    const submissionDates = filteredSubmissions.map(sub => sub.date);
+    const minDate = new Date(Math.min(...submissionDates.map(d => d.getTime())));
+    const maxDate = new Date(Math.max(...submissionDates.map(d => d.getTime())));
+
+    // Normalize dates based on view
+    let startDate: Date, endDate: Date;
+    if (cumulativeView === 'Daily') {
+        startDate = new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate());
+        endDate = new Date(maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate());
+    } else if (cumulativeView === 'Monthly') {
+        startDate = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+        endDate = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
+    } else { // Yearly
+        startDate = new Date(minDate.getFullYear(), 0, 1);
+        endDate = new Date(maxDate.getFullYear(), 0, 1);
+    }
+
+    // 3. Group submissions by the selected view
     const groupedData = new Map<string, {
         submissions: number;
         easySolved: Set<string>;
@@ -102,9 +139,9 @@ export function getCumulativeStats(
         }
     }
 
-    // 3. Create cumulative data points from sorted groups
-    const sortedKeys = Array.from(groupedData.keys()).sort();
-
+    // 4. Generate complete date range and fill missing data points
+    const allDates = generateDateRange(startDate, endDate, cumulativeView);
+    
     const labels: string[] = [];
     const totalSubmissionsData: number[] = [];
     const easyData: number[] = [];
@@ -116,15 +153,18 @@ export function getCumulativeStats(
     const solvedMedium = new Set<string>();
     const solvedHard = new Set<string>();
 
-    for (const key of sortedKeys) {
-        const group = groupedData.get(key)!;
-        const date = new Date(key);
+    for (const date of allDates) {
+        const key = date.toISOString();
+        const group = groupedData.get(key);
 
-        cumulativeSubmissions += group.submissions;
-
-        group.easySolved.forEach(slug => solvedEasy.add(slug));
-        group.mediumSolved.forEach(slug => solvedMedium.add(slug));
-        group.hardSolved.forEach(slug => solvedHard.add(slug));
+        if (group) {
+            // Data exists for this date
+            cumulativeSubmissions += group.submissions;
+            group.easySolved.forEach(slug => solvedEasy.add(slug));
+            group.mediumSolved.forEach(slug => solvedMedium.add(slug));
+            group.hardSolved.forEach(slug => solvedHard.add(slug));
+        }
+        // If no data exists, cumulative values remain the same
 
         labels.push(formatDate(date, cumulativeView));
         totalSubmissionsData.push(cumulativeSubmissions);
@@ -133,35 +173,35 @@ export function getCumulativeStats(
         hardData.push(solvedHard.size);
     }
 
-    // 4. Format for Chart.js
+    // 5. Format for Chart.js with updated colors
     return {
         labels,
         datasets: [
             {
                 label: 'Total Submissions',
                 data: totalSubmissionsData,
-                borderColor: '#808080', // Grey
+                borderColor: '#353535', // **UPDATED:** Submissions color
                 fill: false,
                 tension: 0.4,
             },
             {
                 label: 'Easy Solved',
                 data: easyData,
-                borderColor: 'rgb(75, 192, 192)', // LC Green
+                borderColor: '#58b8b9', // **UPDATED:** Easy color
                 fill: false,
                 tension: 0.4,
             },
             {
                 label: 'Medium Solved',
                 data: mediumData,
-                borderColor: 'rgb(255, 159, 64)', // LC Yellow
+                borderColor: '#f4ba40', // **UPDATED:** Medium color
                 fill: false,
                 tension: 0.4,
             },
             {
                 label: 'Hard Solved',
                 data: hardData,
-                borderColor: 'rgb(255, 99, 132)', // LC Red
+                borderColor: '#e24a41', // **UPDATED:** Hard color
                 fill: false,
                 tension: 0.4,
             },
