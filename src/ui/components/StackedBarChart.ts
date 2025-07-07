@@ -8,9 +8,6 @@ const GLOW_BLUR = 15;
 
 /**
  * Renders or updates a stacked bar chart.
- * @param canvas The <canvas> element to draw on.
- * @param data The data from getCodingClockStats.
- * @returns The Chart.js instance.
  */
 export function renderOrUpdateStackedBarChart(
     canvas: HTMLCanvasElement,
@@ -24,35 +21,56 @@ export function renderOrUpdateStackedBarChart(
     };
 
     const options: ChartOptions = {
-        // **FIX:** indexAxis is removed, making the chart vertical by default.
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
+            // **UPDATED:** Custom tooltip for entire bar
             tooltip: {
+                mode: 'index',
+                intersect: false,
                 callbacks: {
-                    footer: (tooltipItems: any) => {
+                    title: (tooltipItems: any) => {
                         const index = tooltipItems[0].dataIndex;
                         const tooltipData = data.tooltipsData[index];
-                        return `Total: ${tooltipData.total}\nAccepted: ${tooltipData.accepted}\nRate: ${tooltipData.rate}`;
+                        return tooltipData.label;
+                    },
+                    label: () => '', // Remove individual dataset labels
+                    afterBody: (tooltipItems: any) => {
+                        const index = tooltipItems[0].dataIndex;
+                        const tooltipData = data.tooltipsData[index];
+                        return [
+                            `Submissions: ${tooltipData.total}`,
+                            `Accepted: ${tooltipData.accepted}`,
+                            `Rate: ${tooltipData.rate}`
+                        ];
                     },
                 },
+                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                titleColor: '#bdbeb3',
+                bodyColor: '#bdbeb3',
+                borderColor: '#5db666',
+                borderWidth: 1,
             },
+            // **UPDATED:** Remove legend
             legend: {
-                position: 'top',
-                labels: { color: 'rgba(255, 255, 255, 0.9)' }
+                display: false
             },
         },
         scales: {
-            // **FIX:** Swapped x and y axis configurations for vertical orientation.
-            x: { // This is now the category axis (Hour/Day)
+            x: {
                 stacked: true,
-                ticks: { color: 'rgba(255, 255, 255, 0.7)' },
+                ticks: { 
+                    color: '#bdbeb3' // **UPDATED:** Numbers color
+                },
                 grid: { display: false }
             },
-            y: { // This is now the value axis (Submission Count)
+            y: {
                 stacked: true,
-                ticks: { color: 'rgba(255, 255, 255, 0.7)' },
-                grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                ticks: { 
+                    color: '#bdbeb3' // **UPDATED:** Numbers color
+                },
+                // **UPDATED:** Remove background horizontal lines
+                grid: { display: false }
             },
         },
         elements: {

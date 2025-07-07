@@ -34,7 +34,7 @@ let legacyStats: any = null;
 let currentFilters = {
     timeRange: 'All Time' as TimeRange,
     difficulty: 'All' as Difficulty,
-    clockView: 'HourOfDay' as ClockView,
+    clockView: 'DayOfWeek' as ClockView,
     cumulativeView: 'Monthly' as CumulativeView,
 };
 // Add this to your state management section
@@ -301,7 +301,6 @@ function renderSkillMatrix(processedData: ProcessedData) {
 function setupFilterListeners(processedData: ProcessedData) {
     const timeRangeSelect = document.getElementById('time-range-filter') as HTMLSelectElement;
     const difficultySelect = document.getElementById('difficulty-filter') as HTMLSelectElement;
-    const clockViewToggle = document.getElementById('clock-view-toggle') as HTMLButtonElement;
     const cumulativeViewToggle = document.getElementById('cumulative-view-toggle') as HTMLDivElement;
 
     timeRangeSelect.addEventListener('change', () => {
@@ -314,10 +313,33 @@ function setupFilterListeners(processedData: ProcessedData) {
         renderFilteredCharts(processedData);
     });
 
-    clockViewToggle.addEventListener('click', () => {
-        currentFilters.clockView = currentFilters.clockView === 'HourOfDay' ? 'DayOfWeek' : 'HourOfDay';
-        clockViewToggle.textContent = `View by ${currentFilters.clockView === 'HourOfDay' ? 'Day' : 'Hour'}`;
-        renderCodingClock(processedData); // This filter is specific to one chart
+    // NEW: Two-button toggle logic
+    const dayViewBtn = document.getElementById('day-view-btn') as HTMLButtonElement;
+    const hourViewBtn = document.getElementById('hour-view-btn') as HTMLButtonElement;
+    // NEW: Day View button click handler
+    dayViewBtn.addEventListener('click', () => {
+        if (currentFilters.clockView !== 'DayOfWeek') {
+            currentFilters.clockView = 'DayOfWeek';
+            
+            // Update button states
+            dayViewBtn.setAttribute('data-state', 'active');
+            hourViewBtn.setAttribute('data-state', 'inactive');
+            
+            renderCodingClock(processedData);
+        }
+    });
+
+    // NEW: Hour View button click handler
+    hourViewBtn.addEventListener('click', () => {
+        if (currentFilters.clockView !== 'HourOfDay') {
+            currentFilters.clockView = 'HourOfDay';
+            
+            // Update button states
+            hourViewBtn.setAttribute('data-state', 'active');
+            dayViewBtn.setAttribute('data-state', 'inactive');
+            
+            renderCodingClock(processedData);
+        }
     });
 
     cumulativeViewToggle.addEventListener('click', (e) => {
@@ -387,8 +409,22 @@ function createStatsPaneWithGrid(): HTMLElement {
         <!-- TOP-LEFT: CODING CLOCK -->
         <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
           <div class="flex justify-between items-center mb-4">
-            <h3 class="text-md font-medium text-label-1 dark:text-dark-label-1">Coding Clock</h3>
-            <button id="clock-view-toggle" class="text-xs bg-layer-2 dark:bg-dark-layer-2 px-2 py-1 rounded-md text-label-2 dark:text-dark-label-2 hover:bg-fill-3 dark:hover:bg-dark-fill-3">View by Day</button>
+            <!-- **UPDATED:** Heading color -->
+            <h3 class="text-md font-medium" style="color: #f9ffff;">Coding Clock</h3>
+            <!-- **UPDATED:** Button text for default day view -->
+            <!-- NEW: Two-button toggle -->
+<div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
+  <button id="day-view-btn" 
+          data-state="active"
+          class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
+    Day View
+  </button>
+  <button id="hour-view-btn" 
+          data-state="inactive"
+          class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
+    Hour View
+  </button>
+</div>
           </div>
           <div class="relative h-80 w-full">
             <canvas id="coding-clock-chart"></canvas>
