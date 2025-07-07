@@ -356,7 +356,7 @@ function createStatsPaneWithGrid(): HTMLElement {
     <div class="space-y-4">
     <!-- INTERACTIVE CHART SECTION - Add this BEFORE the legacy section -->
       <div class="rounded-lg bg-layer-2 dark:bg-dark-layer-2 p-4">
-        <h2 class="text-xl font-bold text-label-1 dark:text-dark-label-1 mb-4">Interactive Timeline</h2>
+        <h2 class="text-xl font-bold text-label-1 dark:text-dark-label-1 mb-4">DNA Strand</h2>
         <div id="interactive-chart-container"></div>
       </div>
        <!-- YOUR LEGACY SECTION -->

@@ -32,30 +32,31 @@ export function renderOrUpdateInteractiveChart(
   container.innerHTML = `
     <div class="interactive-chart-container">
       <!-- Global Toggles -->
-      <div class="mb-4">
-        <!-- Primary Toggle -->
-        <div class="flex mb-3">
-          <button id="primary-submissions" class="primary-toggle-btn active px-6 py-3 rounded-l-lg font-medium transition-all duration-300">
-            Submissions
-          </button>
-          <button id="primary-problems" class="primary-toggle-btn px-6 py-3 rounded-r-lg font-medium transition-all duration-300">
-            Problems Solved
-          </button>
-        </div>
-        
-        <!-- Secondary Toggle -->
-        <div class="flex space-x-2">
-          <button id="secondary-difficulty" class="secondary-toggle-btn active px-4 py-2 rounded-full text-sm font-medium transition-all duration-200">
-            Difficulty
-          </button>
-          <button id="secondary-language" class="secondary-toggle-btn px-4 py-2 rounded-full text-sm font-medium transition-all duration-200">
-            Language
-          </button>
-          <button id="secondary-status" class="secondary-toggle-btn px-4 py-2 rounded-full text-sm font-medium transition-all duration-200">
-            Status
-          </button>
-        </div>
-      </div>
+<div class="flex justify-between items-center mb-4">
+  <!-- Primary Toggle (Left) -->
+  <div id="primary-view-toggle" class="flex text-xs bg-layer-2 dark:bg-dark-layer-2 p-1 rounded-md text-label-2 dark:text-dark-label-2">
+    <button id="primary-submissions" data-view="Submissions" class="px-2 py-0.5 rounded-md bg-fill-3 dark:bg-dark-fill-3">
+      Submissions
+    </button>
+    <button id="primary-problems" data-view="Problems Solved" class="px-2 py-0.5 rounded-md">
+      Problems Solved
+    </button>
+  </div>
+  
+  <!-- Secondary Toggle (Right) -->
+  <div id="secondary-view-toggle" class="flex text-xs bg-layer-2 dark:bg-dark-layer-2 p-1 rounded-md text-label-2 dark:text-dark-label-2">
+    <button id="secondary-difficulty" data-view="Difficulty" class="px-2 py-0.5 rounded-md bg-fill-3 dark:bg-dark-fill-3">
+      Difficulty
+    </button>
+    <button id="secondary-language" data-view="Language" class="px-2 py-0.5 rounded-md">
+      Language
+    </button>
+    <button id="secondary-status" data-view="Status" class="px-2 py-0.5 rounded-md">
+      Status
+    </button>
+  </div>
+</div>
+
 
       <!-- Main Chart -->
       <div class="main-chart-container mb-4" style="height: 400px;">
@@ -97,6 +98,52 @@ export function renderOrUpdateInteractiveChart(
   // Add styles
   const style = document.createElement('style');
   style.textContent = `
+  .interactive-chart-container {
+  font-family: inherit;
+}
+
+/* Remove the old toggle button styles and replace with these */
+#primary-view-toggle button,
+#secondary-view-toggle button {
+  transition: all 0.2s ease;
+  font-weight: 500;
+}
+
+#primary-view-toggle button.active,
+#secondary-view-toggle button.active {
+  background: var(--fill-3, #e5e5e5);
+  color: var(--label-1, #333);
+}
+
+#primary-view-toggle button:not(.active),
+#secondary-view-toggle button:not(.active) {
+  background: transparent;
+  color: var(--label-2, #666);
+}
+
+#primary-view-toggle button:hover:not(.active),
+#secondary-view-toggle button:hover:not(.active) {
+  background: var(--fill-2, #f0f0f0);
+}
+
+/* Keep your existing tooltip and other styles */
+.chart-tooltip {
+  position: absolute;
+  background: var(--layer-1, white);
+  border: 1px solid var(--divider-3, #ddd);
+  border-radius: 8px;
+  padding: 12px;
+  font-size: 14px;
+  color: var(--label-1, #333);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  pointer-events: none;
+  z-index: 1000;
+  display: none;
+  max-width: 300px;
+}
+
+/* ... rest of your existing styles ... */
+
     .interactive-chart-container {
       font-family: inherit;
     }
@@ -334,49 +381,45 @@ export function renderOrUpdateInteractiveChart(
 
 
   function setupEventListeners() {
-    // Primary toggle listeners
-    const primaryButtons = container.querySelectorAll('.primary-toggle-btn');
-    primaryButtons.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
-        const newView = target.id === 'primary-submissions' ? 'Submissions' : 'Problems Solved';
-        
-        if (newView === currentFilters.primaryView) return;
+  // Primary toggle listeners
+  const primaryButtons = container.querySelectorAll('#primary-view-toggle button');
+  primaryButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const newView = target.dataset.view as 'Submissions' | 'Problems Solved';
+      
+      if (newView === currentFilters.primaryView) return;
 
-        // Update active states
-        primaryButtons.forEach(b => b.classList.remove('active'));
-        target.classList.add('active');
+      // Update active states
+      primaryButtons.forEach(b => b.classList.remove('active'));
+      target.classList.add('active');
 
-        // Update filters and chart
-        currentFilters.primaryView = newView;
-        updateMainChart();
-      });
+      // Update filters and chart
+      currentFilters.primaryView = newView;
+      updateMainChart();
     });
+  });
 
-    // Secondary toggle listeners
-    const secondaryButtons = container.querySelectorAll('.secondary-toggle-btn');
-    secondaryButtons.forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
-        const viewMap: { [key: string]: 'Difficulty' | 'Language' | 'Status' } = {
-          'secondary-difficulty': 'Difficulty',
-          'secondary-language': 'Language',
-          'secondary-status': 'Status'
-        };
-        const newView = viewMap[target.id];
-        
-        if (newView === currentFilters.secondaryView) return;
+  // Secondary toggle listeners
+  const secondaryButtons = container.querySelectorAll('#secondary-view-toggle button');
+  secondaryButtons.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement;
+      const newView = target.dataset.view as 'Difficulty' | 'Language' | 'Status';
+      
+      if (newView === currentFilters.secondaryView) return;
 
-        // Update active states
-        secondaryButtons.forEach(b => b.classList.remove('active'));
-        target.classList.add('active');
+      // Update active states
+      secondaryButtons.forEach(b => b.classList.remove('active'));
+      target.classList.add('active');
 
-        // Update filters and chart
-        currentFilters.secondaryView = newView;
-        updateMainChart();
-      });
+      // Update filters and chart
+      currentFilters.secondaryView = newView;
+      updateMainChart();
     });
-  }
+  });
+}
+
 
   function handleTooltip(context: any) {
     const tooltip = container.querySelector('#chart-tooltip') as HTMLElement;
