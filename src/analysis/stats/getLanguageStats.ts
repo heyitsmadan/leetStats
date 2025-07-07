@@ -19,7 +19,7 @@ export function getLanguageStats(
   const { submissions } = processedData;
   const { timeRange, difficulty } = filters;
 
-  // --- 1. Filter submissions based on dropdowns ---
+  // Filter submissions (existing code remains the same)
   const now = new Date();
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -35,14 +35,13 @@ export function getLanguageStats(
     }
 
     return true;
-});
-
+  });
 
   if (filteredSubmissions.length === 0) {
       return null;
   }
 
-  // --- 2. Aggregate data by language ---
+  // Aggregate data by language (existing code remains the same)
   const langMap = new Map<string, {
     accepted: number;
     failed: number;
@@ -67,10 +66,8 @@ export function getLanguageStats(
     }
     const bucket = langMap.get(sub.lang)!;
     
-    // Update counts
     if (sub.status === STATUS_ACCEPTED) {
         bucket.accepted++;
-        // Update solved difficulty counts ONLY for accepted submissions
         if (sub.metadata?.difficulty === 'Easy') bucket.solvedEasy++;
         else if (sub.metadata?.difficulty === 'Medium') bucket.solvedMedium++;
         else if (sub.metadata?.difficulty === 'Hard') bucket.solvedHard++;
@@ -78,12 +75,11 @@ export function getLanguageStats(
         bucket.failed++;
     }
     
-    // Update first/last used dates
     if (sub.date < bucket.firstUsed) bucket.firstUsed = sub.date;
     if (sub.date > bucket.lastUsed) bucket.lastUsed = sub.date;
   }
   
-  // --- 3. Find the "best" language for the glow effect ---
+  // Find the "best" language for glow effect
   let bestLang = '';
   let maxRate = -1;
 
@@ -98,7 +94,7 @@ export function getLanguageStats(
     }
   });
 
-  // --- 4. Format data for Chart.js ---
+  // Format data for Chart.js
   const sortedLangs = Array.from(langMap.entries()).sort((a, b) => (b[1].accepted + b[1].failed) - (a[1].accepted + a[1].failed));
 
   return {
@@ -107,16 +103,17 @@ export function getLanguageStats(
       {
         label: 'Accepted',
         data: sortedLangs.map(entry => entry[1].accepted),
-        backgroundColor: 'rgba(75, 192, 192, 0.7)',
+        backgroundColor: '#5db666', // Updated color
       },
       {
         label: 'Failed',
         data: sortedLangs.map(entry => entry[1].failed),
-        backgroundColor: 'rgba(156, 163, 175, 0.5)',
+        backgroundColor: '#353535', // Updated color
       }
     ],
     tooltipsData: sortedLangs.map(entry => ({
         total: entry[1].accepted + entry[1].failed,
+        accepted: entry[1].accepted, // Add this line
         rate: entry[1].accepted + entry[1].failed > 0 ? ((entry[1].accepted / (entry[1].accepted + entry[1].failed)) * 100).toFixed(1) + '%' : 'N/A',
         solvedBreakdown: { E: entry[1].solvedEasy, M: entry[1].solvedMedium, H: entry[1].solvedHard },
         firstUsed: formatDate(entry[1].firstUsed),
@@ -125,3 +122,4 @@ export function getLanguageStats(
     bestLang,
   };
 }
+

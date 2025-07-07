@@ -6,14 +6,6 @@ export type HorizontalBarChartInstance = Chart;
 const GLOW_COLOR = 'rgba(255, 255, 0, 0.7)';
 const GLOW_BLUR = 15;
 
-/**
- * Renders or updates a horizontal stacked bar chart for language stats.
- * @param canvas The <canvas> element to draw on.
- * @param data The data from getLanguageStats.
- * @param filters The current global filter settings.
- * @param existingChart An optional existing chart instance to update.
- * @returns The new or updated Chart.js instance.
- */
 export function renderOrUpdateHorizontalBarChart(
     canvas: HTMLCanvasElement,
     data: any,
@@ -27,33 +19,37 @@ export function renderOrUpdateHorizontalBarChart(
     };
 
     const options: ChartOptions = {
-        indexAxis: 'y', // This makes it a horizontal bar chart
+        indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
         plugins: {
             legend: { display: false },
             tooltip: {
+                mode: 'index', // Single tooltip for entire bar
+                intersect: false,
                 callbacks: {
                     title: (tooltipItems) => {
-                        // Use the language name as the title
-                        return tooltipItems[0].label;
+                        return tooltipItems[0].label; // Language name
                     },
-                    label: (context) => {
-                        // Show "Accepted: X" or "Failed: Y"
-                        return ` ${context.dataset.label}: ${context.raw}`;
+                    label: () => {
+                        return []; // Remove individual dataset labels
                     },
                     footer: (tooltipItems) => {
                         const index = tooltipItems[0].dataIndex;
                         const tooltipData = data.tooltipsData[index];
                         const breakdown = tooltipData.solvedBreakdown;
-                        let footerText = `\nTotal: ${tooltipData.total}\nSuccess Rate: ${tooltipData.rate}`;
                         
-                        // Only show difficulty breakdown if 'All' is selected
+                        let footerText = `Total Submissions: ${tooltipData.total}`;
+                        footerText += `\nAccepted: ${tooltipData.accepted}`;
+                        footerText += `\nSuccess Rate: ${tooltipData.rate}`;
+                        
                         if (filters.difficulty === 'All') {
                             footerText += `\nSolved: E:${breakdown.E} M:${breakdown.M} H:${breakdown.H}`;
                         }
                         
-                        footerText += `\n\nFirst used: ${tooltipData.firstUsed}\nLast used: ${tooltipData.lastUsed}`;
+                        footerText += `\nFirst used: ${tooltipData.firstUsed}`;
+                        footerText += `\nLast used: ${tooltipData.lastUsed}`;
+                        
                         return footerText;
                     },
                 },
@@ -63,12 +59,12 @@ export function renderOrUpdateHorizontalBarChart(
             x: {
                 stacked: true,
                 ticks: { color: 'rgba(255, 255, 255, 0.7)' },
-                grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                grid: { display: false } // Remove background lines
             },
             y: {
                 stacked: true,
                 ticks: { color: 'rgba(255, 255, 255, 0.7)' },
-                grid: { display: false }
+                grid: { display: false } // Remove background lines
             },
         },
         elements: {
