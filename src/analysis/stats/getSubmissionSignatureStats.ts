@@ -2,15 +2,16 @@ import type { ProcessedData, Difficulty, TimeRange } from '../../types';
 
 // Constants for mapping status codes to human-readable labels and colors.
 const STATUS_MAP: { [key: number]: { label: string; color: string } } = {
-  10: { label: 'Accepted', color: 'rgba(75, 192, 192, 0.8)' },
-  11: { label: 'Wrong Answer', color: 'rgba(255, 99, 132, 0.8)' },
-  12: { label: 'Memory Limit Exceeded', color: 'rgba(255, 159, 64, 0.8)' },
-  14: { label: 'Time Limit Exceeded', color: 'rgba(255, 205, 86, 0.8)' },
-  20: { label: 'Compile Error', color: 'rgba(153, 102, 255, 0.8)' },
+  10: { label: 'Accepted', color: '#5db666' },
+  11: { label: 'Wrong Answer', color: '#e66b62' },
+  12: { label: 'Memory Limit Exceeded', color: '#58b8b9' },
+  14: { label: 'Time Limit Exceeded', color: '#6c7a89' },
+  20: { label: 'Compile Error', color: '#a056d5' },
 };
 
 // Default for any other status code (13, 15, etc.).
-const RUNTIME_ERROR_DEFAULT = { label: 'Runtime Error', color: 'rgba(201, 203, 207, 0.8)' };
+const RUNTIME_ERROR_DEFAULT = { label: 'Runtime Error', color: '#f28500' };
+
 
 /**
  * Calculates all necessary data for the Submission Signature doughnut chart.
