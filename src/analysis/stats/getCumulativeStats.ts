@@ -173,38 +173,71 @@ export function getCumulativeStats(
         hardData.push(solvedHard.size);
     }
 
-    // 5. Format for Chart.js with updated colors
-    return {
-        labels,
-        datasets: [
-            {
-                label: 'Total Submissions',
-                data: totalSubmissionsData,
-                borderColor: '#353535', // **UPDATED:** Submissions color
-                fill: false,
-                tension: 0.4,
-            },
-            {
-                label: 'Easy Solved',
-                data: easyData,
-                borderColor: '#58b8b9', // **UPDATED:** Easy color
-                fill: false,
-                tension: 0.4,
-            },
-            {
-                label: 'Medium Solved',
-                data: mediumData,
-                borderColor: '#f4ba40', // **UPDATED:** Medium color
-                fill: false,
-                tension: 0.4,
-            },
-            {
-                label: 'Hard Solved',
-                data: hardData,
-                borderColor: '#e24a41', // **UPDATED:** Hard color
-                fill: false,
-                tension: 0.4,
-            },
-        ]
-    };
+    // 5. Format for Chart.js with updated colors and conditional datasets
+const datasets = [
+    {
+        label: 'Total Submissions',
+        data: totalSubmissionsData,
+        borderColor: '#353535',
+        fill: false,
+        tension: 0.4,
+    }
+];
+
+// Only add difficulty-specific datasets if difficulty is 'All' or matches the specific difficulty
+if (difficulty === 'All') {
+    datasets.push(
+        {
+            label: 'Easy Solved',
+            data: easyData,
+            borderColor: '#58b8b9',
+            fill: false,
+            tension: 0.4,
+        },
+        {
+            label: 'Medium Solved',
+            data: mediumData,
+            borderColor: '#f4ba40',
+            fill: false,
+            tension: 0.4,
+        },
+        {
+            label: 'Hard Solved',
+            data: hardData,
+            borderColor: '#e24a41',
+            fill: false,
+            tension: 0.4,
+        }
+    );
+} else if (difficulty === 'Easy') {
+    datasets.push({
+        label: 'Easy Solved',
+        data: easyData,
+        borderColor: '#58b8b9',
+        fill: false,
+        tension: 0.4,
+    });
+} else if (difficulty === 'Medium') {
+    datasets.push({
+        label: 'Medium Solved',
+        data: mediumData,
+        borderColor: '#f4ba40',
+        fill: false,
+        tension: 0.4,
+    });
+} else if (difficulty === 'Hard') {
+    datasets.push({
+        label: 'Hard Solved',
+        data: hardData,
+        borderColor: '#e24a41',
+        fill: false,
+        tension: 0.4,
+    });
+}
+
+return {
+    labels,
+    datasets
+};
+
 }

@@ -13,18 +13,21 @@ export function renderOrUpdateCumulativeLineChart(
 ): CumulativeLineChartInstance {
     if (existingChart) {
         existingChart.data.labels = chartData.labels;
-        // Important: Update each dataset individually to preserve styling and settings
-        chartData.datasets.forEach((newDataset, index) => {
-            if (existingChart.data.datasets[index]) {
-                existingChart.data.datasets[index].data = newDataset.data;
-                existingChart.data.datasets[index].label = newDataset.label;
-                existingChart.data.datasets[index].borderColor = newDataset.borderColor;
-            }
+        
+        // Clear existing datasets and add new ones
+        existingChart.data.datasets = [];
+        chartData.datasets.forEach((newDataset) => {
+            existingChart.data.datasets.push({
+                ...newDataset,
+                pointRadius: 0,
+                pointHoverRadius: 4,
+            });
         });
+        
         existingChart.update();
         return existingChart;
     }
-
+    
     // **UPDATED:** Add pointRadius: 0 to remove circles
     const processedChartData = {
         ...chartData,

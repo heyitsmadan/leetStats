@@ -299,20 +299,90 @@ function renderSkillMatrix(processedData: ProcessedData) {
 
 
 function setupFilterListeners(processedData: ProcessedData) {
-    const timeRangeSelect = document.getElementById('time-range-filter') as HTMLSelectElement;
-    const difficultySelect = document.getElementById('difficulty-filter') as HTMLSelectElement;
-    const cumulativeViewToggle = document.getElementById('cumulative-view-toggle') as HTMLDivElement;
+  // Time Range Dropdown Logic
+    const timeRangeBtn = document.getElementById('time-range-dropdown-btn') as HTMLButtonElement;
+    const timeRangeOptions = document.getElementById('time-range-dropdown-options') as HTMLDivElement;
+    const timeRangeOptionElements = timeRangeOptions?.querySelectorAll('[data-value]');
 
-    timeRangeSelect.addEventListener('change', () => {
-        currentFilters.timeRange = timeRangeSelect.value as TimeRange;
-        renderFilteredCharts(processedData);
+    timeRangeBtn?.addEventListener('click', () => {
+        const isOpen = timeRangeOptions.classList.contains('hidden');
+        if (isOpen) {
+            timeRangeOptions.classList.remove('hidden');
+            timeRangeBtn.setAttribute('aria-expanded', 'true');
+        } else {
+            timeRangeOptions.classList.add('hidden');
+            timeRangeBtn.setAttribute('aria-expanded', 'false');
+        }
     });
 
-    difficultySelect.addEventListener('change', () => {
-        currentFilters.difficulty = difficultySelect.value as Difficulty;
-        renderFilteredCharts(processedData);
+    timeRangeOptionElements?.forEach(option => {
+        option.addEventListener('click', () => {
+            const value = option.getAttribute('data-value') as TimeRange;
+            const span = timeRangeBtn.querySelector('span');
+            if (span) span.textContent = value;
+            
+            currentFilters.timeRange = value;
+            timeRangeOptions.classList.add('hidden');
+            timeRangeBtn.setAttribute('aria-expanded', 'false');
+            
+            // Update visual selection
+            timeRangeOptionElements.forEach(opt => {
+                opt.classList.remove('bg-fill-3', 'dark:bg-dark-fill-3', 'font-medium');
+            });
+            option.classList.add('bg-fill-3', 'dark:bg-dark-fill-3', 'font-medium');
+            
+            renderFilteredCharts(processedData);
+        });
     });
 
+    // Difficulty Dropdown Logic
+    const difficultyBtn = document.getElementById('difficulty-dropdown-btn') as HTMLButtonElement;
+    const difficultyOptions = document.getElementById('difficulty-dropdown-options') as HTMLDivElement;
+    const difficultyOptionElements = difficultyOptions?.querySelectorAll('[data-value]');
+
+    difficultyBtn?.addEventListener('click', () => {
+        const isOpen = difficultyOptions.classList.contains('hidden');
+        if (isOpen) {
+            difficultyOptions.classList.remove('hidden');
+            difficultyBtn.setAttribute('aria-expanded', 'true');
+        } else {
+            difficultyOptions.classList.add('hidden');
+            difficultyBtn.setAttribute('aria-expanded', 'false');
+        }
+    });
+
+    difficultyOptionElements?.forEach(option => {
+        option.addEventListener('click', () => {
+            const value = option.getAttribute('data-value') as Difficulty;
+            const span = difficultyBtn.querySelector('span');
+            if (span) span.textContent = value;
+            
+            currentFilters.difficulty = value;
+            difficultyOptions.classList.add('hidden');
+            difficultyBtn.setAttribute('aria-expanded', 'false');
+            
+            // Update visual selection
+            difficultyOptionElements.forEach(opt => {
+                opt.classList.remove('bg-fill-3', 'dark:bg-dark-fill-3', 'font-medium');
+            });
+            option.classList.add('bg-fill-3', 'dark:bg-dark-fill-3', 'font-medium');
+            
+            renderFilteredCharts(processedData);
+        });
+    });
+
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', (event) => {
+        const target = event.target as HTMLElement;
+        if (!timeRangeBtn?.contains(target) && !timeRangeOptions?.contains(target)) {
+            timeRangeOptions?.classList.add('hidden');
+            timeRangeBtn?.setAttribute('aria-expanded', 'false');
+        }
+        if (!difficultyBtn?.contains(target) && !difficultyOptions?.contains(target)) {
+            difficultyOptions?.classList.add('hidden');
+            difficultyBtn?.setAttribute('aria-expanded', 'false');
+        }
+    });
     // NEW: Two-button toggle logic
     const dayViewBtn = document.getElementById('day-view-btn') as HTMLButtonElement;
     const hourViewBtn = document.getElementById('hour-view-btn') as HTMLButtonElement;
@@ -425,22 +495,73 @@ function createStatsPaneWithGrid(): HTMLElement {
         <div id="legacy-section" class="min-h-96"></div>
       </div>
 
-      <!-- FILTERS -->
-      <div class="flex items-center space-x-4 p-4 bg-layer-1 dark:bg-dark-layer-1 rounded-lg">
-        <select id="time-range-filter" class="bg-layer-2 dark:bg-dark-layer-2 rounded-md p-2 text-sm text-label-1 dark:text-dark-label-1">
-    <option>All Time</option>
-    <option>Last 30 Days</option>
-    <option>Last 90 Days</option>
-    <option>Last 365 Days</option>
-</select>
-
-        <select id="difficulty-filter" class="bg-layer-2 dark:bg-dark-layer-2 rounded-md p-2 text-sm text-label-1 dark:text-dark-label-1">
-          <option>All</option>
-          <option>Easy</option>
-          <option>Medium</option>
-          <option>Hard</option>
-        </select>
+<!-- FILTERS -->
+<div class="flex items-center justify-end space-x-4 p-4 bg-layer-1 dark:bg-dark-layer-1 rounded-lg">
+  <!-- Time Range Dropdown -->
+  <div class="relative" data-headlessui-state>
+    <button id="time-range-dropdown-btn" class="flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3 w-40" type="button" aria-haspopup="listbox" aria-expanded="false" data-headlessui-state>
+      <span class="whitespace-nowrap flex-1 pr-2">All Time</span>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="pointer-events-none flex-shrink-0 w-4 h-4" aria-hidden="true">
+        <path fill-rule="evenodd" d="M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z" clip-rule="evenodd"></path>
+      </svg>
+    </button>
+    <div id="time-range-dropdown-options" class="hidden z-dropdown absolute max-h-56 overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 right-0 mt-2 shadow-level3 dark:shadow-dark-level3 w-40" role="listbox" tabindex="0" data-headlessui-state>
+      <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded bg-fill-3 dark:bg-dark-fill-3" data-value="All Time" role="option" tabindex="-1">
+        <div class="flex h-5 flex-1 items-center pr-2 font-medium">
+          <div class="whitespace-nowrap">All Time</div>
+        </div>
       </div>
+      <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Last 30 Days" role="option" tabindex="-1">
+        <div class="flex h-5 flex-1 items-center pr-2">
+          <div class="whitespace-nowrap">Last 30 Days</div>
+        </div>
+      </div>
+      <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Last 90 Days" role="option" tabindex="-1">
+        <div class="flex h-5 flex-1 items-center pr-2">
+          <div class="whitespace-nowrap">Last 90 Days</div>
+        </div>
+      </div>
+      <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Last 365 Days" role="option" tabindex="-1">
+        <div class="flex h-5 flex-1 items-center pr-2">
+          <div class="whitespace-nowrap">Last 365 Days</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Difficulty Dropdown -->
+  <div class="relative" data-headlessui-state>
+    <button id="difficulty-dropdown-btn" class="flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3 w-24" type="button" aria-haspopup="listbox" aria-expanded="false" data-headlessui-state>
+      <span class="whitespace-nowrap flex-1 pr-2">All</span>
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="pointer-events-none flex-shrink-0 w-4 h-4" aria-hidden="true">
+        <path fill-rule="evenodd" d="M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z" clip-rule="evenodd"></path>
+      </svg>
+    </button>
+    <div id="difficulty-dropdown-options" class="hidden z-dropdown absolute max-h-56 overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 right-0 mt-2 shadow-level3 dark:shadow-dark-level3 w-24" role="listbox" tabindex="0" data-headlessui-state>
+      <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded bg-fill-3 dark:bg-dark-fill-3" data-value="All" role="option" tabindex="-1">
+        <div class="flex h-5 flex-1 items-center pr-2 font-medium">
+          <div class="whitespace-nowrap">All</div>
+        </div>
+      </div>
+      <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Easy" role="option" tabindex="-1">
+        <div class="flex h-5 flex-1 items-center pr-2">
+          <div class="whitespace-nowrap">Easy</div>
+        </div>
+      </div>
+      <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Medium" role="option" tabindex="-1">
+        <div class="flex h-5 flex-1 items-center pr-2">
+          <div class="whitespace-nowrap">Medium</div>
+        </div>
+      </div>
+      <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Hard" role="option" tabindex="-1">
+        <div class="flex h-5 flex-1 items-center pr-2">
+          <div class="whitespace-nowrap">Hard</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 
       <!-- **FIX:** Changed lg:grid-cols-2 to md:grid-cols-2 for better responsiveness -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -455,16 +576,16 @@ function createStatsPaneWithGrid(): HTMLElement {
   <button id="day-view-btn" 
           data-state="active"
           class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
-    Day View
+    Daily
   </button>
   <button id="hour-view-btn" 
           data-state="inactive"
           class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
-    Hour View
+    Hourly
   </button>
 </div>
           </div>
-          <div class="relative h-80 w-full">
+          <div class="relative h-64 w-full">
             <canvas id="coding-clock-chart"></canvas>
           </div>
         </div>
@@ -495,7 +616,7 @@ function createStatsPaneWithGrid(): HTMLElement {
       </button>
     </div>
   </div>
-  <div class="relative h-80 w-full">
+  <div class="relative h-64 w-full">
     <canvas id="cumulative-chart"></canvas>
   </div>
 </div>
@@ -503,7 +624,7 @@ function createStatsPaneWithGrid(): HTMLElement {
         <!-- BOTTOM-LEFT: SUBMISSION SIGNATURE -->
         <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
             <h3 class="text-md font-medium text-label-1 dark:text-dark-label-1 mb-4">Submission Signature</h3>
-            <div class="relative h-80 w-full">
+            <div class="relative h-64 w-full">
                 <canvas id="submission-signature-chart"></canvas>
             </div>
         </div>
@@ -511,7 +632,7 @@ function createStatsPaneWithGrid(): HTMLElement {
         <!-- BOTTOM-RIGHT: LANGUAGE STATS -->
         <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
             <h3 class="text-md font-medium text-label-1 dark:text-dark-label-1 mb-4">Language Stats</h3>
-            <div class="relative h-80 w-full">
+            <div class="relative h-64 w-full">
                 <canvas id="language-stats-chart"></canvas>
             </div>
         </div>
