@@ -105,7 +105,6 @@ function generateTimeSeriesForTopic(submissions: ProcessedSubmission[]) {
 
         if (currentDate !== nextDate) {
             // Only include data points when there's meaningful data
-            if (cumulativeSubmissions >= 3) { // Minimum threshold
                 const overallAcceptanceRate = (cumulativeAccepted / cumulativeSubmissions) * 100;
                 
                 // ✅ FIXED: Use submission-based average attempts for time series
@@ -135,7 +134,6 @@ function generateTimeSeriesForTopic(submissions: ProcessedSubmission[]) {
                     medium: getValidMetricValue(problemGroups.medium, 'firstAceRate'),
                     hard: getValidMetricValue(problemGroups.hard, 'firstAceRate')
                 });
-            }
         }
     }
 
@@ -153,11 +151,6 @@ function getValidMetricValue(
     
     // Calculate total submissions for this difficulty
     const totalSubmissions = Array.from(problemGroups.values()).flat().length;
-    
-    // Require minimum data points before showing
-    if (totalSubmissions < 2) {
-        return undefined;
-    }
     
     const metrics = calculateMetricsFromGroups(problemGroups);
     
@@ -195,10 +188,12 @@ export function getSkillMatrixStats(
     // Determine topics to display based on filtered results.
     const topicsSet = new Set<string>();
     filteredSubmissions.forEach(sub => sub.metadata?.topics?.forEach(topic => topicsSet.add(topic)));
-    const topics = Array.from(topicsSet).sort();
-    console.log(`[SkillMatrix] Found ${topics.length} topics to display.`);
+    
+    // ✅ CHANGED: Don't sort alphabetically yet, we'll sort by acceptance rate later
+    const unsortedTopics = Array.from(topicsSet);
+    console.log(`[SkillMatrix] Found ${unsortedTopics.length} topics to display.`);
 
-    if (topics.length === 0) {
+    if (unsortedTopics.length === 0) {
         console.log('[SkillMatrix] No topics match filters. Aborting.');
         const endTime = performance.now();
         console.log(`[SkillMatrix] Total calculation finished in ${(endTime - startTime).toFixed(2)}ms.`);
@@ -236,7 +231,7 @@ export function getSkillMatrixStats(
     const timeSeriesData: SkillMatrixData['timeSeriesData'] = {};
 
     console.log('[SkillMatrix] Calculating metrics for each topic...');
-    topics.forEach((topic, index) => {
+    unsortedTopics.forEach((topic, index) => {
         const topicStartTime = performance.now();
 
         // Calculate metrics for the main table
@@ -264,17 +259,27 @@ export function getSkillMatrixStats(
         timeSeriesData[topic] = generateTimeSeriesForTopic(allTopicSubmissions);
         
         const topicEndTime = performance.now();
-        if (topics.length > 10) {
-             if (index % Math.floor(topics.length / 5) === 0) {
-                console.log(`[SkillMatrix] Processed topic ${index + 1}/${topics.length}: "${topic}"...`);
+        if (unsortedTopics.length > 10) {
+             if (index % Math.floor(unsortedTopics.length / 5) === 0) {
+                console.log(`[SkillMatrix] Processed topic ${index + 1}/${unsortedTopics.length}: "${topic}"...`);
              }
         } else {
             console.log(`[SkillMatrix] Processed topic "${topic}" in ${(topicEndTime - topicStartTime).toFixed(2)}ms`);
         }
     });
 
+    // ✅ NEW: Sort topics by acceptance rate (descending)
+    const topics = unsortedTopics.sort((a, b) => {
+        const aRate = metrics.acceptanceRate[a] || 0;
+        const bRate = metrics.acceptanceRate[b] || 0;
+        return bRate - aRate; // Descending order (highest acceptance rate first)
+    });
+
+    console.log('[SkillMatrix] Topics sorted by acceptance rate (descending)');
+
     const endTime = performance.now();
     console.log(`[SkillMatrix] Total calculation finished in ${(endTime - startTime).toFixed(2)}ms.`);
 
     return { topics, metrics, timeSeriesData };
 }
+

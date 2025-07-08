@@ -460,20 +460,58 @@ function setupFilterListeners(processedData: ProcessedData) {
         }
     });
 
+// Add skill matrix dropdown logic
+const skillMatrixBtn = document.getElementById('skill-matrix-time-filter-btn') as HTMLButtonElement;
+const skillMatrixDropdown = document.getElementById('skill-matrix-time-filter-options') as HTMLDivElement; // ✅ Renamed
+const skillMatrixOptionElements = skillMatrixDropdown?.querySelectorAll('[data-value]'); // ✅ Updated reference
 
-    
-  //   const skillMatrixContainer = document.getElementById('skill-matrix-container');
-  // skillMatrixContainer?.addEventListener('skillMatrixUpdate', (e: any) => {
-  //   Object.assign(skillMatrixOptions, e.detail);
-  //   renderSkillMatrix(processedData);
-  // });
+skillMatrixBtn?.addEventListener('click', () => {
+    const isOpen = skillMatrixDropdown.classList.contains('hidden'); // ✅ Updated reference
+    if (isOpen) {
+        skillMatrixDropdown.classList.remove('hidden'); // ✅ Updated reference
+        skillMatrixBtn.setAttribute('aria-expanded', 'true');
+    } else {
+        skillMatrixDropdown.classList.add('hidden'); // ✅ Updated reference
+        skillMatrixBtn.setAttribute('aria-expanded', 'false');
+    }
+});
 
-  // Add skill matrix global time filter listener
-    const skillMatrixTimeFilter = document.getElementById('skill-matrix-time-filter') as HTMLSelectElement;
-    skillMatrixTimeFilter?.addEventListener('change', () => {
-        skillMatrixOptions.timeRange = skillMatrixTimeFilter.value as 'Last 30 Days' | 'Last 90 Days' | 'Last 365 Days' | 'All Time';
+skillMatrixOptionElements?.forEach(option => {
+    option.addEventListener('click', () => {
+        const value = option.getAttribute('data-value') as 'Last 30 Days' | 'Last 90 Days' | 'Last 365 Days' | 'All Time';
+        const span = skillMatrixBtn.querySelector('span');
+        if (span) span.textContent = value;
+        
+        skillMatrixOptions.timeRange = value; // ✅ Now refers to the state object
+        skillMatrixDropdown.classList.add('hidden'); // ✅ Updated reference
+        skillMatrixBtn.setAttribute('aria-expanded', 'false');
+        
+        // Update visual selection
+        skillMatrixOptionElements.forEach(opt => {
+            const checkIcon = opt.querySelector('span');
+            if (checkIcon) {
+                checkIcon.classList.toggle('visible', opt === option);
+                checkIcon.classList.toggle('invisible', opt !== option);
+            }
+            opt.classList.toggle('bg-fill-3', opt === option);
+            opt.classList.toggle('dark:bg-dark-fill-3', opt === option);
+            opt.classList.toggle('font-medium', opt === option);
+        });
+        
         renderSkillMatrix(processedData);
     });
+});
+
+// Close skill matrix dropdown when clicking outside
+document.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement;
+    if (!skillMatrixBtn?.contains(target) && !skillMatrixDropdown?.contains(target)) { // ✅ Updated reference
+        skillMatrixDropdown?.classList.add('hidden'); // ✅ Updated reference
+        skillMatrixBtn?.setAttribute('aria-expanded', 'false');
+    }
+});
+
+
 
     }
 
@@ -638,20 +676,73 @@ function createStatsPaneWithGrid(): HTMLElement {
         </div>
       </div>
       <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
+      <!-- SKILL MATRIX SECTION -->
+<div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
   <div class="flex justify-between items-center mb-4">
     <h3 class="text-lg font-medium text-label-1 dark:text-dark-label-1">Skill Matrix</h3>
-    <select id="skill-matrix-time-filter" class="bg-layer-2 dark:bg-dark-layer-2 rounded-md p-2 text-sm text-label-1 dark:text-dark-label-1 border border-divider-3 dark:border-dark-divider-3">
-      <option value="All Time">All Time</option>
-      <option value="Last 365 Days">Last 365 Days</option>
-      <option value="Last 90 Days">Last 90 Days</option>
-      <option value="Last 30 Days">Last 30 Days</option>
-    </select>
-  </div>
-      <!-- SKILL MATRIX SECTION -->
-      <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-        <div id="skill-matrix-container"></div>
+    
+    <!-- Updated dropdown with HeadlessUI style -->
+    <div class="ml-[21px]">
+      <div class="relative" data-headlessui-state>
+        <button id="skill-matrix-time-filter-btn" class="flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3" type="button" aria-haspopup="listbox" aria-expanded="false" data-headlessui-state>
+          <span class="whitespace-nowrap">All Time</span>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="pointer-events-none ml-3 w-4 h-4" aria-hidden="true">
+            <path fill-rule="evenodd" d="M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z" clip-rule="evenodd"></path>
+          </svg>
+        </button>
+        <div id="skill-matrix-time-filter-options" class="hidden z-dropdown absolute max-h-56 overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 right-0 mt-2 shadow-level3 dark:shadow-dark-level3" style="filter: drop-shadow(rgba(0, 0, 0, 0.04) 0px 1px 3px) drop-shadow(rgba(0, 0, 0, 0.12) 0px 6px 16px);">
+          
+          <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded bg-fill-3 dark:bg-dark-fill-3" data-value="All Time">
+            <div class="flex h-5 flex-1 items-center pr-2 font-medium">
+              <div class="whitespace-nowrap">All Time</div>
+            </div>
+            <span class="text-blue dark:text-dark-blue flex items-center pr-2 visible">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4" aria-hidden="true">
+                <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path>
+              </svg>
+            </span>
+          </div>
+          
+          <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Last 365 Days">
+            <div class="flex h-5 flex-1 items-center pr-2">
+              <div class="whitespace-nowrap">Last 365 Days</div>
+            </div>
+            <span class="text-blue dark:text-dark-blue flex items-center pr-2 invisible">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4" aria-hidden="true">
+                <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path>
+              </svg>
+            </span>
+          </div>
+          
+          <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Last 90 Days">
+            <div class="flex h-5 flex-1 items-center pr-2">
+              <div class="whitespace-nowrap">Last 90 Days</div>
+            </div>
+            <span class="text-blue dark:text-dark-blue flex items-center pr-2 invisible">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4" aria-hidden="true">
+                <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path>
+              </svg>
+            </span>
+          </div>
+          
+          <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Last 30 Days">
+            <div class="flex h-5 flex-1 items-center pr-2">
+              <div class="whitespace-nowrap">Last 30 Days</div>
+            </div>
+            <span class="text-blue dark:text-dark-blue flex items-center pr-2 invisible">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4" aria-hidden="true">
+                <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path>
+              </svg>
+            </span>
+          </div>
+          
+        </div>
       </div>
     </div>
+  </div>
+  <div id="skill-matrix-container"></div>
+</div>
+
   `;
     return statsPane;
 }
