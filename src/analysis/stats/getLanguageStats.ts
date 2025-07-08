@@ -108,7 +108,7 @@ export function getLanguageStats(
       {
         label: 'Failed',
         data: sortedLangs.map(entry => entry[1].failed),
-        backgroundColor: '#353535', // Updated color
+        backgroundColor: '#393939', // Updated color
       }
     ],
     tooltipsData: sortedLangs.map(entry => ({

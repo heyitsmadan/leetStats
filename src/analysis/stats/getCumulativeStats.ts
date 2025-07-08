@@ -178,7 +178,7 @@ const datasets = [
     {
         label: 'Total Submissions',
         data: totalSubmissionsData,
-        borderColor: '#353535',
+        borderColor: '#393939',
         fill: false,
         tension: 0.4,
     }

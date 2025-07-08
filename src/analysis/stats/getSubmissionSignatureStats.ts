@@ -5,7 +5,7 @@ const STATUS_MAP: { [key: number]: { label: string; color: string } } = {
   10: { label: 'Accepted', color: '#5db666' },
   11: { label: 'Wrong Answer', color: '#e66b62' },
   12: { label: 'Memory Limit Exceeded', color: '#58b8b9' },
-  14: { label: 'Time Limit Exceeded', color: '#6c7a89' },
+  14: { label: 'Time Limit Exceeded', color: '#f4ba40' },
   20: { label: 'Compile Error', color: '#a056d5' },
 };
 

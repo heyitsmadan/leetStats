@@ -82,7 +82,7 @@ export function getCodingClockStats(
         label: 'Failed',
         data: buckets.map(b => b.failed),
         // **UPDATED:** New failed color
-        backgroundColor: '#353535',
+        backgroundColor: '#393939',
       }
     ],
     tooltipsData: buckets.map((b, index) => ({
