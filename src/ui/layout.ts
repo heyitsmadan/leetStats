@@ -523,13 +523,12 @@ function createStatsPaneWithGrid(): HTMLElement {
     statsPane.innerHTML = `
     <div class="space-y-4">
     <!-- INTERACTIVE CHART SECTION - Add this BEFORE the legacy section -->
-      <div class="rounded-lg bg-layer-2 dark:bg-dark-layer-2 p-4">
+      <div class="rounded-lg p-4">
         <h2 class="text-xl font-bold text-label-1 dark:text-dark-label-1 mb-4">DNA Strand</h2>
         <div id="interactive-chart-container"></div>
       </div>
        <!-- YOUR LEGACY SECTION -->
-      <div class="rounded-lg bg-layer-2 dark:bg-dark-layer-2 p-4">
-        <h2 class="text-xl font-bold text-label-1 dark:text-dark-label-1 mb-4">Your Legacy</h2>
+      <div class="rounded-lg p-4">
         <div id="legacy-section" class="min-h-96"></div>
       </div>
 
@@ -607,7 +606,7 @@ function createStatsPaneWithGrid(): HTMLElement {
         <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
           <div class="flex justify-between items-center mb-4">
             <!-- **UPDATED:** Heading color -->
-            <h3 class="text-md font-medium" style="color: #f9ffff;">Coding Clock</h3>
+            <h3 class="text-lg font-medium text-label-1 dark:text-dark-label-1">Coding Clock</h3>
             <!-- **UPDATED:** Button text for default day view -->
             <!-- NEW: Two-button toggle -->
 <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
@@ -631,7 +630,7 @@ function createStatsPaneWithGrid(): HTMLElement {
         <!-- TOP-RIGHT: CUMULATIVE PROGRESS -->
 <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
   <div class="flex justify-between items-center mb-4">
-    <h3 class="text-md font-medium text-label-1 dark:text-dark-label-1">Cumulative Progress</h3>
+    <h3 class="text-lg font-medium text-label-1 dark:text-dark-label-1">Cumulative Progress</h3>
     <!-- NEW: Three-button toggle with same design as coding clock -->
     <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
       <button id="daily-view-btn" 
@@ -661,7 +660,7 @@ function createStatsPaneWithGrid(): HTMLElement {
 
         <!-- BOTTOM-LEFT: SUBMISSION SIGNATURE -->
         <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-            <h3 class="text-md font-medium text-label-1 dark:text-dark-label-1 mb-4">Submission Signature</h3>
+            <h3 class="text-lg font-medium text-label-1 dark:text-dark-label-1">Submission Signature</h3>
             <div class="relative h-64 w-full">
                 <canvas id="submission-signature-chart"></canvas>
             </div>
@@ -669,7 +668,7 @@ function createStatsPaneWithGrid(): HTMLElement {
 
         <!-- BOTTOM-RIGHT: LANGUAGE STATS -->
         <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-            <h3 class="text-md font-medium text-label-1 dark:text-dark-label-1 mb-4">Language Stats</h3>
+            <h3 class="text-lg font-medium text-label-1 dark:text-dark-label-1">Language Stats</h3>
             <div class="relative h-64 w-full">
                 <canvas id="language-stats-chart"></canvas>
             </div>

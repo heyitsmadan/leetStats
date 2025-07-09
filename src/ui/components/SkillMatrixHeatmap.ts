@@ -40,7 +40,7 @@ export function renderOrUpdateSkillMatrixHeatmap(
 
     container.innerHTML = `
         <div class="w-full">
-            <div class="overflow-x-auto rounded-lg border border-divider-3 dark:border-dark-divider-3 bg-layer-1 dark:bg-dark-layer-1">
+            <div class="overflow-x-auto rounded-lg bg-layer-1 dark:bg-dark-layer-1">
                 <table class="w-full border-collapse" style="table-layout: fixed;">
                     <thead>
                         <tr class="bg-layer-1 dark:bg-dark-layer-1">
