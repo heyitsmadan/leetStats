@@ -244,7 +244,7 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
 
 function calculateMilestones(submissions: any[]): MilestoneData[] {
   const milestones: MilestoneData[] = [];
-  const milestoneNumbers = [1, 10, 50, 100, 250, 500, 1000, 2000, 3000, 4000, 5000];
+  const milestoneNumbers = [1, 10, 50, 100, 500, 1000, 2000, 3000, 4000, 5000];
   
   // Sort submissions chronologically
   const sortedSubmissions = [...submissions].sort((a, b) => a.date.getTime() - b.date.getTime());
