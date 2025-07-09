@@ -27,7 +27,7 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
     firstSubmission: Date;
     firstAccepted?: Date;
     difficulty?: string;
-    allSubmissions: any[]; // Keep track of all submissions for this problem
+    allSubmissions: any[];
   }>();
 
   // First pass: collect all submissions per problem
@@ -48,13 +48,10 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
 
   // Second pass: process each problem's submissions chronologically
   for (const [slug, stats] of problemStats) {
-    // Sort submissions for this problem chronologically
     stats.allSubmissions.sort((a, b) => a.date.getTime() - b.date.getTime());
-    
     stats.submissions = stats.allSubmissions.length;
     stats.firstSubmission = stats.allSubmissions[0].date;
     
-    // Find first accepted submission
     const firstAcceptedSub = stats.allSubmissions.find(sub => sub.status === 10);
     if (firstAcceptedSub) {
       stats.accepted = stats.allSubmissions.filter(sub => sub.status === 10).length;
@@ -62,9 +59,23 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
     }
   }
 
-  // Rest of the trophy calculations remain the same until Phoenix...
+  // 1. First Blood - First problem solved (MOVED TO TOP)
+  const sortedSubmissions = [...submissions].sort((a, b) => a.date.getTime() - b.date.getTime());
+  const firstAccepted = sortedSubmissions.find(s => s.status === 10);
   
-  // 1. Nemesis - Eventually solved with most submissions
+  if (firstAccepted) {
+    trophies.push({
+      id: 'first_blood',
+      title: 'First Blood',
+      subtitle: 'A journey of a thousand miles begins with a single step',
+      problemTitle: firstAccepted.title,
+      problemSlug: firstAccepted.titleSlug,
+      icon: '🩸',
+      stat: 1
+    });
+  }
+
+  // 2. Nemesis - Eventually solved with most submissions
   let maxSubmissionsForSolved = 0;
   let nemesisProblem: any = null;
   
@@ -84,12 +95,11 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
       problemTitle: problemData?.title || nemesisProblem.slug,
       problemSlug: nemesisProblem.slug,
       icon: '⚔️',
-      stat: nemesisProblem.stats.submissions,
-      personalNote: `...but you never gave up!`
+      stat: nemesisProblem.stats.submissions
     });
   }
 
-  // 2. White Whale - Most submissions, never solved
+  // 3. White Whale - Most submissions, never solved
   let maxSubmissionsUnsolved = 0;
   let whaleSlug = '';
   
@@ -111,30 +121,6 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
       icon: '🐋',
       stat: maxSubmissionsUnsolved,
       personalNote: `...one day, Captain Ahab`
-    });
-  }
-
-  // 3. Giant Slayer - Hard solved with fewest attempts
-  let minAttemptsHard = Infinity;
-  let giantSlayerProblem: any = null;
-  
-  for (const [slug, stats] of problemStats) {
-    if (stats.accepted > 0 && stats.difficulty === 'Hard' && stats.submissions < minAttemptsHard) {
-      minAttemptsHard = stats.submissions;
-      giantSlayerProblem = { slug, stats };
-    }
-  }
-  
-  if (giantSlayerProblem) {
-    const problemData = submissions.find(s => s.titleSlug === giantSlayerProblem.slug);
-    trophies.push({
-      id: 'giant_slayer',
-      title: 'Giant Slayer',
-      subtitle: `Hard problem solved in ${giantSlayerProblem.stats.submissions} attempt${giantSlayerProblem.stats.submissions === 1 ? '' : 's'}`,
-      problemTitle: problemData?.title || giantSlayerProblem.slug,
-      problemSlug: giantSlayerProblem.slug,
-      icon: '🗡️',
-      stat: giantSlayerProblem.stats.submissions
     });
   }
 
@@ -164,54 +150,38 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
     });
   }
 
-  // 5. Everest - Hard with most attempts
-  let maxAttemptsHard = 0;
+  // 5. Everest - Hard problem with most failed attempts (UPDATED CALCULATION)
+  let maxFailedHard = 0;
   let everestProblem: any = null;
   
   for (const [slug, stats] of problemStats) {
-    if (stats.difficulty === 'Hard' && stats.submissions > maxAttemptsHard) {
-      maxAttemptsHard = stats.submissions;
-      everestProblem = { slug, stats };
+    const failed = stats.submissions - stats.accepted;
+    if (stats.difficulty === 'Hard' && failed > maxFailedHard) {
+      maxFailedHard = stats.submissions;
+      everestProblem = { slug, stats, failed };
     }
   }
   
-  if (everestProblem) {
+  if (everestProblem && maxFailedHard > 0) {
     const problemData = submissions.find(s => s.titleSlug === everestProblem.slug);
     trophies.push({
       id: 'everest',
       title: 'Everest',
-      subtitle: `${everestProblem.stats.submissions} attempts on a Hard problem`,
+      subtitle: `${everestProblem.failed} failed attempts on a Hard problem`,
       problemTitle: problemData?.title || everestProblem.slug,
       problemSlug: everestProblem.slug,
       icon: '🏔️',
-      stat: everestProblem.stats.submissions
+      stat: everestProblem.failed
     });
   }
 
-  // 6. First Blood - First problem solved
-  const sortedSubmissions = [...submissions].sort((a, b) => a.date.getTime() - b.date.getTime());
-  const firstAccepted = sortedSubmissions.find(s => s.status === 10);
-  
-  if (firstAccepted) {
-    trophies.push({
-      id: 'first_blood',
-      title: 'First Blood',
-      subtitle: `Your coding journey began here`,
-      problemTitle: firstAccepted.title,
-      problemSlug: firstAccepted.titleSlug,
-      icon: '🩸',
-      stat: 1
-    });
-  }
-
-  // 7. The Phoenix - FIXED: Biggest time gap between first submission and acceptance
+  // 6. The Phoenix - Biggest time gap between first submission and acceptance
   let maxTimeGap = 0;
   let phoenixProblem: any = null;
   
   for (const [slug, stats] of problemStats) {
     if (stats.accepted > 0 && stats.firstAccepted) {
       const timeGap = stats.firstAccepted.getTime() - stats.firstSubmission.getTime();
-      // Only consider it if there was actually a gap (not solved on first try)
       if (timeGap > maxTimeGap && timeGap > 0) {
         maxTimeGap = timeGap;
         phoenixProblem = { slug, stats, timeGap };
@@ -223,7 +193,6 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
     const problemData = submissions.find(s => s.titleSlug === phoenixProblem.slug);
     const days = Math.floor(maxTimeGap / (1000 * 60 * 60 * 24));
     
-    // Only show if it's at least 1 day gap
     if (days > 0) {
       trophies.push({
         id: 'phoenix',
@@ -232,14 +201,14 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
         problemTitle: problemData?.title || phoenixProblem.slug,
         problemSlug: phoenixProblem.slug,
         icon: '🔥',
-        stat: days,
-        personalNote: `...patience paid off`
+        stat: days
       });
     }
   }
 
   return trophies;
 }
+
 
 
 function calculateMilestones(submissions: any[]): MilestoneData[] {
@@ -261,14 +230,15 @@ function calculateMilestones(submissions: any[]): MilestoneData[] {
     
     // Check submission milestones
     if (milestoneNumbers.includes(totalSubmissions)) {
-      milestones.push({
-        type: 'submissions',
-        milestone: totalSubmissions,
-        date: sub.date,
-        problemTitle: sub.title,
-        problemSlug: sub.titleSlug
-      });
-    }
+  milestones.push({
+    type: 'submissions',
+    milestone: totalSubmissions,
+    date: sub.date,
+    problemTitle: sub.title,
+    problemSlug: sub.titleSlug,
+    submissionId: sub.id // Add this line to capture submission ID
+  });
+}
     
     // If accepted, track problems solved and difficulty
     if (sub.status === 10 && !problemsSolved.has(sub.titleSlug)) {
@@ -281,7 +251,8 @@ function calculateMilestones(submissions: any[]): MilestoneData[] {
           milestone: solvedCount,
           date: sub.date,
           problemTitle: sub.title,
-          problemSlug: sub.titleSlug
+          problemSlug: sub.titleSlug,
+          submissionId: sub.id // Add this line to capture submission ID
         });
       }
       
@@ -294,7 +265,8 @@ function calculateMilestones(submissions: any[]): MilestoneData[] {
             milestone: easyCount,
             date: sub.date,
             problemTitle: sub.title,
-            problemSlug: sub.titleSlug
+            problemSlug: sub.titleSlug,
+            submissionId: sub.id // Add this line to capture submission ID
           });
         }
       } else if (sub.metadata?.difficulty === 'Medium') {
@@ -305,7 +277,8 @@ function calculateMilestones(submissions: any[]): MilestoneData[] {
             milestone: mediumCount,
             date: sub.date,
             problemTitle: sub.title,
-            problemSlug: sub.titleSlug
+            problemSlug: sub.titleSlug,
+            submissionId: sub.id // Add this line to capture submission ID
           });
         }
       } else if (sub.metadata?.difficulty === 'Hard') {
@@ -316,7 +289,8 @@ function calculateMilestones(submissions: any[]): MilestoneData[] {
             milestone: hardCount,
             date: sub.date,
             problemTitle: sub.title,
-            problemSlug: sub.titleSlug
+            problemSlug: sub.titleSlug,
+            submissionId: sub.id // Add this line to capture submission ID
           });
         }
       }

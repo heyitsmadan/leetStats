@@ -85,6 +85,7 @@ export interface MilestoneData {
   date: Date;
   problemTitle?: string;
   problemSlug?: string;
+  submissionId?: string;
 }
 
 export interface RecordData {

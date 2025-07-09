@@ -129,60 +129,77 @@ function renderLegacySection(processedData: ProcessedData) {
           <!-- Timeline line -->
           <div class="absolute left-3 top-0 bottom-0 w-0.5 bg-fill-3 dark:bg-dark-fill-3"></div>
           <div class="space-y-4">
-            ${legacyStats.milestones.map((milestone: any) => `
-              <div class="relative flex items-center">
-                <!-- Timeline dot -->
-                <div class="absolute left-0 w-6 h-6 bg-green-500 rounded-full border-4 border-layer-1 dark:border-dark-layer-1 flex items-center justify-center">
-                  <div class="w-2 h-2 bg-white rounded-full"></div>
-                </div>
-                <!-- Content -->
-                <div class="ml-10">
-                  <div class="text-sm font-medium text-label-1 dark:text-dark-label-1">
-                    ${milestone.milestone}${getOrdinalSuffix(milestone.milestone)} ${formatMilestoneType(milestone.type)}
-                  </div>
-                  <div class="text-xs text-label-2 dark:text-dark-label-2">
-                    ${milestone.date.toLocaleDateString('en-GB')}
-                  </div>
-                  ${milestone.problemTitle ? `
-                    <a href="https://leetcode.com/problems/${milestone.problemSlug}/" 
-                       class="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300">
-                      ${milestone.problemTitle}
-                    </a>
-                  ` : ''}
-                </div>
-              </div>
-            `).join('')}
+            
+${legacyStats.milestones.map((milestone: any) => {
+  const milestoneColor = getMilestoneColor(milestone.type);
+  return `
+    <div class="relative flex items-center">
+      <!-- Timeline dot with dynamic color -->
+      <div class="absolute left-3 w-6 h-6 transform -translate-x-1/2 rounded-full border-4 border-layer-1 dark:border-dark-layer-1 flex items-center justify-center">
+  <div class="w-2 h-2 rounded-full" style="background-color: ${milestoneColor}"></div>
+</div>
+
+      <!-- Content -->
+      <div class="ml-10">
+        <div class="text-sm font-medium" style="color: #f9ffff">
+          ${milestone.milestone}${getOrdinalSuffix(milestone.milestone)} ${formatMilestoneType(milestone.type)}
+        </div>
+        <div class="text-xs text-label-2 dark:text-dark-label-2">
+          ${milestone.date.toLocaleDateString('en-GB')}
+        </div>
+        ${milestone.type === 'submissions' ? `
+          <a href="https://leetcode.com/submissions/detail/${milestone.submissionId || milestone.id}/" 
+   class="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300">
+  Submission #${milestone.submissionId || milestone.id}
+</a>
+        ` : milestone.problemTitle ? `
+          <a href="https://leetcode.com/problems/${milestone.problemSlug}/" 
+   class="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300">
+  ${milestone.problemTitle}
+</a>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}).join('')}
           </div>
         </div>
-      </div>
+</div>
       
       
 <!-- Right Half -->
 <div class="flex-1 flex flex-col gap-4">
-  <!-- Trophy Room - takes as much space as it needs -->
-  <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-    <h3 class="text-lg font-medium text-label-1 dark:text-dark-label-1 mb-4">Trophy Room</h3>
-    <div class="space-y-3">
-      ${legacyStats.trophies.map((trophy: any) => `
-        <div class="flex items-center space-x-3 p-3 rounded-md bg-fill-3 dark:bg-dark-fill-3">
-          <span class="text-2xl">${trophy.icon}</span>
-          <div class="flex-1">
-            <div class="font-medium text-label-1 dark:text-dark-label-1">${trophy.title}</div>
-            <div class="text-sm text-label-2 dark:text-dark-label-2">${trophy.subtitle}</div>
-            <a href="https://leetcode.com/problems/${trophy.problemSlug}/" 
-               class="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300">
-              ${trophy.problemTitle}
-            </a>
-            ${trophy.personalNote ? `
-              <div class="text-xs italic text-label-3 dark:text-dark-label-3 mt-1">
-                ${trophy.personalNote}
-              </div>
-            ` : ''}
+<div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
+  <div class="text-base font-medium leading-6">Trophy Room</div>
+  <div class="mt-4 space-y-3">
+    ${legacyStats.trophies.map((trophy: any) => `
+      <div class="flex items-center space-x-3 p-3 rounded-md bg-[rgba(0,0,0,0.02)] dark:bg-[rgba(255,255,255,0.06)]">
+        <span class="text-2xl flex-shrink-0">${trophy.icon}</span>
+        <div class="flex-1">
+          <div class="text-base font-semibold text-label-1 dark:text-dark-label-1">
+            ${trophy.title}
           </div>
+          
+          <a href="https://leetcode.com/problems/${trophy.problemSlug}/" 
+             class="block text-sm font-medium text-label-2 dark:text-dark-label-2 hover:text-blue-500 dark:hover:text-blue-400 transition-colors mt-1">
+            ${trophy.problemTitle}
+          </a>
+          
+          <div class="text-sm font-normal text-label-2 dark:text-dark-label-2 mt-1.5">
+            ${trophy.subtitle}
+          </div>
+          
+          ${trophy.personalNote ? `
+            <div class="text-xs italic text-label-3 dark:text-dark-label-3 mt-2 border-l-2 border-current pl-2">
+              ${trophy.personalNote}
+            </div>
+          ` : ''}
         </div>
-      `).join('')}
-    </div>
+      </div>
+    `).join('')}
   </div>
+</div>
+
   
 <!-- Records - takes remaining space -->
 <div class="flex-1 rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
@@ -822,4 +839,16 @@ function formatMilestoneType(type: string): string {
   };
   
   return typeMap[type] || type;
+}
+
+// Helper function to get milestone colors
+function getMilestoneColor(type: string): string {
+  const colorMap: { [key: string]: string } = {
+    'easy': '#58b8b9',
+    'medium': '#f4ba40', 
+    'hard': '#e24a41',
+    'problems_solved': '#5db666',
+    'submissions': '#f9ffff'
+  };
+  return colorMap[type] || '#f9ffff'; // Default to problem color
 }
