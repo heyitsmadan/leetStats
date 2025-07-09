@@ -107,13 +107,13 @@ export interface LegacyStats {
 export interface SkillMatrixData {
   topics: string[];
   metrics: {
-    acceptanceRate: { [topic: string]: number };
+    problemsSolved: { [topic: string]: number }; // ✅ CHANGED: Replace acceptanceRate
     avgTries: { [topic: string]: number };
     firstAceRate: { [topic: string]: number };
   };
   timeSeriesData: {
     [topic: string]: {
-      acceptanceRate: TimeSeriesPoint[];
+      problemsSolved: TimeSeriesPoint[]; // ✅ CHANGED: Replace acceptanceRate
       avgTries: TimeSeriesPoint[];
       firstAceRate: TimeSeriesPoint[];
     };
@@ -132,7 +132,7 @@ export interface SkillMatrixOptions {
   timeRange: 'Last 30 Days' | 'Last 90 Days' | 'Last 365 Days' | 'All Time';
   chartView: 'Daily' | 'Monthly' | 'Yearly';
   showDifficultySplit: boolean;
-  selectedMetric: 'acceptanceRate' | 'avgTries' | 'firstAceRate';
+  selectedMetric: 'problemsSolved' | 'avgTries' | 'firstAceRate'; // ✅ CHANGED: Replace acceptanceRate
 }
 
 // Add these interfaces to your existing types.ts

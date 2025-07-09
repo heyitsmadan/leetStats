@@ -24,16 +24,16 @@ export function renderOrUpdateSkillMatrixHeatmap(
     let expandedRows = new Set<string>();
     let charts = new Map<string, Chart>();
     let chartOptions = new Map<string, {
-        metric: 'acceptanceRate' | 'avgTries' | 'firstAceRate',
+        metric: 'problemsSolved' | 'avgTries' | 'firstAceRate',
         view: 'Daily' | 'Monthly' | 'Yearly',
         split: boolean,
     }>();
 
     function renderInitialTable() {
     console.time('[Heatmap] renderInitialTable');
-    const metrics = ['acceptanceRate', 'avgTries', 'firstAceRate'] as const;
+    const metrics = ['problemsSolved', 'avgTries', 'firstAceRate'] as const;
     const metricLabels = {
-        acceptanceRate: 'Acceptance Rate',
+        problemsSolved: 'Problems Solved', // ✅ CHANGED
         avgTries: 'Average Attempts', 
         firstAceRate: 'First Ace Rate'
     };
@@ -44,7 +44,7 @@ export function renderOrUpdateSkillMatrixHeatmap(
                 <table class="w-full border-collapse" style="table-layout: fixed;">
                     <thead>
                         <tr class="bg-layer-1 dark:bg-dark-layer-1">
-                            <th class="text-left p-3 text-sm font-medium text-label-1 dark:text-dark-label-1" style="width: 30%;">Topic</th>
+                            <th class="text-left p-3 text-sm font-medium text-label-1 dark:text-dark-label-1" style="width: 30%;"></th>
                             ${metrics.map(metric => `<th class="text-center p-3 text-sm font-medium text-label-1 dark:text-dark-label-1" style="width: ${70/3}%;">${metricLabels[metric]}</th>`).join('')}
                             <th style="width: 40px;"></th>
                         </tr>
@@ -113,7 +113,7 @@ export function renderOrUpdateSkillMatrixHeatmap(
         // Expand logic
         expandedRows.add(topic);
         if (!chartOptions.has(topic)) {
-            chartOptions.set(topic, { metric: 'acceptanceRate', view: 'Monthly', split: false });
+            chartOptions.set(topic, { metric: 'problemsSolved', view: 'Monthly', split: false });
         }
         
         const newRow = document.createElement('tr');
@@ -167,15 +167,15 @@ export function renderOrUpdateSkillMatrixHeatmap(
                     <div class="ml-[21px]">
                         <div class="relative" data-headlessui-state>
                             <button class="flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3 metric-selector" data-topic="${topic}" type="button" aria-haspopup="listbox" aria-expanded="false">
-                                <span class="whitespace-nowrap">Acceptance Rate</span>
+                                <span class="whitespace-nowrap">Problems Solved</span>
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="pointer-events-none ml-3 w-4 h-4" aria-hidden="true">
                                     <path fill-rule="evenodd" d="M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z" clip-rule="evenodd"></path>
                                 </svg>
                             </button>
                             <div class="hidden z-dropdown absolute max-h-56 overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 left-0 mt-2 shadow-level3 dark:shadow-dark-level3 metric-options" style="filter: drop-shadow(rgba(0, 0, 0, 0.04) 0px 1px 3px) drop-shadow(rgba(0, 0, 0, 0.12) 0px 6px 16px);">
-                                <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded bg-fill-3 dark:bg-dark-fill-3" data-value="acceptanceRate">
+                                <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded bg-fill-3 dark:bg-dark-fill-3" data-value="problemsSolved">
                                     <div class="flex h-5 flex-1 items-center pr-2 font-medium">
-                                        <div class="whitespace-nowrap">Acceptance Rate</div>
+                                        <div class="whitespace-nowrap">Problems Solved</div>
                                     </div>
                                     <span class="text-blue dark:text-dark-blue flex items-center pr-2 visible">
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4" aria-hidden="true">
@@ -260,10 +260,10 @@ export function renderOrUpdateSkillMatrixHeatmap(
     // Option selection
     metricOptions?.querySelectorAll('[data-value]').forEach(option => {
         option.addEventListener('click', (e) => {
-            const value = option.getAttribute('data-value') as 'acceptanceRate' | 'avgTries' | 'firstAceRate';
+            const value = option.getAttribute('data-value') as 'problemsSolved' | 'avgTries' | 'firstAceRate';
             const span = metricSelector?.querySelector('span');
             const labels = {
-                acceptanceRate: 'Acceptance Rate',
+                problemsSolved: 'Problems Solved', // ✅ CHANGED
                 avgTries: 'Average Attempts', 
                 firstAceRate: 'First Ace Rate'
             };
@@ -599,7 +599,7 @@ const scaleConfig = timeScaleConfig[localOpts.view];
 
 
     // Helper Functions
-    function getHeatmapColor(value: number, metric: 'acceptanceRate' | 'avgTries' | 'firstAceRate'): string {
+    function getHeatmapColor(value: number, metric: 'problemsSolved' | 'avgTries' | 'firstAceRate'): string {
     const bestColor = { r: 93, g: 182, b: 102 };   // #5db666
     const worstColor = { r: 230, g: 107, b: 98 };  // #e66b62
     
@@ -608,8 +608,13 @@ const scaleConfig = timeScaleConfig[localOpts.view];
         // For average attempts, lower is better
         if (value <= 1) percent = 0; // Best case
         else percent = Math.min(1, (value - 1) / 4); // Worst case approaches 1
+    } else if (metric === 'problemsSolved') {
+        // ✅ NEW: For problems solved, higher is better (similar to acceptance rate)
+        // Use a reasonable scale - assume max ~50 problems per topic as "excellent"
+        const maxExpected = 20;
+        percent = 1 - Math.min(1, value / maxExpected);
     } else {
-        // For acceptance rate and first ace rate, higher is better
+        // For first ace rate, higher is better
         percent = 1 - (value / 100); // Invert so 100% = 0 (best), 0% = 1 (worst)
     }
     
@@ -633,9 +638,12 @@ const scaleConfig = timeScaleConfig[localOpts.view];
     function formatMetricValue(value: number, metric: string): string {
     if (metric === 'avgTries') {
         if (value === Infinity) {
-            return '∞'; // or 'N/A' if you prefer
+            return '∞';
         }
         return value.toFixed(1);
+    } else if (metric === 'problemsSolved') {
+        // ✅ NEW: Format problems solved as whole number
+        return value.toString();
     }
     return `${value.toFixed(0)}%`;
 }

@@ -43,7 +43,7 @@ let skillMatrixOptions = {
   timeRange: 'All Time' as 'Last 30 Days' | 'Last 90 Days' | 'Last 365 Days' | 'All Time',
   chartView: 'Monthly' as 'Daily' | 'Monthly' | 'Yearly',
   showDifficultySplit: false,
-  selectedMetric: 'acceptanceRate' as 'acceptanceRate' | 'avgTries' | 'firstAceRate'
+  selectedMetric: 'problemsSolved' as 'problemsSolved' | 'avgTries' | 'firstAceRate'
 };
 
 /**

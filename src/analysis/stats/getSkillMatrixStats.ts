@@ -15,31 +15,28 @@ function passesTimeRangeFilter(date: Date, timeRange: TimeRange): boolean {
 }
 
 // Helper to calculate metrics from pre-grouped submissions.
+// Update the calculateMetricsFromGroups function
 function calculateMetricsFromGroups(problemGroups: Map<string, ProcessedSubmission[]>) {
     if (problemGroups.size === 0) {
-        return { acceptanceRate: 0, avgTries: Infinity, firstAceRate: 0 };
+        return { problemsSolved: 0, avgTries: Infinity, firstAceRate: 0 }; // ✅ CHANGED
     }
 
-    // Get all submissions across all problems in this topic
     const allSubmissions = Array.from(problemGroups.values()).flat();
     const totalSubmissions = allSubmissions.length;
     
     if (totalSubmissions === 0) {
-        return { acceptanceRate: 0, avgTries: Infinity, firstAceRate: 0 };
+        return { problemsSolved: 0, avgTries: Infinity, firstAceRate: 0 }; // ✅ CHANGED
     }
 
-    // Count accepted submissions (status === 10)
     const acceptedSubmissions = allSubmissions.filter(sub => sub.status === 10);
     const acceptedCount = acceptedSubmissions.length;
 
-    // Calculate submission-based acceptance rate
-    const acceptanceRate = (acceptedCount / totalSubmissions) * 100;
+    // ✅ NEW: Calculate problems solved (unique solved problems)
+    const problemsSolved = problemGroups.size > 0 ? 
+        Array.from(problemGroups.values()).filter(subs => subs.some(s => s.status === 10)).length : 0;
 
-    // ✅ FIXED: Calculate submission-based average attempts
-    // Formula: total submissions / accepted submissions
     const avgTries = acceptedCount > 0 ? totalSubmissions / acceptedCount : Infinity;
 
-    // Calculate first try rate (problems solved on first attempt / total attempted problems)
     const solvedProblems = Array.from(problemGroups.values()).filter(subs => 
         subs.some(s => s.status === 10)
     );
@@ -47,21 +44,21 @@ function calculateMetricsFromGroups(problemGroups: Map<string, ProcessedSubmissi
     const firstAceRate = problemGroups.size > 0 ? (firstAces / problemGroups.size) * 100 : 0;
 
     return {
-        acceptanceRate,
+        problemsSolved, // ✅ NEW: Return problems solved instead of acceptance rate
         avgTries,
         firstAceRate,
     };
 }
 
-// Generates cumulative time series data efficiently in a single pass.
+// Update the generateTimeSeriesForTopic function
 function generateTimeSeriesForTopic(submissions: ProcessedSubmission[]) {
     if (submissions.length === 0) {
-        return { acceptanceRate: [], avgTries: [], firstAceRate: [] };
+        return { problemsSolved: [], avgTries: [], firstAceRate: [] }; // ✅ CHANGED
     }
 
     const sortedSubs = submissions.sort((a, b) => a.date.getTime() - b.date.getTime());
-    const metricsOverTime: { [key in 'acceptanceRate' | 'avgTries' | 'firstAceRate']: TimeSeriesPoint[] } = {
-        acceptanceRate: [],
+    const metricsOverTime: { [key in 'problemsSolved' | 'avgTries' | 'firstAceRate']: TimeSeriesPoint[] } = {
+        problemsSolved: [], // ✅ CHANGED
         avgTries: [],
         firstAceRate: [],
     };
@@ -81,7 +78,6 @@ function generateTimeSeriesForTopic(submissions: ProcessedSubmission[]) {
         const slug = sub.titleSlug;
         const difficulty = sub.metadata?.difficulty;
 
-        // Update cumulative counters
         cumulativeSubmissions++;
         if (sub.status === 10) cumulativeAccepted++;
 
@@ -104,36 +100,35 @@ function generateTimeSeriesForTopic(submissions: ProcessedSubmission[]) {
         const nextDate = (i + 1 < sortedSubs.length) ? sortedSubs[i + 1].date.toISOString().split('T')[0] : null;
 
         if (currentDate !== nextDate) {
-            // Only include data points when there's meaningful data
-                const overallAcceptanceRate = (cumulativeAccepted / cumulativeSubmissions) * 100;
-                
-                // ✅ FIXED: Use submission-based average attempts for time series
-                const overallAvgTries = cumulativeAccepted > 0 ? cumulativeSubmissions / cumulativeAccepted : Infinity;
+            // ✅ NEW: Calculate cumulative problems solved
+            const overallProblemsSolved = Array.from(problemGroups.overall.values())
+                .filter(subs => subs.some(s => s.status === 10)).length;
 
-                metricsOverTime.acceptanceRate.push({ 
-                    date: currentDate, 
-                    value: overallAcceptanceRate,
-                    easy: getValidMetricValue(problemGroups.easy, 'acceptanceRate'),
-                    medium: getValidMetricValue(problemGroups.medium, 'acceptanceRate'),
-                    hard: getValidMetricValue(problemGroups.hard, 'acceptanceRate')
-                });
-                
-                metricsOverTime.avgTries.push({ 
-                    date: currentDate, 
-                    value: overallAvgTries,
-                    easy: getValidMetricValue(problemGroups.easy, 'avgTries'),
-                    medium: getValidMetricValue(problemGroups.medium, 'avgTries'),
-                    hard: getValidMetricValue(problemGroups.hard, 'avgTries')
-                });
-                
-                const overallMetrics = calculateMetricsFromGroups(problemGroups.overall);
-                metricsOverTime.firstAceRate.push({ 
-                    date: currentDate, 
-                    value: overallMetrics.firstAceRate,
-                    easy: getValidMetricValue(problemGroups.easy, 'firstAceRate'),
-                    medium: getValidMetricValue(problemGroups.medium, 'firstAceRate'),
-                    hard: getValidMetricValue(problemGroups.hard, 'firstAceRate')
-                });
+            metricsOverTime.problemsSolved.push({ // ✅ CHANGED
+                date: currentDate, 
+                value: overallProblemsSolved,
+                easy: getValidMetricValue(problemGroups.easy, 'problemsSolved'),
+                medium: getValidMetricValue(problemGroups.medium, 'problemsSolved'),
+                hard: getValidMetricValue(problemGroups.hard, 'problemsSolved')
+            });
+            
+            const overallAvgTries = cumulativeAccepted > 0 ? cumulativeSubmissions / cumulativeAccepted : Infinity;
+            metricsOverTime.avgTries.push({ 
+                date: currentDate, 
+                value: overallAvgTries,
+                easy: getValidMetricValue(problemGroups.easy, 'avgTries'),
+                medium: getValidMetricValue(problemGroups.medium, 'avgTries'),
+                hard: getValidMetricValue(problemGroups.hard, 'avgTries')
+            });
+            
+            const overallMetrics = calculateMetricsFromGroups(problemGroups.overall);
+            metricsOverTime.firstAceRate.push({ 
+                date: currentDate, 
+                value: overallMetrics.firstAceRate,
+                easy: getValidMetricValue(problemGroups.easy, 'firstAceRate'),
+                medium: getValidMetricValue(problemGroups.medium, 'firstAceRate'),
+                hard: getValidMetricValue(problemGroups.hard, 'firstAceRate')
+            });
         }
     }
 
@@ -141,22 +136,21 @@ function generateTimeSeriesForTopic(submissions: ProcessedSubmission[]) {
 }
 
 // ✅ UPDATED: Helper function to return valid metric values or undefined
+
+
+// Update the getValidMetricValue function
 function getValidMetricValue(
     problemGroups: Map<string, ProcessedSubmission[]>, 
-    metric: 'acceptanceRate' | 'avgTries' | 'firstAceRate'
+    metric: 'problemsSolved' | 'avgTries' | 'firstAceRate' // ✅ CHANGED
 ): number | undefined {
     if (problemGroups.size === 0) {
-        return undefined; // Don't include this difficulty in the chart yet
+        return undefined;
     }
-    
-    // Calculate total submissions for this difficulty
-    const totalSubmissions = Array.from(problemGroups.values()).flat().length;
     
     const metrics = calculateMetricsFromGroups(problemGroups);
     
-    // ✅ FIXED: Handle infinity case for chart display
     if (metric === 'avgTries' && metrics[metric] === Infinity) {
-        return undefined; // Don't show infinite values in charts
+        return undefined;
     }
     
     return metrics[metric];
@@ -197,7 +191,7 @@ export function getSkillMatrixStats(
         console.log('[SkillMatrix] No topics match filters. Aborting.');
         const endTime = performance.now();
         console.log(`[SkillMatrix] Total calculation finished in ${(endTime - startTime).toFixed(2)}ms.`);
-        return { topics: [], metrics: { acceptanceRate: {}, avgTries: {}, firstAceRate: {} }, timeSeriesData: {} };
+        return { topics: [], metrics: { problemsSolved: {}, avgTries: {}, firstAceRate: {} }, timeSeriesData: {} };
     }
     
     // Pre-group FILTERED submissions by topic for time series generation
@@ -224,7 +218,7 @@ export function getSkillMatrixStats(
     console.log('[SkillMatrix] Finished pre-grouping filtered submissions.');
 
     const metrics: SkillMatrixData['metrics'] = {
-        acceptanceRate: {},
+        problemsSolved: {},
         avgTries: {},
         firstAceRate: {}
     };
@@ -250,7 +244,7 @@ export function getSkillMatrixStats(
         }
 
         const overallMetrics = calculateMetricsFromGroups(problemGroupsForTable);
-        metrics.acceptanceRate[topic] = overallMetrics.acceptanceRate;
+        metrics.problemsSolved[topic] = overallMetrics.problemsSolved;
         metrics.avgTries[topic] = overallMetrics.avgTries;
         metrics.firstAceRate[topic] = overallMetrics.firstAceRate;
 
@@ -268,11 +262,11 @@ export function getSkillMatrixStats(
         }
     });
 
-    // ✅ NEW: Sort topics by acceptance rate (descending)
+    // ✅ CHANGED: Sort topics by problems solved (descending)
     const topics = unsortedTopics.sort((a, b) => {
-        const aRate = metrics.acceptanceRate[a] || 0;
-        const bRate = metrics.acceptanceRate[b] || 0;
-        return bRate - aRate; // Descending order (highest acceptance rate first)
+        const aProblems = metrics.problemsSolved[a] || 0;
+        const bProblems = metrics.problemsSolved[b] || 0;
+        return bProblems - aProblems; // Descending order (highest problems solved first)
     });
 
     console.log('[SkillMatrix] Topics sorted by acceptance rate (descending)');
