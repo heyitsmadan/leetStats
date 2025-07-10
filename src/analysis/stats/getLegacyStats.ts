@@ -303,14 +303,7 @@ function calculateMilestones(submissions: any[]): MilestoneData[] {
 function calculateRecords(processedData: ProcessedData, submissions: any[]): RecordData[] {
   const records: RecordData[] = [];
   
-  // 1. Longest submission streak with ending date
-  const streakData = calculateLongestStreak(submissions);
-  records.push({
-    name: 'Longest Submission Streak',
-    value: `${streakData.length} days ending on ${formatDate(streakData.endDate)}`
-  });
-  
-  // 2. Problems solved on first try
+  // 1. Problems solved on first try (first in order)
   let firstTryEasy = 0;
   let firstTryMedium = 0;
   let firstTryHard = 0;
@@ -330,7 +323,23 @@ function calculateRecords(processedData: ProcessedData, submissions: any[]): Rec
     subStats: { easy: firstTryEasy, medium: firstTryMedium, hard: firstTryHard }
   });
   
-  // 3. Busiest day
+  // 2. Longest submission streak with ending date
+  const streakData = calculateLongestStreak(submissions);
+  records.push({
+    name: 'Longest Submission Streak',
+    mainStat: `${streakData.length} days`,
+    dateStat: `ending on ${formatDate(streakData.endDate)}`
+  });
+  
+  // 3. Longest break with start and end dates
+  const breakData = calculateLongestBreak(submissions);
+  records.push({
+    name: 'Longest Break',
+    mainStat: `${formatDuration(breakData.days)}`,
+    dateStat: `${formatDate(breakData.startDate)} - ${formatDate(breakData.endDate)}`
+  });
+  
+  // 4. Busiest day
   const dayMap = new Map<string, number>();
   for (const sub of submissions) {
     const dateKey = sub.date.toDateString();
@@ -348,27 +357,34 @@ function calculateRecords(processedData: ProcessedData, submissions: any[]): Rec
   
   records.push({
     name: 'Busiest Day',
-    value: `${maxDaySubmissions} submissions on ${formatDate(new Date(busiestDay))}`
+    mainStat: `${maxDaySubmissions} submissions`,
+    dateStat: `on ${formatDate(new Date(busiestDay))}`
   });
   
-  // 4. Longest break with start and end dates
-  const breakData = calculateLongestBreak(submissions);
-  records.push({
-    name: 'Longest Break',
-    value: `${formatDuration(breakData.days)} (${formatDate(breakData.startDate)} - ${formatDate(breakData.endDate)})`
-  });
-  
-  // 5-7. Best periods - calculate unique problems solved (removed best week)
+  // 5-7. Best periods - calculate unique problems solved
   const bestPeriods = calculateBestPeriods(submissions);
   
   records.push(
-    { name: 'Best Day', value: `${bestPeriods.bestDay.count} problems solved on ${formatDate(bestPeriods.bestDay.date)}`, isHighlight: true },
-    { name: 'Best Month', value: `${bestPeriods.bestMonth.count} problems solved in ${formatMonthYear(bestPeriods.bestMonth.date)}`, isHighlight: true },
-    { name: 'Best Year', value: `${bestPeriods.bestYear.count} problems solved in ${bestPeriods.bestYear.date.getFullYear()}`, isHighlight: true }
+    { 
+      name: 'Best Day', 
+      mainStat: `${bestPeriods.bestDay.count} problems solved`,
+      dateStat: `on ${formatDate(bestPeriods.bestDay.date)}`
+    },
+    { 
+      name: 'Best Month', 
+      mainStat: `${bestPeriods.bestMonth.count} problems solved`,
+      dateStat: `in ${formatMonthYear(bestPeriods.bestMonth.date)}`
+    },
+    { 
+      name: 'Best Year', 
+      mainStat: `${bestPeriods.bestYear.count} problems solved`,
+      dateStat: `in ${bestPeriods.bestYear.date.getFullYear()}`
+    }
   );
   
   return records;
 }
+
 
 // Helper function to format date as day/month/year
 function formatDate(date: Date): string {

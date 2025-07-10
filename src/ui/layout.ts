@@ -24,6 +24,36 @@ let interactiveChartFilters = {
   difficulty: 'All' as Difficulty,
 };
 
+const styles = {
+  // === Structural Headers ===
+  sectionHeader: "text-2xl font-semibold text-gray-100", // Added margin-bottom for spacing
+  subSectionHeader: "text-xl font-medium text-gray-300", // Made larger (xl) and distinct from content
+
+  // === Milestone Styles ===
+  milestoneEvent: "text-base font-semibold text-gray-200", // Brightest text for the title
+  milestoneDate: "text-sm text-gray-400 dark:text-dark-label-2", // Secondary info
+  milestoneProblem: "text-sm text-gray-500", // Can be a problem name or a mono ID
+
+  // === Trophy Card Styles (to be used with new design below) ===
+  trophyName: "text-base font-semibold text-gray-200", // Consistent with milestoneEvent
+  trophyProblem: "text-sm text-sky-400 hover:underline cursor-pointer",
+  trophyDescription: "text-sm text-gray-400", // Secondary text
+  trophyPersonalNote: "text-sm italic text-gray-500", // Muted, tertiary text
+
+  // === Records Section Styles (to be used with new design below) ===
+  recordLabel: "text-base font-medium text-gray-300",
+  recordValue: "text-base font-semibold text-gray-100", // For the main number/stat
+  recordContext: "text-sm text-gray-400", // For the date/context text
+
+  // === Skill Matrix ===
+  skillMatrixColumnHeader: "text-xs font-semibold uppercase tracking-wider text-gray-400",
+  skillMatrixRowLabel: "text-base font-medium text-gray-300",
+  skillMatrixCellValue: "text-base text-gray-200",
+};
+
+
+
+
 // --- State Management ---
 let codingClockChart: CodingClockChartInstance | undefined;
 let cumulativeLineChart: CumulativeLineChartInstance | undefined;
@@ -121,11 +151,12 @@ function renderLegacySection(processedData: ProcessedData) {
   if (!legacyContainer || !legacyStats) return;
   
   legacyContainer.innerHTML = `
+  <div class="${styles.sectionHeader}">Legacy</div>
     <div class="flex flex-col lg:flex-row gap-4 h-full">
       <!-- Left Half: Milestones -->
       <div class="flex-1 rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-        <h3 class="text-lg font-medium text-label-1 dark:text-dark-label-1 mb-4">Milestones</h3>
-        <div class="relative">
+        <div class="${styles.subSectionHeader}">Milestones</div>
+        <div class="mt-4 relative">
           <!-- Timeline line -->
           <div class="absolute left-3 top-0 bottom-0 w-0.5 bg-fill-3 dark:bg-dark-fill-3"></div>
           <div class="space-y-4">
@@ -141,20 +172,20 @@ ${legacyStats.milestones.map((milestone: any) => {
 
       <!-- Content -->
       <div class="ml-10">
-        <div class="text-sm font-medium" style="color: #f9ffff">
+        <div class="${styles.milestoneEvent}" style="color: #f9ffff">
           ${milestone.milestone}${getOrdinalSuffix(milestone.milestone)} ${formatMilestoneType(milestone.type)}
         </div>
-        <div class="text-xs text-label-2 dark:text-dark-label-2">
+        <div class="${styles.milestoneDate}">
           ${milestone.date.toLocaleDateString('en-GB')}
         </div>
         ${milestone.type === 'submissions' ? `
           <a href="https://leetcode.com/submissions/detail/${milestone.submissionId || milestone.id}/" 
-   class="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300">
+   class="inline-flex items-center gap-1 ${styles.milestoneProblem}">
   Submission #${milestone.submissionId || milestone.id}
 </a>
         ` : milestone.problemTitle ? `
           <a href="https://leetcode.com/problems/${milestone.problemSlug}/" 
-   class="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300">
+   class="inline-flex items-center gap-1 ${styles.milestoneProblem}">
   ${milestone.problemTitle}
 </a>
         ` : ''}
@@ -170,27 +201,27 @@ ${legacyStats.milestones.map((milestone: any) => {
 <!-- Right Half -->
 <div class="flex-1 flex flex-col gap-4">
 <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-  <div class="text-base font-medium leading-6">Trophy Room</div>
+  <div class="${styles.subSectionHeader}">Trophies</div>
   <div class="mt-4 space-y-3">
     ${legacyStats.trophies.map((trophy: any) => `
       <div class="flex items-center space-x-3 p-3 rounded-md bg-[rgba(0,0,0,0.02)] dark:bg-[rgba(255,255,255,0.06)]">
         <span class="text-2xl flex-shrink-0">${trophy.icon}</span>
         <div class="flex-1">
-          <div class="text-base font-semibold text-label-1 dark:text-dark-label-1">
+          <div class="${styles.trophyName}">
             ${trophy.title}
           </div>
           
           <a href="https://leetcode.com/problems/${trophy.problemSlug}/" 
-             class="block text-sm font-medium text-label-2 dark:text-dark-label-2 hover:text-blue-500 dark:hover:text-blue-400 transition-colors mt-1">
+             class="${styles.trophyProblem} hover:underline cursor-pointer mt-1">
             ${trophy.problemTitle}
           </a>
           
-          <div class="text-sm font-normal text-label-2 dark:text-dark-label-2 mt-1.5">
+          <div class="${styles.trophyDescription} mt-1.5">
             ${trophy.subtitle}
           </div>
           
           ${trophy.personalNote ? `
-            <div class="text-xs italic text-label-3 dark:text-dark-label-3 mt-2 border-l-2 border-current pl-2">
+            <div class="${styles.trophyPersonalNote} mt-2 border-l-2 border-current pl-2">
               ${trophy.personalNote}
             </div>
           ` : ''}
@@ -202,39 +233,34 @@ ${legacyStats.milestones.map((milestone: any) => {
 
   
 <!-- Records - takes remaining space -->
+<!-- Records - takes remaining space -->
 <div class="flex-1 rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-  <h3 class="text-lg font-medium text-label-1 dark:text-dark-label-1 mb-4">Records</h3>
-  <div class="space-y-2">
-    ${legacyStats.records.filter((record: any) => !record.isHighlight).map((record: any) => `
+  <div class="${styles.subSectionHeader}">Records</div>
+  <div class="mt-4 space-y-2">
+    ${legacyStats.records.map((record: any) => `
       <div class="flex justify-between items-center p-2 rounded-md">
-        <span class="text-sm text-label-1 dark:text-dark-label-1">${record.name}</span>
+        <span class="${styles.milestoneEvent}">${record.name}</span>
         <div class="text-right flex items-center">
-          <span class="text-sm font-medium text-label-1 dark:text-dark-label-1">${record.value}</span>
-          ${record.subStats ? `
-            <div class="ml-2 w-12 h-6">
-              <canvas id="mini-chart-${record.name.replace(/\s+/g, '-').toLowerCase()}" width="48" height="24"></canvas>
+          ${record.value !== undefined ? `
+            <span class="text-sm font-medium text-label-1 dark:text-dark-label-1">${record.value}</span>
+            ${record.subStats ? `
+              <div class="ml-2 w-12 h-6">
+                <canvas id="mini-chart-${record.name.replace(/\s+/g, '-').toLowerCase()}" width="48" height="24"></canvas>
+              </div>
+            ` : ''}
+          ` : `
+            <div class="flex flex-col items-end">
+              <span class="${styles.milestoneEvent}">${record.mainStat}</span>
+              <span class="${styles.milestoneDate}">${record.dateStat}</span>
             </div>
-          ` : ''}
+          `}
         </div>
       </div>
     `).join('')}
-    
-    <!-- Best periods section with single border -->
-    <div class="border border-yellow-500/30 bg-yellow-500/10 rounded-md p-3 mt-4">
-      <div class="text-sm font-medium text-label-1 dark:text-dark-label-1 mb-2">Best Periods</div>
-      <div class="space-y-2">
-        ${legacyStats.records.filter((record: any) => record.isHighlight).map((record: any) => `
-          <div class="flex justify-between items-center">
-            <span class="text-sm text-label-1 dark:text-dark-label-1">${record.name}</span>
-            <span class="text-sm font-medium text-label-1 dark:text-dark-label-1">${record.value}</span>
-          </div>
-        `).join('')}
-      </div>
-    </div>
   </div>
 </div>
-
-
+  </div>
+</div>
   `;
 }
 
@@ -541,75 +567,83 @@ function createStatsPaneWithGrid(): HTMLElement {
     <div class="space-y-4">
     <!-- INTERACTIVE CHART SECTION - Add this BEFORE the legacy section -->
       <div class="rounded-lg p-4">
-        <h2 class="text-xl font-bold text-label-1 dark:text-dark-label-1 mb-4">DNA Strand</h2>
-        <div id="interactive-chart-container"></div>
+        <div class="${styles.sectionHeader}">History</div>
+        <div class="mt-4" id="interactive-chart-container"></div>
       </div>
+      <div class="border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b"></div>
        <!-- YOUR LEGACY SECTION -->
       <div class="rounded-lg p-4">
         <div id="legacy-section" class="min-h-96"></div>
       </div>
-
+<div class="border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b"></div>
 <!-- FILTERS -->
-<div class="flex items-center justify-end space-x-4 p-4 bg-layer-1 dark:bg-dark-layer-1 rounded-lg">
-  <!-- Time Range Dropdown -->
-  <div class="relative" data-headlessui-state>
-    <button id="time-range-dropdown-btn" class="flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3 w-40" type="button" aria-haspopup="listbox" aria-expanded="false" data-headlessui-state>
-      <span class="whitespace-nowrap flex-1 pr-2">All Time</span>
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="pointer-events-none flex-shrink-0 w-4 h-4" aria-hidden="true">
-        <path fill-rule="evenodd" d="M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z" clip-rule="evenodd"></path>
-      </svg>
-    </button>
-    <div id="time-range-dropdown-options" class="hidden z-dropdown absolute max-h-56 overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 right-0 mt-2 shadow-level3 dark:shadow-dark-level3 w-40" role="listbox" tabindex="0" data-headlessui-state>
-      <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded bg-fill-3 dark:bg-dark-fill-3" data-value="All Time" role="option" tabindex="-1">
-        <div class="flex h-5 flex-1 items-center pr-2 font-medium">
-          <div class="whitespace-nowrap">All Time</div>
+<!-- HEADER + FILTERS -->
+<div class="flex items-center justify-between p-4 bg-layer-1 dark:bg-dark-layer-1 rounded-lg">
+  <!-- Left Header -->
+  <h2 class="${styles.sectionHeader}">Activity</h2>
+
+  <!-- FILTERS -->
+  <div class="flex items-center space-x-4">
+    <!-- Time Range Dropdown -->
+    <div class="relative" data-headlessui-state>
+      <button id="time-range-dropdown-btn" class="flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3 w-40" type="button" aria-haspopup="listbox" aria-expanded="false" data-headlessui-state>
+        <span class="whitespace-nowrap flex-1 pr-2">All Time</span>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="pointer-events-none flex-shrink-0 w-4 h-4" aria-hidden="true">
+          <path fill-rule="evenodd" d="M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z" clip-rule="evenodd"></path>
+        </svg>
+      </button>
+      <div id="time-range-dropdown-options" class="hidden z-dropdown absolute max-h-56 overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 right-0 mt-2 shadow-level3 dark:shadow-dark-level3 w-40" role="listbox" tabindex="0" data-headlessui-state>
+        <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded bg-fill-3 dark:bg-dark-fill-3" data-value="All Time" role="option" tabindex="-1">
+          <div class="flex h-5 flex-1 items-center pr-2 font-medium">
+            <div class="whitespace-nowrap">All Time</div>
+          </div>
         </div>
-      </div>
-      <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Last 30 Days" role="option" tabindex="-1">
-        <div class="flex h-5 flex-1 items-center pr-2">
-          <div class="whitespace-nowrap">Last 30 Days</div>
+        <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Last 30 Days" role="option" tabindex="-1">
+          <div class="flex h-5 flex-1 items-center pr-2">
+            <div class="whitespace-nowrap">Last 30 Days</div>
+          </div>
         </div>
-      </div>
-      <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Last 90 Days" role="option" tabindex="-1">
-        <div class="flex h-5 flex-1 items-center pr-2">
-          <div class="whitespace-nowrap">Last 90 Days</div>
+        <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Last 90 Days" role="option" tabindex="-1">
+          <div class="flex h-5 flex-1 items-center pr-2">
+            <div class="whitespace-nowrap">Last 90 Days</div>
+          </div>
         </div>
-      </div>
-      <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Last 365 Days" role="option" tabindex="-1">
-        <div class="flex h-5 flex-1 items-center pr-2">
-          <div class="whitespace-nowrap">Last 365 Days</div>
+        <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Last 365 Days" role="option" tabindex="-1">
+          <div class="flex h-5 flex-1 items-center pr-2">
+            <div class="whitespace-nowrap">Last 365 Days</div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Difficulty Dropdown -->
-  <div class="relative" data-headlessui-state>
-    <button id="difficulty-dropdown-btn" class="flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3 w-24" type="button" aria-haspopup="listbox" aria-expanded="false" data-headlessui-state>
-      <span class="whitespace-nowrap flex-1 pr-2">All</span>
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="pointer-events-none flex-shrink-0 w-4 h-4" aria-hidden="true">
-        <path fill-rule="evenodd" d="M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z" clip-rule="evenodd"></path>
-      </svg>
-    </button>
-    <div id="difficulty-dropdown-options" class="hidden z-dropdown absolute max-h-56 overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 right-0 mt-2 shadow-level3 dark:shadow-dark-level3 w-24" role="listbox" tabindex="0" data-headlessui-state>
-      <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded bg-fill-3 dark:bg-dark-fill-3" data-value="All" role="option" tabindex="-1">
-        <div class="flex h-5 flex-1 items-center pr-2 font-medium">
-          <div class="whitespace-nowrap">All</div>
+    <!-- Difficulty Dropdown -->
+    <div class="relative" data-headlessui-state>
+      <button id="difficulty-dropdown-btn" class="flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3 w-24" type="button" aria-haspopup="listbox" aria-expanded="false" data-headlessui-state>
+        <span class="whitespace-nowrap flex-1 pr-2">All</span>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="pointer-events-none flex-shrink-0 w-4 h-4" aria-hidden="true">
+          <path fill-rule="evenodd" d="M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z" clip-rule="evenodd"></path>
+        </svg>
+      </button>
+      <div id="difficulty-dropdown-options" class="hidden z-dropdown absolute max-h-56 overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 right-0 mt-2 shadow-level3 dark:shadow-dark-level3 w-24" role="listbox" tabindex="0" data-headlessui-state>
+        <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded bg-fill-3 dark:bg-dark-fill-3" data-value="All" role="option" tabindex="-1">
+          <div class="flex h-5 flex-1 items-center pr-2 font-medium">
+            <div class="whitespace-nowrap">All</div>
+          </div>
         </div>
-      </div>
-      <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Easy" role="option" tabindex="-1">
-        <div class="flex h-5 flex-1 items-center pr-2">
-          <div class="whitespace-nowrap">Easy</div>
+        <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Easy" role="option" tabindex="-1">
+          <div class="flex h-5 flex-1 items-center pr-2">
+            <div class="whitespace-nowrap">Easy</div>
+          </div>
         </div>
-      </div>
-      <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Medium" role="option" tabindex="-1">
-        <div class="flex h-5 flex-1 items-center pr-2">
-          <div class="whitespace-nowrap">Medium</div>
+        <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Medium" role="option" tabindex="-1">
+          <div class="flex h-5 flex-1 items-center pr-2">
+            <div class="whitespace-nowrap">Medium</div>
+          </div>
         </div>
-      </div>
-      <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Hard" role="option" tabindex="-1">
-        <div class="flex h-5 flex-1 items-center pr-2">
-          <div class="whitespace-nowrap">Hard</div>
+        <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Hard" role="option" tabindex="-1">
+          <div class="flex h-5 flex-1 items-center pr-2">
+            <div class="whitespace-nowrap">Hard</div>
+          </div>
         </div>
       </div>
     </div>
@@ -623,7 +657,7 @@ function createStatsPaneWithGrid(): HTMLElement {
         <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
           <div class="flex justify-between items-center mb-4">
             <!-- **UPDATED:** Heading color -->
-            <h3 class="text-lg font-medium text-label-1 dark:text-dark-label-1">Coding Clock</h3>
+            <div class="${styles.subSectionHeader}">Coding Clock</div>
             <!-- **UPDATED:** Button text for default day view -->
             <!-- NEW: Two-button toggle -->
 <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
@@ -639,7 +673,7 @@ function createStatsPaneWithGrid(): HTMLElement {
   </button>
 </div>
           </div>
-          <div class="relative h-64 w-full">
+          <div class="mt-4 relative h-64 w-full">
             <canvas id="coding-clock-chart"></canvas>
           </div>
         </div>
@@ -647,7 +681,7 @@ function createStatsPaneWithGrid(): HTMLElement {
         <!-- TOP-RIGHT: CUMULATIVE PROGRESS -->
 <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
   <div class="flex justify-between items-center mb-4">
-    <h3 class="text-lg font-medium text-label-1 dark:text-dark-label-1">Cumulative Progress</h3>
+    <div class="${styles.subSectionHeader}">Progress Tracker</div>
     <!-- NEW: Three-button toggle with same design as coding clock -->
     <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
       <button id="daily-view-btn" 
@@ -670,32 +704,33 @@ function createStatsPaneWithGrid(): HTMLElement {
       </button>
     </div>
   </div>
-  <div class="relative h-64 w-full">
+  <div class="mt-4 relative h-64 w-full">
     <canvas id="cumulative-chart"></canvas>
   </div>
 </div>
 
         <!-- BOTTOM-LEFT: SUBMISSION SIGNATURE -->
         <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-            <h3 class="text-lg font-medium text-label-1 dark:text-dark-label-1">Submission Signature</h3>
-            <div class="relative h-64 w-full">
+            <div class="${styles.subSectionHeader}">Submission Signature</div>
+            <div class="mt-4 relative h-64 w-full">
                 <canvas id="submission-signature-chart"></canvas>
             </div>
         </div>
 
         <!-- BOTTOM-RIGHT: LANGUAGE STATS -->
         <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-            <h3 class="text-lg font-medium text-label-1 dark:text-dark-label-1">Language Stats</h3>
-            <div class="relative h-64 w-full">
+            <div class="${styles.subSectionHeader}">Language Stats</div>
+            <div class="mt-4 relative h-64 w-full">
                 <canvas id="language-stats-chart"></canvas>
             </div>
         </div>
       </div>
       <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
       <!-- SKILL MATRIX SECTION -->
+      <div class="border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b"></div>
 <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
   <div class="flex justify-between items-center mb-4">
-    <h3 class="text-lg font-medium text-label-1 dark:text-dark-label-1">Skill Matrix</h3>
+    <div class="${styles.sectionHeader}">Skills</div>
     
     <!-- Updated dropdown with HeadlessUI style -->
     <div class="ml-[21px]">
@@ -756,7 +791,7 @@ function createStatsPaneWithGrid(): HTMLElement {
       </div>
     </div>
   </div>
-  <div id="skill-matrix-container"></div>
+  <div class="mt-4" id="skill-matrix-container"></div>
 </div>
 
   `;

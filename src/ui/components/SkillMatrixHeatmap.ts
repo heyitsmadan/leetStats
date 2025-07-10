@@ -44,19 +44,19 @@ export function renderOrUpdateSkillMatrixHeatmap(
                 <table class="w-full border-collapse" style="table-layout: fixed;">
                     <thead>
                         <tr class="bg-layer-1 dark:bg-dark-layer-1">
-                            <th class="text-left p-3 text-sm font-medium text-label-1 dark:text-dark-label-1" style="width: 30%;"></th>
-                            ${metrics.map(metric => `<th class="text-center p-3 text-sm font-medium text-label-1 dark:text-dark-label-1" style="width: ${70/3}%;">${metricLabels[metric]}</th>`).join('')}
+                            <th class="text-left p-3 text-base font-semibold text-gray-200" style="width: 30%;"></th>
+                            ${metrics.map(metric => `<th class="text-center p-3 text-base font-semibold text-gray-200" style="width: ${70/3}%;">${metricLabels[metric]}</th>`).join('')}
                             <th style="width: 40px;"></th>
                         </tr>
                     </thead>
                     <tbody id="skill-matrix-tbody">
                         ${data.topics.map(topic => `
                             <tr class="topic-row last:border-b-0" data-topic-row="${topic}">
-                                <td class="p-3 text-sm text-label-1 dark:text-dark-label-1 font-medium">${formatTopicName(topic)}</td>
+                                <td class="p-3 text-base font-semibold text-gray-200">${formatTopicName(topic)}</td>
                                 ${metrics.map(metric => {
                                     const value = data.metrics[metric][topic] || 0;
                                     const color = getHeatmapColor(value, metric);
-                                    return `<td class="p-0 text-center font-medium text-sm" style="background-color: ${color}; color: ${getTextColor(color)};">
+                                    return `<td class="p-0 text-center text-base font-semibold text-gray-200" style="background-color: ${color}; color: ${getTextColor(color)};">
                                         <div class="p-2">${formatMetricValue(value, metric)}</div>
                                     </td>`;
                                 }).join('')}

@@ -90,11 +90,14 @@ export interface MilestoneData {
 
 export interface RecordData {
   name: string;
-  value: string | number;
+  value?: string | number;  // Make this optional since some records use mainStat/dateStat instead
   subStats?: { easy: number; medium: number; hard: number };
   isHighlight?: boolean;
-  chartId?: string; // Add this line
+  chartId?: string;
+  mainStat?: string;  // Add this line
+  dateStat?: string;  // Add this line
 }
+
 
 
 export interface LegacyStats {
