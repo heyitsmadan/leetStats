@@ -206,20 +206,20 @@ export function renderOrUpdateInteractiveChart(
     }
 
     .brush .selection {
-      fill: rgba(189, 190, 179, 0.3);
-      stroke: #bdbeb3;
+      fill: rgba(249, 255, 255, 0.3);
+      stroke: #f9ffff;
       stroke-width: 2;
     }
 
     .brush .handle {
-      fill: #bdbeb3;
-      stroke: #bdbeb3;
+      fill: #f9ffff;
+      stroke: #f9ffff;
       stroke-width: 2;
     }
 
     .navigator-area {
-      fill: rgba(189, 190, 179, 0.2);
-      stroke: #bdbeb3;
+      fill: rgba(93, 182, 102, 0.2);
+      stroke: #5db666;
       stroke-width: 1;
     }
 
