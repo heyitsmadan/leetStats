@@ -67,37 +67,41 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
     trophies.push({
       id: 'first_blood',
       title: 'First Blood',
-      subtitle: 'A journey of a thousand miles begins with a single step',
+      subtitle: 'Your very first solved problem',
       problemTitle: firstAccepted.title,
       problemSlug: firstAccepted.titleSlug,
       icon: '🩸',
-      stat: 1
+      stat: 1,
+      personalNote: `...and so the suffering began`
     });
   }
 
-  // 2. Nemesis - Eventually solved with most submissions
-  let maxSubmissionsForSolved = 0;
-  let nemesisProblem: any = null;
-  
-  for (const [slug, stats] of problemStats) {
-    if (stats.accepted > 0 && stats.submissions > maxSubmissionsForSolved) {
-      maxSubmissionsForSolved = stats.submissions;
-      nemesisProblem = { slug, stats };
-    }
+// 2. Nemesis - Eventually solved with most failed submissions
+let maxFailedSubmissions = 0;
+let nemesisProblem: any = null;
+
+for (const [slug, stats] of problemStats) {
+  const failedSubmissions = stats.submissions - stats.accepted;
+  if (stats.accepted > 0 && failedSubmissions > maxFailedSubmissions) {
+    maxFailedSubmissions = failedSubmissions;
+    nemesisProblem = { slug, stats, failedSubmissions };
   }
-  
-  if (nemesisProblem) {
-    const problemData = submissions.find(s => s.titleSlug === nemesisProblem.slug);
-    trophies.push({
-      id: 'nemesis',
-      title: 'Nemesis',
-      subtitle: `Conquered after ${nemesisProblem.stats.submissions} attempts`,
-      problemTitle: problemData?.title || nemesisProblem.slug,
-      problemSlug: nemesisProblem.slug,
-      icon: '⚔️',
-      stat: nemesisProblem.stats.submissions
-    });
-  }
+}
+
+if (nemesisProblem) {
+  const problemData = submissions.find(s => s.titleSlug === nemesisProblem.slug);
+  trophies.push({
+    id: 'nemesis',
+    title: 'Nemesis',
+    subtitle: `Conquered after ${nemesisProblem.failedSubmissions} failed attempts`,
+    problemTitle: problemData?.title || nemesisProblem.slug,
+    problemSlug: nemesisProblem.slug,
+    icon: '⚔️',
+    stat: nemesisProblem.failedSubmissions,
+    personalNote: `...this was personal`
+  });
+}
+
 
   // 3. White Whale - Most submissions, never solved
   let maxSubmissionsUnsolved = 0;
@@ -162,18 +166,18 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
     }
   }
   
-  if (everestProblem && maxFailedHard > 0) {
-    const problemData = submissions.find(s => s.titleSlug === everestProblem.slug);
-    trophies.push({
-      id: 'everest',
-      title: 'Everest',
-      subtitle: `${everestProblem.failed} failed attempts on a Hard problem`,
-      problemTitle: problemData?.title || everestProblem.slug,
-      problemSlug: everestProblem.slug,
-      icon: '🏔️',
-      stat: everestProblem.failed
-    });
-  }
+  // if (everestProblem && maxFailedHard > 0) {
+  //   const problemData = submissions.find(s => s.titleSlug === everestProblem.slug);
+  //   trophies.push({
+  //     id: 'everest',
+  //     title: 'Everest',
+  //     subtitle: `${everestProblem.failed} failed attempts on a Hard problem`,
+  //     problemTitle: problemData?.title || everestProblem.slug,
+  //     problemSlug: everestProblem.slug,
+  //     icon: '🏔️',
+  //     stat: everestProblem.failed
+  //   });
+  // }
 
   // 6. The Phoenix - Biggest time gap between first submission and acceptance
   let maxTimeGap = 0;
@@ -201,7 +205,8 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
         problemTitle: problemData?.title || phoenixProblem.slug,
         problemSlug: phoenixProblem.slug,
         icon: '🔥',
-        stat: days
+        stat: days,
+      personalNote: `...well, that took a while`
       });
     }
   }

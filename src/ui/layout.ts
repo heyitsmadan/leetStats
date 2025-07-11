@@ -35,10 +35,10 @@ const styles = {
   milestoneProblem: "text-sm text-gray-500", // Can be a problem name or a mono ID
 
   // === Trophy Card Styles (to be used with new design below) ===
-  trophyName: "text-base font-semibold text-gray-200", // Consistent with milestoneEvent
-  trophyProblem: "text-sm text-sky-400 hover:underline cursor-pointer",
-  trophyDescription: "text-sm text-gray-400", // Secondary text
-  trophyPersonalNote: "text-sm italic text-gray-500", // Muted, tertiary text
+  trophyName: "text-base font-semibold text-gray-200", // Unchanged, as requested.
+trophyProblem: "text-sm text-sky-400 hover:underline", // The problem link remains a prominent secondary element.
+trophyDescription: "text-xs text-gray-400", // **Crucial Change**: Made smaller (xs) and a standard gray.
+trophyPersonalNote: "text-xs italic text-gray-500 dark:text-dark-label-2", // Muted, tertiary text
 
   // === Records Section Styles (to be used with new design below) ===
   recordLabel: "text-base font-medium text-gray-300",
@@ -204,29 +204,27 @@ ${legacyStats.milestones.map((milestone: any) => {
   <div class="${styles.subSectionHeader}">Trophies</div>
   <div class="mt-4 space-y-3">
     ${legacyStats.trophies.map((trophy: any) => `
-      <div class="flex items-center space-x-3 p-3 rounded-md bg-[rgba(0,0,0,0.02)] dark:bg-[rgba(255,255,255,0.06)]">
-        <span class="text-2xl flex-shrink-0">${trophy.icon}</span>
-        <div class="flex-1">
-          <div class="${styles.trophyName}">
+      <div class="flex items-center space-x-4 p-3 rounded-lg bg-[rgba(0,0,0,0.02)] dark:bg-[rgba(255,255,255,0.06)]">
+    <span class="text-2xl flex-shrink-0 pt-0.5">${trophy.icon}</span>
+
+    <div class="flex-1 flex flex-col space-y-1">
+        <div class="${styles.trophyName}">
             ${trophy.title}
-          </div>
-          
-          <a href="https://leetcode.com/problems/${trophy.problemSlug}/" 
-             class="${styles.trophyProblem} hover:underline cursor-pointer mt-1">
-            ${trophy.problemTitle}
-          </a>
-          
-          <div class="${styles.trophyDescription} mt-1.5">
-            ${trophy.subtitle}
-          </div>
-          
-          ${trophy.personalNote ? `
-            <div class="${styles.trophyPersonalNote} mt-2 border-l-2 border-current pl-2">
-              ${trophy.personalNote}
-            </div>
-          ` : ''}
         </div>
-      </div>
+        <div class="border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b"></div>
+        <a href="https://leetcode.com/problems/${trophy.problemSlug}/" class="${styles.trophyProblem}">
+            ${trophy.problemTitle}
+        </a>
+        
+        <div class="${styles.trophyDescription} pt-1"> ${trophy.subtitle}
+        </div>
+
+        ${trophy.personalNote ? `
+            <div class="${styles.trophyPersonalNote} pt-1.5"> ${trophy.personalNote}
+            </div>
+        ` : ''}
+    </div>
+</div>
     `).join('')}
   </div>
 </div>
