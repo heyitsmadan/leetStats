@@ -42,16 +42,18 @@ import type {
   TooltipData 
 } from '../../types';
 
+// Update the color constants at the top of the file:
 const DIFFICULTY_COLORS = {
-  'Easy': '#58b8b9',
-  'Medium': '#f4ba40',
-  'Hard': '#e24a41'
+  'Easy': '#58b8b9',    // ✅ UPDATED
+  'Medium': '#f4ba40',  // ✅ UPDATED  
+  'Hard': '#e24a41'     // ✅ UPDATED
 };
 
 const STATUS_COLORS = {
-  'Accepted': '#5db666',
-  'Failed': '#9ca3af'
+  'Accepted': '#5db666', // ✅ UPDATED
+  'Failed': '#393939'    // ✅ UPDATED
 };
+
 
 const LANGUAGE_COLORS = [
   '#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b',

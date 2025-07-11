@@ -34,24 +34,39 @@ export function renderOrUpdateInteractiveChart(
       <!-- Global Toggles -->
 <div class="flex justify-between items-center mb-4">
   <!-- Primary Toggle (Left) -->
-  <div id="primary-view-toggle" class="flex text-xs bg-layer-2 dark:bg-dark-layer-2 p-1 rounded-md text-label-2 dark:text-dark-label-2">
-    <button id="primary-submissions" data-view="Submissions" class="px-2 py-0.5 rounded-md bg-fill-3 dark:bg-dark-fill-3">
+  <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
+    <button id="primary-submissions" 
+            data-view="Submissions" 
+            data-state="active"
+            class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
       Submissions
     </button>
-    <button id="primary-problems" data-view="Problems Solved" class="px-2 py-0.5 rounded-md">
+    <button id="primary-problems" 
+            data-view="Problems Solved" 
+            data-state="inactive"
+            class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
       Problems Solved
     </button>
   </div>
   
   <!-- Secondary Toggle (Right) -->
-  <div id="secondary-view-toggle" class="flex text-xs bg-layer-2 dark:bg-dark-layer-2 p-1 rounded-md text-label-2 dark:text-dark-label-2">
-    <button id="secondary-difficulty" data-view="Difficulty" class="px-2 py-0.5 rounded-md bg-fill-3 dark:bg-dark-fill-3">
+  <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
+    <button id="secondary-difficulty" 
+            data-view="Difficulty" 
+            data-state="active"
+            class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
       Difficulty
     </button>
-    <button id="secondary-language" data-view="Language" class="px-2 py-0.5 rounded-md">
+    <button id="secondary-language" 
+            data-view="Language" 
+            data-state="inactive"
+            class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
       Language
     </button>
-    <button id="secondary-status" data-view="Status" class="px-2 py-0.5 rounded-md">
+    <button id="secondary-status" 
+            data-view="Status" 
+            data-state="inactive"
+            class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
       Status
     </button>
   </div>
@@ -191,22 +206,23 @@ export function renderOrUpdateInteractiveChart(
     }
 
     .brush .selection {
-      fill: rgba(69, 183, 209, 0.3);
-      stroke: #45b7d1;
+      fill: rgba(189, 190, 179, 0.3);
+      stroke: #bdbeb3;
       stroke-width: 2;
     }
 
     .brush .handle {
-      fill: #45b7d1;
-      stroke: #45b7d1;
+      fill: #bdbeb3;
+      stroke: #bdbeb3;
       stroke-width: 2;
     }
 
     .navigator-area {
-      fill: rgba(69, 183, 209, 0.2);
-      stroke: #45b7d1;
+      fill: rgba(189, 190, 179, 0.2);
+      stroke: #bdbeb3;
       stroke-width: 1;
     }
+
   `;
   document.head.appendChild(style);
 
@@ -233,50 +249,60 @@ export function renderOrUpdateInteractiveChart(
     const chartData = getInteractiveChartStats(processedData, currentFilters);
     if (!chartData) return;
 
-    mainChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: chartData.labels,
-        datasets: chartData.datasets
+    // In the initializeMainChart() function, update the Chart.js options:
+mainChart = new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: chartData.labels,
+    datasets: chartData.datasets.map(dataset => ({
+      ...dataset,
+      maxBarThickness: 20 // ✅ Limit bar width to a maximum of 20px
+    }))
+  },  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: {
+      mode: 'index' as const,
+      intersect: false,
+    },
+    plugins: {
+      legend: {
+        display: false, // ✅ REMOVE LEGEND
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: {
-          mode: 'index' as const,
-          intersect: false,
-        },
-        plugins: {
-          legend: {
-            display: true,
-            position: 'top' as const,
-          },
-          tooltip: {
-            enabled: false, // We'll use custom tooltip
-            external: handleTooltip
-          }
-        },
-        scales: {
-          x: {
-            stacked: true,
-            grid: {
-              display: false
-            }
-          },
-          y: {
-            stacked: true,
-            beginAtZero: true,
-            grid: {
-              color: 'rgba(0, 0, 0, 0.1)'
-            }
-          }
-        },
-        animation: {
-          duration: 750,
-          easing: 'easeInOutQuart'
+      tooltip: {
+        enabled: false,
+        external: handleTooltip
+      }
+    },
+    scales: {
+      x: {
+        stacked: true,
+        grid: {
+          display: false // ✅ REMOVE BACKGROUND LINES
+        }
+      },
+      y: {
+        stacked: true,
+        beginAtZero: true,
+        grid: {
+          display: false // ✅ REMOVE BACKGROUND LINES
         }
       }
-    });
+    },
+    // ✅ ADD ROUNDED BARS
+    elements: {
+      bar: {
+        borderRadius: 6,
+        borderSkipped: 'bottom',
+      }
+    },
+    animation: {
+      duration: 750,
+      easing: 'easeInOutQuart'
+    }
+  }
+});
+
   }
 
  function initializeBrushChart() {
@@ -382,7 +408,7 @@ export function renderOrUpdateInteractiveChart(
 
   function setupEventListeners() {
   // Primary toggle listeners
-  const primaryButtons = container.querySelectorAll('#primary-view-toggle button');
+  const primaryButtons = container.querySelectorAll('[id^="primary-"]');
   primaryButtons.forEach(btn => {
     btn.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
@@ -390,18 +416,17 @@ export function renderOrUpdateInteractiveChart(
       
       if (newView === currentFilters.primaryView) return;
 
-      // Update active states
-      primaryButtons.forEach(b => b.classList.remove('active'));
-      target.classList.add('active');
+      // Update active states using data-state
+      primaryButtons.forEach(b => b.setAttribute('data-state', 'inactive'));
+      target.setAttribute('data-state', 'active');
 
-      // Update filters and chart
       currentFilters.primaryView = newView;
       updateMainChart();
     });
   });
 
   // Secondary toggle listeners
-  const secondaryButtons = container.querySelectorAll('#secondary-view-toggle button');
+  const secondaryButtons = container.querySelectorAll('[id^="secondary-"]');
   secondaryButtons.forEach(btn => {
     btn.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
@@ -409,16 +434,16 @@ export function renderOrUpdateInteractiveChart(
       
       if (newView === currentFilters.secondaryView) return;
 
-      // Update active states
-      secondaryButtons.forEach(b => b.classList.remove('active'));
-      target.classList.add('active');
+      // Update active states using data-state
+      secondaryButtons.forEach(b => b.setAttribute('data-state', 'inactive'));
+      target.setAttribute('data-state', 'active');
 
-      // Update filters and chart
       currentFilters.secondaryView = newView;
       updateMainChart();
     });
   });
 }
+
 
 
   function handleTooltip(context: any) {
