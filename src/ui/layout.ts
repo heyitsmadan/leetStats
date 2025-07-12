@@ -142,6 +142,14 @@ export function renderPageLayout(processedData: ProcessedData) {
 
     // 6. Setup tab switching logic
     setupTabLogic(statsTab, tabBar, contentSection, statsPane, processedData);
+
+    // 7. Pre-render all charts on page load
+  if (!window.statsRendered) {
+    requestAnimationFrame(() => {
+      renderAllCharts(processedData);
+      window.statsRendered = true;
+    });
+  }
     console.log('Stats UI injected successfully');
   };
 
@@ -911,13 +919,7 @@ function setupTabLogic(
     `);
     rightElements.forEach(el => (el as HTMLElement).style.display = 'none');
     
-    // First-time chart rendering
-    if (!window.statsRendered) {
-      requestAnimationFrame(() => {
-        renderAllCharts(processedData);
-        window.statsRendered = true;
-      });
-    }
+    
   });
 
   // LeetCode tab click handler
