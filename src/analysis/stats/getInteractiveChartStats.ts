@@ -3,10 +3,42 @@ function createChartData(
   timeGroups: { [key: string]: any[] },
   filters: InteractiveChartFilters,
   aggregationLevel: 'Daily' | 'Monthly' | 'Yearly',
-  dateRange: { start: Date; end: Date }
+  effectiveDateRange?: { start: Date; end: Date } | null
 ): InteractiveChartData {
-  // Generate complete intervals including empty periods at ends
-  const allIntervals = generateAllIntervals(dateRange.start, dateRange.end, aggregationLevel);
+  
+  // Use effective date range if available, otherwise fall back to timeGroups dates
+  let startDate: Date, endDate: Date;
+  
+  if (effectiveDateRange) {
+    startDate = effectiveDateRange.start;
+    endDate = effectiveDateRange.end;
+  } else {
+    // Fallback to existing logic
+    const allDates = Object.keys(timeGroups);
+    if (allDates.length === 0) {
+      return {
+        labels: [],
+        datasets: [],
+        aggregationLevel,
+        timeRange: { start: new Date(), end: new Date() }
+      };
+    }
+    const sortedDates = allDates.sort();
+    startDate = new Date(sortedDates[0]);
+    endDate = new Date(sortedDates[sortedDates.length - 1]);
+  }
+
+  // Adjust dates based on aggregation level for proper boundaries
+  if (aggregationLevel === 'Monthly') {
+    startDate.setDate(1); // Start of month
+    endDate.setMonth(endDate.getMonth() + 1, 0); // End of month
+  } else if (aggregationLevel === 'Yearly') {
+    startDate.setMonth(0, 1); // Start of year
+    endDate.setMonth(11, 31); // End of year
+  }
+
+  // Generate complete intervals for the determined date range
+  const allIntervals = generateAllIntervals(startDate, endDate, aggregationLevel);
   
   const datasets: any[] = [];
   
@@ -138,10 +170,9 @@ function createChartData(
     labels: allIntervals.map(interval => formatDateLabel(interval, aggregationLevel)),
     datasets,
     aggregationLevel,
-    timeRange: dateRange
+    timeRange: { start: startDate, end: endDate }
   };
 }
-
 
 
 // Enhanced date formatting
@@ -279,34 +310,37 @@ export function getInteractiveChartStats(
 ): InteractiveChartData | null {
   const { submissions } = processedData;
   if (!submissions.length) return null;
-  
-  // Get extended date range (to today)
-  const fullDateRange = getExtendedDateRange(submissions, false);
-  
+
   // Filter submissions by brush window or time range
   let filteredSubmissions = submissions;
-  let effectiveDateRange = fullDateRange;
+  let effectiveDateRange: { start: Date; end: Date } | null = null;
   
   if (filters.brushWindow) {
     const [start, end] = filters.brushWindow;
     filteredSubmissions = submissions.filter(sub => 
       sub.date >= start && sub.date <= end
     );
+    // Use the BRUSH WINDOW dates for aggregation level, not filtered submissions
     effectiveDateRange = { start, end };
   } else if (filters.timeRange !== 'All Time') {
     const cutoffDate = getTimeRangeCutoff(filters.timeRange);
     filteredSubmissions = submissions.filter(sub => sub.date >= cutoffDate);
-    effectiveDateRange = { start: cutoffDate, end: fullDateRange.end };
+    effectiveDateRange = { 
+      start: cutoffDate, 
+      end: new Date(Math.max(...submissions.map(s => s.date.getTime())))
+    };
   }
-  
+
   if (filters.difficulty !== 'All') {
     filteredSubmissions = filteredSubmissions.filter(sub =>
       sub.metadata?.difficulty === filters.difficulty
     );
   }
-  
-  // Determine aggregation level
-  const aggregationLevel = getAggregationLevel(filteredSubmissions, false);
+
+  // ✅ FIX: Determine aggregation level based on the effective date range, not filtered submissions
+  const aggregationLevel = effectiveDateRange 
+    ? getAggregationLevelFromDateRange(effectiveDateRange.start, effectiveDateRange.end)
+    : getAggregationLevel(filteredSubmissions);
   
   // Group submissions by time period
   const timeGroups = groupByTimePeriod(filteredSubmissions, aggregationLevel);
@@ -453,7 +487,7 @@ function getAggregationLevel(submissions: any[], isNavigator: boolean = false): 
   const daysDiff = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
   
   // Optimal bar counts: 15-60 bars for good visualization
-  if (daysDiff <= 90) return 'Daily';        // Up to 90 bars
+  if (daysDiff <= 60) return 'Daily';        // Up to 90 bars
   if (daysDiff <= 1095) return 'Monthly';    // Up to 36 bars (3 years)
   return 'Yearly';                           // For longer periods
 }
@@ -482,4 +516,14 @@ function getExtendedDateRange(submissions: any[], isNavigator: boolean = false):
   const end = isNavigator ? new Date() : new Date(); // Always extend to today
   
   return { start, end };
+}
+
+// ✅ NEW: Calculate aggregation level based on specific date range
+function getAggregationLevelFromDateRange(startDate: Date, endDate: Date): 'Daily' | 'Monthly' | 'Yearly' {
+  const daysDiff = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+  
+  // Use the same thresholds as your existing logic
+  if (daysDiff <= 60) return 'Daily';        // Up to 90 days
+  if (daysDiff <= 1095) return 'Monthly';    // Up to 3 years  
+  return 'Yearly';                           // For longer periods
 }
