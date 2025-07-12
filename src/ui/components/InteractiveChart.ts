@@ -153,7 +153,7 @@ export function renderOrUpdateInteractiveChart(
     if (!ctx) return;
     const chartData = getInteractiveChartStats(processedData, currentFilters);
     if (!chartData) return;
-
+    const showLegend = currentFilters.secondaryView === 'Language';
     // In the initializeMainChart function, update the Chart.js options:
 mainChart = new Chart(ctx, {
   type: 'bar',
@@ -161,7 +161,7 @@ mainChart = new Chart(ctx, {
     labels: chartData.labels,
     datasets: chartData.datasets.map(dataset => ({
       ...dataset,
-      maxBarThickness: 20  // Ensure max bar width
+      maxBarThickness: 20,  // Ensure max bar width
     }))
   },
   options: {
@@ -169,7 +169,15 @@ mainChart = new Chart(ctx, {
     maintainAspectRatio: false,
     interaction: { mode: 'index', intersect: false },
     plugins: {
-      legend: { display: false },
+      legend: { display: showLegend, // ✅ Conditional legend
+          labels: {
+            boxWidth: 12,
+            padding: 15,
+            font: {
+              size: 12
+            },
+            color: '#bdbeb3', // ✅ Makes legend markers circular instead of squares
+          } },
       tooltip: { enabled: false, external: handleTooltip }
     },
     scales: {

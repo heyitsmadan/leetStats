@@ -74,7 +74,8 @@ function createChartData(
         data,
         backgroundColor: DIFFICULTY_COLORS[difficulty as keyof typeof DIFFICULTY_COLORS],
         borderColor: DIFFICULTY_COLORS[difficulty as keyof typeof DIFFICULTY_COLORS],
-        stack: 'main'
+        stack: 'main',
+        maxBarThickness: 20,
       });
     });
   } else if (filters.secondaryView === 'Status') {
@@ -117,14 +118,16 @@ function createChartData(
         data: acceptedData,
         backgroundColor: STATUS_COLORS.Accepted,
         borderColor: STATUS_COLORS.Accepted,
-        stack: 'main'
+        stack: 'main',
+        maxBarThickness: 20,
       },
       {
         label: 'Failed',
         data: failedData,
         backgroundColor: filters.primaryView === 'Problems Solved' ? '#d1e7dd' : STATUS_COLORS.Failed,
         borderColor: filters.primaryView === 'Problems Solved' ? '#d1e7dd' : STATUS_COLORS.Failed,
-        stack: 'main'
+        stack: 'main',
+        maxBarThickness: 20,
       }
     );
   } else if (filters.secondaryView === 'Language') {
@@ -161,7 +164,8 @@ function createChartData(
         data,
         backgroundColor: LANGUAGE_COLORS[index % LANGUAGE_COLORS.length],
         borderColor: LANGUAGE_COLORS[index % LANGUAGE_COLORS.length],
-        stack: 'main'
+        stack: 'main',
+        maxBarThickness: 20,
       });
     });
   }
@@ -301,7 +305,16 @@ function fillMissingIntervals(
 
 const DIFFICULTY_COLORS = { 'Easy': '#58b8b9', 'Medium': '#f4ba40', 'Hard': '#e24a41' };
 const STATUS_COLORS = { 'Accepted': '#5db666', 'Failed': '#393939' };
-const LANGUAGE_COLORS = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b', '#eb4d4b', '#6c5ce7', '#a29bfe', '#fd79a8', '#e84393'];
+const LANGUAGE_COLORS = [
+  '#FFDAC1', // Peach
+  '#E2F0CB', // Light sage
+  '#F4C2C2', // Dusty rose (very muted)
+  '#D6EAF8', // Powder blue
+  '#E8DAEF', // Lilac
+  '#D5F4E6', // Pale mint
+  '#F9E79F', // Cream (muted yellow)
+  '#FADBD8'  // Blush (very pale pink)
+];
 
 // Updated main function
 export function getInteractiveChartStats(
