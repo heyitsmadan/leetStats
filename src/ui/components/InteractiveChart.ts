@@ -1,11 +1,11 @@
 import * as d3 from 'd3';
 import { Chart, registerables } from 'chart.js';
-import type { 
-  InteractiveChartData, 
-  BrushChartData, 
+import type {
+  InteractiveChartData,
+  BrushChartData,
   InteractiveChartFilters,
   TooltipData,
-  ProcessedData 
+  ProcessedData
 } from '../../types';
 import { getInteractiveChartStats, getBrushChartData, getTooltipData } from '../../analysis/stats/getInteractiveChartStats';
 
@@ -32,46 +32,30 @@ export function renderOrUpdateInteractiveChart(
   container.innerHTML = `
     <div class="interactive-chart-container">
       <!-- Global Toggles -->
-<div class="flex justify-between items-center mb-4">
-  <!-- Primary Toggle (Left) -->
-  <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
-    <button id="primary-submissions" 
-            data-view="Submissions" 
-            data-state="active"
-            class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
-      Submissions
-    </button>
-    <button id="primary-problems" 
-            data-view="Problems Solved" 
-            data-state="inactive"
-            class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
-      Problems Solved
-    </button>
-  </div>
-  
-  <!-- Secondary Toggle (Right) -->
-  <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
-    <button id="secondary-difficulty" 
-            data-view="Difficulty" 
-            data-state="active"
-            class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
-      Difficulty
-    </button>
-    <button id="secondary-language" 
-            data-view="Language" 
-            data-state="inactive"
-            class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
-      Language
-    </button>
-    <button id="secondary-status" 
-            data-view="Status" 
-            data-state="inactive"
-            class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
-      Status
-    </button>
-  </div>
-</div>
-
+      <div class="flex justify-between items-center mb-4">
+        <!-- Primary Toggle (Left) -->
+        <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
+          <button id="primary-submissions" data-view="Submissions" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
+            Submissions
+          </button>
+          <button id="primary-problems" data-view="Problems Solved" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
+            Problems Solved
+          </button>
+        </div>
+        
+        <!-- Secondary Toggle (Right) -->
+        <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
+          <button id="secondary-difficulty" data-view="Difficulty" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
+            Difficulty
+          </button>
+          <button id="secondary-language" data-view="Language" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
+            Language
+          </button>
+          <button id="secondary-status" data-view="Status" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
+            Status
+          </button>
+        </div>
+      </div>
 
       <!-- Main Chart -->
       <div class="main-chart-container mb-4" style="height: 400px;">
@@ -86,298 +70,284 @@ export function renderOrUpdateInteractiveChart(
       <!-- Tooltip -->
       <div id="chart-tooltip" class="chart-tooltip"></div>
     </div>
-    <style>
-    // Add these styles to your existing style.textContent:
-.navigator-container {
-  width: 100%;
-  min-width: 300px;
-  height: 80px;
-  overflow: visible;
-}
-
-#brush-chart {
-  width: 100%;
-  height: 80px;
-  display: block;
-}
-
-.main-chart-container {
-  width: 100%;
-  min-width: 300px;
-  height: 400px;
-}
-
-    </style>
   `;
 
   // Add styles
   const style = document.createElement('style');
   style.textContent = `
-  .interactive-chart-container {
-  font-family: inherit;
-}
-
-/* Remove the old toggle button styles and replace with these */
-#primary-view-toggle button,
-#secondary-view-toggle button {
-  transition: all 0.2s ease;
-  font-weight: 500;
-}
-
-#primary-view-toggle button.active,
-#secondary-view-toggle button.active {
-  background: var(--fill-3, #e5e5e5);
-  color: var(--label-1, #333);
-}
-
-#primary-view-toggle button:not(.active),
-#secondary-view-toggle button:not(.active) {
-  background: transparent;
-  color: var(--label-2, #666);
-}
-
-#primary-view-toggle button:hover:not(.active),
-#secondary-view-toggle button:hover:not(.active) {
-  background: var(--fill-2, #f0f0f0);
-}
-
-/* Keep your existing tooltip and other styles */
-.chart-tooltip {
-  position: absolute;
-  background: var(--layer-1, white);
-  border: 1px solid var(--divider-3, #ddd);
-  border-radius: 8px;
-  padding: 12px;
-  font-size: 14px;
-  color: var(--label-1, #333);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  pointer-events: none;
-  z-index: 1000;
-  display: none;
-  max-width: 300px;
-}
-
-/* ... rest of your existing styles ... */
-
     .interactive-chart-container {
       font-family: inherit;
     }
 
-    .primary-toggle-btn {
-      background: var(--layer-2, #f5f5f5);
-      color: var(--label-2, #666);
-      border: 1px solid var(--divider-3, #ddd);
-    }
-
-    .primary-toggle-btn.active {
-      background: var(--fill-3, #e5e5e5);
-      color: var(--label-1, #333);
-    }
-
-    .secondary-toggle-btn {
-      background: var(--layer-2, #f5f5f5);
-      color: var(--label-2, #666);
-      border: 1px solid var(--divider-3, #ddd);
-    }
-
-    .secondary-toggle-btn.active {
-      background: var(--fill-3, #e5e5e5);
-      color: var(--label-1, #333);
-    }
-
     .chart-tooltip {
       position: absolute;
-      background: var(--layer-1, white);
-      border: 1px solid var(--divider-3, #ddd);
+      background: #353535;
+      border: 1px solid #4a4a4a;
       border-radius: 8px;
       padding: 12px;
       font-size: 14px;
-      color: var(--label-1, #333);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      color: #f9ffff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
       pointer-events: none;
       z-index: 1000;
       display: none;
       max-width: 300px;
     }
 
-    .brush .overlay {
-      fill: none;
-      pointer-events: all;
+    /* === REVISED NAVIGATOR/BRUSH STYLES === */
+
+    .navigator-container .axis .domain,
+    .navigator-container .axis .tick line {
+        stroke: #bdbeb3;
+        stroke-opacity: 0.5;
     }
 
-    .brush .selection {
-      fill: rgba(249, 255, 255, 0.3);
-      stroke: #f9ffff;
-      stroke-width: 2;
-    }
-
-    .brush .handle {
-      fill: #f9ffff;
-      stroke: #f9ffff;
-      stroke-width: 2;
+    .navigator-container .axis .tick text {
+        fill: #bdbeb3;
+        font-size: 11px;
+        font-family: inherit;
     }
 
     .navigator-area {
-      fill: rgba(93, 182, 102, 0.2);
-      stroke: #5db666;
-      stroke-width: 1;
+        fill: #5db666;
+        fill-opacity: 0.25;
+        stroke: #5db666;
+        stroke-width: 1.5;
+        stroke-opacity: 0.8;
     }
 
+    /* The selection rectangle is now a semi-transparent highlight */
+    .brush .selection {
+      fill: rgba(249, 255, 255, 0.0); /* Lighter highlight color */
+      stroke: #bdbeb3; /* Crisp white border */
+      stroke-width: 1px;
+      shape-rendering: crispEdges;
+    }
+
+    .brush .handle {
+      fill: #353535;
+      stroke: #bdbeb3;
+      stroke-width: 1px;
+      rx: 3;
+      ry: 3;
+    }
   `;
   document.head.appendChild(style);
 
   // Initialize state
   let currentFilters: InteractiveChartFilters = { ...initialFilters };
   let mainChart: Chart | null = null;
-  let brushChart: any = null;
   let brushData: BrushChartData | null = null;
 
-// Initialize charts after DOM is ready
+  // Initialize charts after DOM is ready
   setTimeout(() => {
     initializeMainChart();
     initializeBrushChart();
     setupEventListeners();
-  }, 100); // Small delay to ensure DOM is rendered
+  }, 100);
 
   function initializeMainChart() {
     const canvas = container.querySelector('#main-chart') as HTMLCanvasElement;
     if (!canvas) return;
-
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-
     const chartData = getInteractiveChartStats(processedData, currentFilters);
     if (!chartData) return;
 
-    // In the initializeMainChart() function, update the Chart.js options:
-mainChart = new Chart(ctx, {
-  type: 'bar',
-  data: {
-    labels: chartData.labels,
-    datasets: chartData.datasets.map(dataset => ({
-      ...dataset,
-      maxBarThickness: 20 // ✅ Limit bar width to a maximum of 20px
-    }))
-  },  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: {
-      mode: 'index' as const,
-      intersect: false,
-    },
-    plugins: {
-      legend: {
-        display: false, // ✅ REMOVE LEGEND
+    mainChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: chartData.labels,
+        datasets: chartData.datasets.map(dataset => ({
+          ...dataset,
+          maxBarThickness: 20
+        }))
       },
-      tooltip: {
-        enabled: false,
-        external: handleTooltip
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: { enabled: false, external: handleTooltip }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            grid: { display: false },
+            ticks: { color: '#bdbeb3' }
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            grid: { display: true, color: 'rgba(189, 190, 179, 0.1)' },
+            ticks: { color: '#bdbeb3' }
+          }
+        },
+        elements: { bar: { borderRadius: 4, borderSkipped: 'bottom' } },
+        animation: { duration: 500, easing: 'easeInOutQuart' }
       }
-    },
-    scales: {
-      x: {
-        stacked: true,
-        grid: {
-          display: false // ✅ REMOVE BACKGROUND LINES
-        }
-      },
-      y: {
-        stacked: true,
-        beginAtZero: true,
-        grid: {
-          display: false // ✅ REMOVE BACKGROUND LINES
-        }
-      }
-    },
-    // ✅ ADD ROUNDED BARS
-    elements: {
-      bar: {
-        borderRadius: 6,
-        borderSkipped: 'bottom',
-      }
-    },
-    animation: {
-      duration: 750,
-      easing: 'easeInOutQuart'
-    }
-  }
-});
-
+    });
   }
 
- function initializeBrushChart() {
+  function initializeBrushChart() {
   brushData = getBrushChartData(processedData);
-  if (!brushData) return;
+  if (!brushData || !mainChart) return;
 
   const svg = d3.select(container.querySelector('#brush-chart'));
-  const margin = { top: 10, right: 30, bottom: 30, left: 30 };
+  const margin = { top: 10, right: 20, bottom: 25, left: 20 };
   
-  // Fix: Get the actual container width and ensure it's valid
-  const containerWidth = container.offsetWidth || 800; // fallback width
-  const width = Math.max(containerWidth - margin.left - margin.right, 200); // minimum width
+  // === FIX: Get width from the main chart's canvas for perfect alignment ===
+  const mainChartCanvas = container.querySelector('#main-chart') as HTMLElement;
+  const containerWidth = mainChartCanvas.offsetWidth;
+  // Validate dimensions before proceeding
+  if (containerWidth <= 0) {
+      console.warn('Container width not ready, retrying...');
+      setTimeout(initializeBrushChart, 100);
+      return;
+  }
+  const width = containerWidth - margin.left - margin.right;
   const height = 80 - margin.top - margin.bottom;
 
-  // Fix: Clear and set proper SVG dimensions
   svg.selectAll("*").remove();
   svg.attr("width", containerWidth).attr("height", 80);
 
   const g = svg.append("g")
     .attr("transform", `translate(${margin.left},${margin.top})`);
 
-  // Scales
+  // Create clip path definitions
+  const defs = g.append("defs");
+  
+  // General navigator clip path
+  defs.append("clipPath")
+    .attr("id", "navigator-clip")
+    .append("rect")
+    .attr("width", width)
+    .attr("height", height);
+  
+  // Clip path for the selected (normal) area
+  const selectedClip = defs.append("clipPath")
+    .attr("id", "selected-area-clip")
+    .append("rect")
+    .attr("x", 0)
+    .attr("y", 0)
+    .attr("width", width)  // Initially full width
+    .attr("height", height);
+
+  // Clip path for the dimmed areas (everything except selected)
+  const dimmedClip = defs.append("clipPath")
+    .attr("id", "dimmed-area-clip");
+  
+  // Left dimmed rectangle
+  dimmedClip.append("rect")
+    .attr("class", "dim-left-rect")
+    .attr("x", 0)
+    .attr("y", 0)
+    .attr("width", 0)  // Initially no width
+    .attr("height", height);
+  
+  // Right dimmed rectangle  
+  dimmedClip.append("rect")
+    .attr("class", "dim-right-rect")
+    .attr("x", width)
+    .attr("y", 0)
+    .attr("width", 0)  // Initially no width
+    .attr("height", height);
+
   const xScale = d3.scaleTime()
     .domain(d3.extent(brushData.labels, d => new Date(d)) as [Date, Date])
     .range([0, width]);
 
   const yScale = d3.scaleLinear()
-    .domain([0, d3.max(brushData.data) || 0])
+    .domain([0, d3.max(brushData.data) as number])
     .range([height, 0]);
 
-  // Area generator
   const area = d3.area<any>()
     .x((d, i) => xScale(new Date(brushData!.labels[i])))
     .y0(height)
     .y1((d, i) => yScale(brushData!.data[i]))
-    .curve(d3.curveCardinal);
+    .curve(d3.curveBasis);
 
-  // Add area
-  g.append("path")
+  const chartArea = g.append("g")
+    .attr("clip-path", "url(#navigator-clip)");
+
+  // Create TWO identical area charts with different styling and clipping
+  
+  // Normal area (clipped to selected region)
+  chartArea.append("path")
     .datum(brushData.data)
-    .attr("class", "navigator-area")
-    .attr("d", area);
+    .attr("class", "navigator-area-selected")
+    .attr("d", area)
+    .attr("clip-path", "url(#selected-area-clip)")
+    .style("fill", "#5db666")
+    .style("fill-opacity", 0.25)
+    .style("stroke", "#5db666")
+    .style("stroke-width", 1.5)
+    .style("stroke-opacity", 0.8);
 
-  // Add brush
+  // Dimmed area (clipped to non-selected regions)
+  chartArea.append("path")
+    .datum(brushData.data)
+    .attr("class", "navigator-area-dimmed")
+    .attr("d", area)
+    .attr("clip-path", "url(#dimmed-area-clip)")
+    .style("fill", "#5db666")
+    .style("fill-opacity", 0.1)  // Much dimmer
+    .style("stroke", "#5db666")
+    .style("stroke-width", 1.5)
+    .style("stroke-opacity", 0.3);  // Much dimmer
+
   const brush = d3.brushX()
     .extent([[0, 0], [width, height]])
+    .handleSize(8) // Slightly larger handles for easier grabbing
     .on("brush end", handleBrush);
 
-  const brushG = g.append("g")
-    .attr("class", "brush");
-
+  const brushG = g.append("g").attr("class", "brush");
   brush(brushG);
 
-  // Fix: Set initial brush selection to entire width (wait a moment for DOM to update)
+  // Set initial brush to full extent
   setTimeout(() => {
     brushG.call(brush.move, [0, width]);
+    // Initialize clips for full selection
+    selectedClip.attr("x", 0).attr("width", width);
+    dimmedClip.select(".dim-left-rect").attr("width", 0);
+    dimmedClip.select(".dim-right-rect").attr("width", 0);
   }, 0);
 
-  // Add x-axis
   const xAxis = d3.axisBottom(xScale)
-    .tickFormat((domainValue: Date | d3.NumberValue) => {
-      const date = domainValue instanceof Date ? domainValue : new Date(domainValue.valueOf());
-      return d3.timeFormat("'%y")(date);
-    })
-    .ticks(d3.timeYear.every(1));
+    .ticks(d3.timeYear.every(1))
+    .tickFormat((domainValue, index) => {
+      return d3.timeFormat("'%y")(domainValue as Date);
+    });
 
   g.append("g")
+    .attr("class", "axis")
     .attr("transform", `translate(0,${height})`)
     .call(xAxis);
 
   function handleBrush(event: any) {
+    if (!event.sourceEvent) return;
     const selection = event.selection;
     if (!selection || !brushData) return;
 
     const [x0, x1] = selection;
+    
+    // Update the clip paths to match exact brush boundaries
+    
+    // Selected area clip: show only between x0 and x1
+    selectedClip
+      .attr("x", x0)
+      .attr("width", x1 - x0);
+    
+    // Dimmed areas clip: show left and right of selection
+    dimmedClip.select(".dim-left-rect")
+      .attr("x", 0)
+      .attr("width", x0);
+        
+    dimmedClip.select(".dim-right-rect")
+      .attr("x", x1)
+      .attr("width", width - x1);
+
     const startDate = xScale.invert(x0);
     const endDate = xScale.invert(x1);
 
@@ -388,74 +358,55 @@ mainChart = new Chart(ctx, {
 
 
   function updateMainChart() {
-  if (!mainChart) return;
-
-  const chartData = getInteractiveChartStats(processedData, currentFilters);
-  if (!chartData) return;
-
-  // Update the chart data
-  mainChart.data.labels = chartData.labels;
-  mainChart.data.datasets = chartData.datasets;
-
-  // Update the chart title based on the current mode
-  if (mainChart.options.plugins?.title) {
-    mainChart.options.plugins.title.text = `${currentFilters.primaryView} by ${currentFilters.secondaryView}`;
+    if (!mainChart) return;
+    const chartData = getInteractiveChartStats(processedData, currentFilters);
+    if (!chartData) return;
+    mainChart.data.labels = chartData.labels;
+    mainChart.data.datasets = chartData.datasets;
+    mainChart.update('none'); // Use 'none' for faster updates when brushing
   }
 
-  mainChart.update('active');
-}
-
-
   function setupEventListeners() {
-  // Primary toggle listeners
-  const primaryButtons = container.querySelectorAll('[id^="primary-"]');
-  primaryButtons.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const target = e.target as HTMLElement;
-      const newView = target.dataset.view as 'Submissions' | 'Problems Solved';
-      
-      if (newView === currentFilters.primaryView) return;
-
-      // Update active states using data-state
-      primaryButtons.forEach(b => b.setAttribute('data-state', 'inactive'));
-      target.setAttribute('data-state', 'active');
-
-      currentFilters.primaryView = newView;
-      updateMainChart();
+    // ... (event listeners remain the same)
+    const primaryButtons = container.querySelectorAll('[id^="primary-"]');
+    primaryButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        const newView = target.dataset.view as 'Submissions' | 'Problems Solved';
+        if (newView === currentFilters.primaryView) return;
+        primaryButtons.forEach(b => b.setAttribute('data-state', 'inactive'));
+        target.setAttribute('data-state', 'active');
+        currentFilters.primaryView = newView;
+        updateMainChart();
+      });
     });
-  });
 
-  // Secondary toggle listeners
-  const secondaryButtons = container.querySelectorAll('[id^="secondary-"]');
-  secondaryButtons.forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const target = e.target as HTMLElement;
-      const newView = target.dataset.view as 'Difficulty' | 'Language' | 'Status';
-      
-      if (newView === currentFilters.secondaryView) return;
-
-      // Update active states using data-state
-      secondaryButtons.forEach(b => b.setAttribute('data-state', 'inactive'));
-      target.setAttribute('data-state', 'active');
-
-      currentFilters.secondaryView = newView;
-      updateMainChart();
+    const secondaryButtons = container.querySelectorAll('[id^="secondary-"]');
+    secondaryButtons.forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const target = e.target as HTMLElement;
+        const newView = target.dataset.view as 'Difficulty' | 'Language' | 'Status';
+        if (newView === currentFilters.secondaryView) return;
+        secondaryButtons.forEach(b => b.setAttribute('data-state', 'inactive'));
+        target.setAttribute('data-state', 'active');
+        currentFilters.secondaryView = newView;
+        updateMainChart();
+      });
     });
-  });
-}
-
-
+  }
 
   function handleTooltip(context: any) {
-    const tooltip = container.querySelector('#chart-tooltip') as HTMLElement;
-    if (!tooltip) return;
+    // ... (tooltip handler remains the same)
+    const tooltipEl = container.querySelector('#chart-tooltip') as HTMLElement;
+    if (!tooltipEl) return;
+    const tooltipModel = context.tooltip;
 
-    if (context.opacity === 0) {
-      tooltip.style.display = 'none';
+    if (tooltipModel.opacity === 0) {
+      tooltipEl.style.opacity = '0';
       return;
     }
 
-    const dataIndex = context.dataPoints[0]?.dataIndex;
+    const dataIndex = tooltipModel.dataPoints[0]?.dataIndex;
     if (dataIndex === undefined) return;
 
     const chartData = getInteractiveChartStats(processedData, currentFilters);
@@ -465,52 +416,51 @@ mainChart = new Chart(ctx, {
     const tooltipData = getTooltipData(processedData, label, currentFilters);
     if (!tooltipData) return;
 
-    // Build tooltip content
-    let tooltipContent = `
-      <div class="font-medium mb-2">${tooltipData.date}</div>
-      <div class="text-sm">
-        <div>Total Submissions: <span class="font-medium">${tooltipData.totalSubmissions}</span></div>
-        <div>Problems Solved: <span class="font-medium">${tooltipData.problemsSolved}</span></div>
-      </div>
-    `;
-
+    let innerHtml = `<div class="font-medium mb-2">${tooltipData.date}</div>`;
+    innerHtml += `<div class="text-sm space-y-1">`;
+    innerHtml += `<div>Total Submissions: <span class="font-medium text-white">${tooltipData.totalSubmissions}</span></div>`;
+    innerHtml += `<div>Problems Solved: <span class="font-medium text-white">${tooltipData.problemsSolved}</span></div>`;
+    innerHtml += `</div>`;
+    
     if (Object.keys(tooltipData.breakdown).length > 0) {
-      tooltipContent += '<div class="mt-2 pt-2 border-t border-divider-3 dark:border-dark-divider-3">';
-      Object.entries(tooltipData.breakdown).forEach(([key, value]) => {
-        tooltipContent += `<div class="text-sm">${key}: <span class="font-medium">${value}</span></div>`;
-      });
-      tooltipContent += '</div>';
+        innerHtml += '<div class="mt-2 pt-2 border-t" style="border-color: rgba(189, 190, 179, 0.2);">';
+        Object.entries(tooltipData.breakdown).forEach(([key, value]) => {
+            if (Number(value) > 0) {
+               innerHtml += `<div class="text-sm">${key}: <span class="font-medium text-white">${value}</span></div>`;
+            }
+        });
+        innerHtml += '</div>';
     }
 
-    tooltip.innerHTML = tooltipContent;
-    tooltip.style.display = 'block';
-    tooltip.style.left = context.caretX + 'px';
-    tooltip.style.top = context.caretY - tooltip.offsetHeight - 10 + 'px';
+    tooltipEl.innerHTML = innerHtml;
+    
+    const position = context.chart.canvas.getBoundingClientRect();
+    tooltipEl.style.opacity = '1';
+    tooltipEl.style.position = 'absolute';
+    tooltipEl.style.left = position.left + window.pageXOffset + tooltipModel.caretX + 'px';
+    tooltipEl.style.top = position.top + window.pageYOffset + tooltipModel.caretY - tooltipEl.offsetHeight - 8 + 'px';
+    tooltipEl.style.pointerEvents = 'none';
   }
 
-  // Return the instance interface
   return {
     updateData: (newData: ProcessedData) => {
       Object.assign(processedData, newData);
-      brushData = getBrushChartData(processedData);
       initializeBrushChart();
       updateMainChart();
     },
-
     updateFilters: (newFilters: Partial<InteractiveChartFilters>) => {
       Object.assign(currentFilters, newFilters);
       updateMainChart();
     },
-
     destroy: () => {
       if (mainChart) {
         mainChart.destroy();
         mainChart = null;
       }
-      // Clean up D3 elements
       d3.select(container.querySelector('#brush-chart')).selectAll("*").remove();
-      // Remove the style element
-      document.head.removeChild(style);
+      if (style.parentNode) {
+        style.parentNode.removeChild(style);
+      }
     }
   };
 }

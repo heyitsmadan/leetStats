@@ -1,256 +1,3 @@
-// Helper functions to generate complete time intervals
-function generateAllIntervals(
-  startDate: Date, 
-  endDate: Date, 
-  aggregationLevel: 'Daily' | 'Monthly' | 'Yearly'
-): string[] {
-  const intervals: string[] = [];
-  const current = new Date(startDate);
-  
-  while (current <= endDate) {
-    let key: string;
-    
-    if (aggregationLevel === 'Daily') {
-      key = current.toISOString().split('T')[0];
-      current.setDate(current.getDate() + 1);
-    } else if (aggregationLevel === 'Monthly') {
-      key = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`;
-      current.setMonth(current.getMonth() + 1);
-    } else {
-      key = current.getFullYear().toString();
-      current.setFullYear(current.getFullYear() + 1);
-    }
-    
-    intervals.push(key);
-  }
-  
-  return intervals;
-}
-
-function fillMissingIntervals(
-  dataMap: { [key: string]: number },
-  allIntervals: string[]
-): number[] {
-  return allIntervals.map(interval => dataMap[interval] || 0);
-}
-
-import type { 
-  ProcessedData, 
-  InteractiveChartData, 
-  BrushChartData, 
-  InteractiveChartFilters,
-  TooltipData 
-} from '../../types';
-
-// Update the color constants at the top of the file:
-const DIFFICULTY_COLORS = {
-  'Easy': '#58b8b9',    // ✅ UPDATED
-  'Medium': '#f4ba40',  // ✅ UPDATED  
-  'Hard': '#e24a41'     // ✅ UPDATED
-};
-
-const STATUS_COLORS = {
-  'Accepted': '#5db666', // ✅ UPDATED
-  'Failed': '#393939'    // ✅ UPDATED
-};
-
-
-const LANGUAGE_COLORS = [
-  '#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b',
-  '#eb4d4b', '#6c5ce7', '#a29bfe', '#fd79a8', '#e84393'
-];
-
-export function getInteractiveChartStats(
-  processedData: ProcessedData,
-  filters: InteractiveChartFilters
-): InteractiveChartData | null {
-  
-  const { submissions } = processedData;
-  if (!submissions.length) return null;
-
-  // Filter submissions by time range and difficulty
-  let filteredSubmissions = submissions;
-  
-  if (filters.brushWindow) {
-    const [start, end] = filters.brushWindow;
-    filteredSubmissions = submissions.filter(sub => 
-      sub.date >= start && sub.date <= end
-    );
-  } else if (filters.timeRange !== 'All Time') {
-    const cutoffDate = getTimeRangeCutoff(filters.timeRange);
-    filteredSubmissions = submissions.filter(sub => sub.date >= cutoffDate);
-  }
-
-  if (filters.difficulty !== 'All') {
-    filteredSubmissions = filteredSubmissions.filter(sub => 
-      sub.metadata?.difficulty === filters.difficulty
-    );
-  }
-
-  // Determine aggregation level based on time range
-  const aggregationLevel = getAggregationLevel(filteredSubmissions);
-  
-  // Group submissions by time period
-  const timeGroups = groupByTimePeriod(filteredSubmissions, aggregationLevel);
-  
-  // Create chart data based on secondary view
-  const chartData = createChartData(timeGroups, filters, aggregationLevel);
-  
-  return chartData;
-}
-
-export function getBrushChartData(processedData: ProcessedData): BrushChartData | null {
-  const { submissions } = processedData;
-  if (!submissions.length) return null;
-
-  // Get the full date range
-  const allDates = submissions.map(s => s.date);
-  const startDate = new Date(Math.min(...allDates.map(d => d.getTime())));
-  const endDate = new Date(Math.max(...allDates.map(d => d.getTime())));
-
-  // Generate daily intervals for the entire range
-  const allIntervals = generateAllIntervals(startDate, endDate, 'Daily');
-  
-  // Group submissions by day
-  const dailyGroups: { [key: string]: any[] } = {};
-  submissions.forEach(sub => {
-    const key = sub.date.toISOString().split('T')[0];
-    if (!dailyGroups[key]) dailyGroups[key] = [];
-    dailyGroups[key].push(sub);
-  });
-
-  // Fill missing days with zero
-  const data = fillMissingIntervals(
-    Object.fromEntries(
-      Object.entries(dailyGroups).map(([date, subs]) => [date, subs.length])
-    ),
-    allIntervals
-  );
-
-  return {
-    labels: allIntervals,
-    data,
-    fullTimeRange: {
-      start: startDate,
-      end: endDate
-    }
-  };
-}
-
-
-export function getTooltipData(
-  processedData: ProcessedData,
-  date: string,
-  filters: InteractiveChartFilters
-): TooltipData | null {
-  
-  const { submissions, problemMap } = processedData;
-  
-  // Parse date based on aggregation level
-  const aggregationLevel = getAggregationLevel(submissions);
-  const dateRange = getDateRangeFromLabel(date, aggregationLevel);
-  
-  const periodSubmissions = submissions.filter(sub => 
-    sub.date >= dateRange.start && sub.date <= dateRange.end
-  );
-
-  if (!periodSubmissions.length) return null;
-
-  // Calculate problems solved in this period
-  const uniqueProblems = new Set(
-    periodSubmissions
-      .filter(sub => sub.status === 10) // Accepted
-      .map(sub => sub.titleSlug)
-  );
-
-  const breakdown: { [key: string]: number } = {};
-  
-  if (filters.secondaryView === 'Difficulty') {
-    ['Easy', 'Medium', 'Hard'].forEach(difficulty => {
-      if (filters.primaryView === 'Submissions') {
-        breakdown[difficulty] = periodSubmissions
-          .filter(sub => sub.metadata?.difficulty === difficulty)
-          .length;
-      } else {
-        // Count unique problems solved with this difficulty
-        const solvedProblems = new Set<string>();
-        periodSubmissions.forEach(sub => {
-          if (sub.status === 10 && sub.metadata?.difficulty === difficulty) {
-            solvedProblems.add(sub.titleSlug);
-          }
-        });
-        breakdown[difficulty] = solvedProblems.size;
-      }
-    });
-  } else if (filters.secondaryView === 'Status') {
-    if (filters.primaryView === 'Submissions') {
-      breakdown['Accepted'] = periodSubmissions.filter(sub => sub.status === 10).length;
-      breakdown['Failed'] = periodSubmissions.filter(sub => sub.status !== 10).length;
-    } else {
-      // For problems solved, only show accepted (fully green)
-      breakdown['Accepted'] = uniqueProblems.size;
-      breakdown['Failed'] = 0;
-    }
-  } else if (filters.secondaryView === 'Language') {
-    const allLanguages = new Set(periodSubmissions.map(sub => sub.lang));
-    allLanguages.forEach(lang => {
-      if (filters.primaryView === 'Submissions') {
-        breakdown[lang] = periodSubmissions.filter(sub => sub.lang === lang).length;
-      } else {
-        // Count unique problems solved in this language
-        const solvedProblems = new Set<string>();
-        periodSubmissions.forEach(sub => {
-          if (sub.status === 10 && sub.lang === lang) {
-            solvedProblems.add(sub.titleSlug);
-          }
-        });
-        breakdown[lang] = solvedProblems.size;
-      }
-    });
-  }
-
-  return {
-    date,
-    totalSubmissions: periodSubmissions.length,
-    problemsSolved: uniqueProblems.size,
-    breakdown
-  };
-}
-
-
-function getAggregationLevel(submissions: any[]): 'Daily' | 'Monthly' | 'Yearly' {
-  if (!submissions.length) return 'Daily';
-  
-  const start = new Date(Math.min(...submissions.map(s => s.date.getTime())));
-  const end = new Date(Math.max(...submissions.map(s => s.date.getTime())));
-  const daysDiff = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
-  
-  if (daysDiff < 90) return 'Daily';
-  if (daysDiff < 730) return 'Monthly'; // ~2 years
-  return 'Yearly';
-}
-
-function groupByTimePeriod(submissions: any[], level: 'Daily' | 'Monthly' | 'Yearly') {
-  const groups: { [key: string]: any[] } = {};
-  
-  submissions.forEach(sub => {
-    let key: string;
-    
-    if (level === 'Daily') {
-      key = sub.date.toISOString().split('T')[0];
-    } else if (level === 'Monthly') {
-      key = `${sub.date.getFullYear()}-${String(sub.date.getMonth() + 1).padStart(2, '0')}`;
-    } else {
-      key = sub.date.getFullYear().toString();
-    }
-    
-    if (!groups[key]) groups[key] = [];
-    groups[key].push(sub);
-  });
-  
-  return groups;
-}
-
 function createChartData(
   timeGroups: { [key: string]: any[] },
   filters: InteractiveChartFilters,
@@ -282,8 +29,9 @@ function createChartData(
     endDate.setMonth(11, 31); // End of year
   }
   
-  // Generate all intervals in the range
-  const allIntervals = generateAllIntervals(startDate, endDate, aggregationLevel);
+  const mappedAggregationLevel = aggregationLevel === 'Yearly' ? 'Monthly' : aggregationLevel;
+const allIntervals = generateAllIntervals(startDate, endDate, mappedAggregationLevel);
+
   const datasets: any[] = [];
   
   if (filters.secondaryView === 'Difficulty') {
@@ -462,3 +210,283 @@ function getDateRangeFromLabel(label: string, level: 'Daily' | 'Monthly' | 'Year
     return { start, end };
   }
 }
+
+import type {
+  ProcessedData,
+  InteractiveChartData,
+  BrushChartData,
+  InteractiveChartFilters,
+  TooltipData
+} from '../../types';
+
+// === HELPER FUNCTIONS (some are new/modified) ===
+
+// Helper to get an ISO week key (e.g., "2023-W34") from a date
+function getWeekKey(date: Date): string {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
+}
+
+// Helper to get the first date of an ISO week
+function getDateOfISOWeek(weekKey: string): Date {
+    const [yearStr, weekStr] = weekKey.split('-W');
+    const year = parseInt(yearStr);
+    const week = parseInt(weekStr);
+    const simple = new Date(year, 0, 1 + (week - 1) * 7);
+    const dow = simple.getDay();
+    const isoWeekStart = simple;
+    if (dow <= 4)
+        isoWeekStart.setDate(simple.getDate() - simple.getDay() + 1);
+    else
+        isoWeekStart.setDate(simple.getDate() + 8 - simple.getDay());
+    return isoWeekStart;
+}
+
+
+// Generates a complete sequence of dates/weeks/months between a start and end
+function generateAllIntervals(
+  startDate: Date,
+  endDate: Date,
+  aggregationLevel: 'Daily' | 'Weekly' | 'Monthly'
+): string[] {
+  const intervals: string[] = [];
+  let current = new Date(startDate);
+
+  if (aggregationLevel === 'Daily') {
+    while (current <= endDate) {
+      intervals.push(current.toISOString().split('T')[0]);
+      current.setDate(current.getDate() + 1);
+    }
+  } else if (aggregationLevel === 'Weekly') {
+    current = getDateOfISOWeek(getWeekKey(startDate));
+    while (current <= endDate) {
+      intervals.push(getWeekKey(current));
+      current.setDate(current.getDate() + 7);
+    }
+  } else { // Monthly
+    current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    while (current <= endDate) {
+      intervals.push(`${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`);
+      current.setMonth(current.getMonth() + 1);
+    }
+  }
+  return intervals;
+}
+
+function fillMissingIntervals(
+  dataMap: { [key: string]: number },
+  allIntervals: string[]
+): number[] {
+  return allIntervals.map(interval => dataMap[interval] || 0);
+}
+
+
+// === MAIN EXPORTED FUNCTIONS ===
+
+const DIFFICULTY_COLORS = { 'Easy': '#58b8b9', 'Medium': '#f4ba40', 'Hard': '#e24a41' };
+const STATUS_COLORS = { 'Accepted': '#5db666', 'Failed': '#e66b62' };
+const LANGUAGE_COLORS = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b', '#eb4d4b', '#6c5ce7', '#a29bfe', '#fd79a8', '#e84393'];
+
+export function getInteractiveChartStats(
+  processedData: ProcessedData,
+  filters: InteractiveChartFilters
+): InteractiveChartData | null {
+  // This function remains largely the same as your original
+  // ... (code for getInteractiveChartStats)
+  const { submissions } = processedData;
+  if (!submissions.length) return null;
+
+  // Filter submissions by time range and difficulty
+  let filteredSubmissions = submissions;
+  
+  if (filters.brushWindow) {
+    const [start, end] = filters.brushWindow;
+    filteredSubmissions = submissions.filter(sub => 
+      sub.date >= start && sub.date <= end
+    );
+  } else if (filters.timeRange !== 'All Time') {
+    const cutoffDate = new Date(); // Placeholder, implement getTimeRangeCutoff if needed
+    filteredSubmissions = submissions.filter(sub => sub.date >= cutoffDate);
+  }
+
+  if (filters.difficulty !== 'All') {
+    filteredSubmissions = filteredSubmissions.filter(sub => 
+      sub.metadata?.difficulty === filters.difficulty
+    );
+  }
+
+  // Determine aggregation level based on time range
+  const aggregationLevel = getAggregationLevel(filteredSubmissions);
+  
+  // Group submissions by time period
+  const timeGroups = groupByTimePeriod(filteredSubmissions, aggregationLevel);
+  
+  // Create chart data based on secondary view
+  const chartData = createChartData(timeGroups, filters, aggregationLevel);
+  
+  return chartData;
+}
+
+export function getBrushChartData(processedData: ProcessedData): BrushChartData | null {
+  const { submissions } = processedData;
+  if (!submissions.length) return null;
+
+  const allDates = submissions.map(s => s.date);
+  const startDate = new Date(Math.min(...allDates.map(d => d.getTime())));
+  const endDate = new Date(Math.max(...allDates.map(d => d.getTime())));
+
+  // === NEW: Determine aggregation level for the navigator chart ===
+  const daysDiff = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
+  let aggregationLevel: 'Daily' | 'Weekly' | 'Monthly';
+  if (daysDiff > 365 * 2) {
+    aggregationLevel = 'Monthly';
+  } else if (daysDiff > 90) {
+    aggregationLevel = 'Weekly';
+  } else {
+    aggregationLevel = 'Daily';
+  }
+
+  // Generate a complete list of intervals for the chosen aggregation level
+  const allIntervals = generateAllIntervals(startDate, endDate, aggregationLevel);
+
+  // Group submissions by the chosen aggregation level
+  const groupedData: { [key: string]: any[] } = {};
+  submissions.forEach(sub => {
+    let key: string;
+    if (aggregationLevel === 'Daily') {
+      key = sub.date.toISOString().split('T')[0];
+    } else if (aggregationLevel === 'Weekly') {
+      key = getWeekKey(sub.date);
+    } else { // Monthly
+      key = `${sub.date.getFullYear()}-${String(sub.date.getMonth() + 1).padStart(2, '0')}`;
+    }
+    if (!groupedData[key]) groupedData[key] = [];
+    groupedData[key].push(sub);
+  });
+
+  // Create the final data array, filling in missing intervals with 0
+  const data = fillMissingIntervals(
+    Object.fromEntries(
+      Object.entries(groupedData).map(([date, subs]) => [date, subs.length])
+    ),
+    allIntervals
+  );
+  
+  // Convert weekly/monthly keys back to dates for the D3 scale
+  const labelsAsDates = allIntervals.map(label => {
+      if (aggregationLevel === 'Weekly') return getDateOfISOWeek(label);
+      return new Date(label); // Works for 'YYYY-MM-DD' and 'YYYY-MM'
+  });
+
+  return {
+    labels: labelsAsDates.map(d => d.toISOString().split('T')[0]), // Return labels as string dates
+    data,
+    fullTimeRange: { start: startDate, end: endDate }
+  };
+}
+
+
+export function getTooltipData(
+  processedData: ProcessedData,
+  date: string,
+  filters: InteractiveChartFilters
+): TooltipData | null {
+  // This function remains largely the same as your original
+  // ... (code for getTooltipData)
+    const { submissions, problemMap } = processedData;
+  
+  // Parse date based on aggregation level
+  const aggregationLevel = getAggregationLevel(submissions);
+  const dateRange = getDateRangeFromLabel(date, aggregationLevel);
+  
+  const periodSubmissions = submissions.filter(sub => 
+    sub.date >= dateRange.start && sub.date <= dateRange.end
+  );
+
+  if (!periodSubmissions.length) return null;
+
+  // Calculate problems solved in this period
+  const uniqueProblems = new Set(
+    periodSubmissions
+      .filter(sub => sub.status === 10) // Accepted
+      .map(sub => sub.titleSlug)
+  );
+
+  const breakdown: { [key: string]: number } = {};
+  
+  if (filters.secondaryView === 'Difficulty') {
+    ['Easy', 'Medium', 'Hard'].forEach(difficulty => {
+      if (filters.primaryView === 'Submissions') {
+        breakdown[difficulty] = periodSubmissions
+          .filter(sub => sub.metadata?.difficulty === difficulty)
+          .length;
+      } else {
+        const solvedProblems = new Set<string>();
+        periodSubmissions.forEach(sub => {
+          if (sub.status === 10 && sub.metadata?.difficulty === difficulty) {
+            solvedProblems.add(sub.titleSlug);
+          }
+        });
+        breakdown[difficulty] = solvedProblems.size;
+      }
+    });
+  } else if (filters.secondaryView === 'Status') {
+    if (filters.primaryView === 'Submissions') {
+      breakdown['Accepted'] = periodSubmissions.filter(sub => sub.status === 10).length;
+      breakdown['Failed'] = periodSubmissions.filter(sub => sub.status !== 10).length;
+    } else {
+      breakdown['Accepted'] = uniqueProblems.size;
+      breakdown['Failed'] = 0;
+    }
+  } else if (filters.secondaryView === 'Language') {
+    const allLanguages = new Set(periodSubmissions.map(sub => sub.lang));
+    allLanguages.forEach(lang => {
+      if (filters.primaryView === 'Submissions') {
+        breakdown[lang] = periodSubmissions.filter(sub => sub.lang === lang).length;
+      } else {
+        const solvedProblems = new Set<string>();
+        periodSubmissions.forEach(sub => {
+          if (sub.status === 10 && sub.lang === lang) {
+            solvedProblems.add(sub.titleSlug);
+          }
+        });
+        breakdown[lang] = solvedProblems.size;
+      }
+    });
+  }
+
+  return {
+    date,
+    totalSubmissions: periodSubmissions.length,
+    problemsSolved: uniqueProblems.size,
+    breakdown
+  };
+}
+
+// These functions remain the same
+function getAggregationLevel(submissions: any[]): 'Daily' | 'Monthly' | 'Yearly' {
+  if (!submissions.length) return 'Daily';
+  const start = new Date(Math.min(...submissions.map(s => s.date.getTime())));
+  const end = new Date(Math.max(...submissions.map(s => s.date.getTime())));
+  const daysDiff = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
+  if (daysDiff < 90) return 'Daily';
+  if (daysDiff < 730) return 'Monthly';
+  return 'Yearly';
+}
+
+function groupByTimePeriod(submissions: any[], level: 'Daily' | 'Monthly' | 'Yearly') {
+  const groups: { [key: string]: any[] } = {};
+  submissions.forEach(sub => {
+    let key: string;
+    if (level === 'Daily') key = sub.date.toISOString().split('T')[0];
+    else if (level === 'Monthly') key = `${sub.date.getFullYear()}-${String(sub.date.getMonth() + 1).padStart(2, '0')}`;
+    else key = sub.date.getFullYear().toString();
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(sub);
+  });
+  return groups;
+}
+
