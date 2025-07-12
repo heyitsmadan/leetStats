@@ -858,30 +858,43 @@ function setupTabLogic(
   statsPane: HTMLElement,
   processedData: ProcessedData
 ) {
-  // 1. Track active state
+  // Track active states
   let isStatsActive = false;
-  let originalContent: Element | null = null;
+  const activeTabs = new WeakMap<Element, boolean>();
   
-  // 2. Mutation observer for content changes
-  const observer = new MutationObserver(mutations => {
-    mutations.forEach(mutation => {
-      if (!isStatsActive && mutation.addedNodes.length > 0) {
-        // Hide stats when new content appears
-        statsPane.style.display = 'none';
-        originalContent = contentSection.lastElementChild;
-      }
-    });
+  // Find all LeetCode tabs
+  const leetcodeTabs = Array.from(tabBar.querySelectorAll('.cursor-pointer'))
+    .filter(t => !t.contains(statsTab));
+  
+  // Initialize active states
+  leetcodeTabs.forEach(tab => {
+    const active = tab.querySelector('div')?.classList.contains('bg-fill-3');
+    activeTabs.set(tab, !!active);
   });
-  
-  observer.observe(contentSection, { childList: true });
 
-  // 3. Stats tab click handler - MODIFIED SECTION
+  // Stats tab click handler
   statsTab.addEventListener('click', () => {
     isStatsActive = true;
     
+    // Deactivate all LeetCode tabs
+    leetcodeTabs.forEach(tab => {
+      const innerDiv = tab.querySelector('div');
+      if (innerDiv) {
+        innerDiv.classList.remove('text-label-1', 'dark:text-dark-label-1', 
+                                 'bg-fill-3', 'dark:bg-dark-fill-3');
+      }
+    });
+    
+    // Activate stats tab
+    const statsInner = statsTab.querySelector('div');
+    if (statsInner) {
+      statsInner.classList.add('text-label-1', 'dark:text-dark-label-1', 
+                              'bg-fill-3', 'dark:bg-dark-fill-3');
+    }
+    
     // Hide all non-stats content
     Array.from(contentSection.children).forEach(child => {
-      if (child !== statsPane && child !== tabBar) { // Preserve tab bar
+      if (child !== statsPane && child !== tabBar) {
         (child as HTMLElement).style.display = 'none';
       }
     });
@@ -889,7 +902,7 @@ function setupTabLogic(
     // Show stats content
     statsPane.style.display = 'block';
     
-    // Hide only right-aligned elements, not the entire tab bar
+    // Hide right-aligned elements
     const rightElements = tabBar.querySelectorAll(`
       .ml-auto,
       a[href*="/submissions/"],
@@ -897,34 +910,29 @@ function setupTabLogic(
     `);
     rightElements.forEach(el => (el as HTMLElement).style.display = 'none');
     
-    // Set active tab style
-    const innerDiv = statsTab.querySelector('div');
-    if (innerDiv) {
-      innerDiv.classList.add(...ACTIVE_INNER_DIV_CLASSES);
-    }
-    
-    // Render charts on first activation
+    // First-time chart rendering with optimization
     if (!window.statsRendered) {
-      renderAllCharts(processedData);
-      window.statsRendered = true;
+      requestAnimationFrame(() => {
+        renderAllCharts(processedData);
+        window.statsRendered = true;
+      });
     }
   });
 
-  // 4. Other tabs click handlers
-  const otherTabs = Array.from(tabBar.querySelectorAll('.cursor-pointer')).filter(
-    t => t !== statsTab
-  );
-  
-  otherTabs.forEach(tab => {
+  // LeetCode tab click handlers
+  leetcodeTabs.forEach(tab => {
     tab.addEventListener('click', () => {
       isStatsActive = false;
-      statsPane.style.display = 'none';
       
-      // Remove active style from stats tab
-      const innerDiv = statsTab.querySelector('div');
-      if (innerDiv) {
-        innerDiv.classList.remove(...ACTIVE_INNER_DIV_CLASSES);
+      // Deactivate stats tab
+      const statsInner = statsTab.querySelector('div');
+      if (statsInner) {
+        statsInner.classList.remove('text-label-1', 'dark:text-dark-label-1', 
+                                   'bg-fill-3', 'dark:bg-dark-fill-3');
       }
+      
+      // Hide stats content
+      statsPane.style.display = 'none';
       
       // Restore right-aligned elements
       const rightElements = tabBar.querySelectorAll(`
@@ -934,14 +942,17 @@ function setupTabLogic(
       `);
       rightElements.forEach(el => (el as HTMLElement).style.display = '');
       
-      // Restore original content
-      if (originalContent) {
-        (originalContent as HTMLElement).style.display = 'block';
-      }
+      // Show content for this tab
+      setTimeout(() => {
+        const content = Array.from(contentSection.children).find(
+          c => c !== tabBar && c !== statsPane
+        );
+        if (content) (content as HTMLElement).style.display = 'block';
+      }, 50);
     });
   });
   
-  // Initialize the tab bar as visible
+  // Initialize tab bar as visible
   (tabBar as HTMLElement).style.display = 'flex';
 }
 
