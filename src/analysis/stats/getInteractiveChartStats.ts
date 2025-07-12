@@ -1,51 +1,31 @@
+// Updated createChartData function
 function createChartData(
   timeGroups: { [key: string]: any[] },
   filters: InteractiveChartFilters,
-  aggregationLevel: 'Daily' | 'Monthly' | 'Yearly'
+  aggregationLevel: 'Daily' | 'Monthly' | 'Yearly',
+  dateRange: { start: Date; end: Date }
 ): InteractiveChartData {
+  // Generate complete intervals including empty periods at ends
+  const allIntervals = generateAllIntervals(dateRange.start, dateRange.end, aggregationLevel);
   
-  // Determine the full time range from submissions
-  const allDates = Object.keys(timeGroups);
-  if (allDates.length === 0) {
-    return {
-      labels: [],
-      datasets: [],
-      aggregationLevel,
-      timeRange: { start: new Date(), end: new Date() }
-    };
-  }
-  
-  // Get start and end dates
-  const sortedDates = allDates.sort();
-  const startDate = new Date(sortedDates[0]);
-  const endDate = new Date(sortedDates[sortedDates.length - 1]);
-  
-  // Adjust dates based on aggregation level for proper boundaries
-  if (aggregationLevel === 'Monthly') {
-    startDate.setDate(1); // Start of month
-    endDate.setMonth(endDate.getMonth() + 1, 0); // End of month
-  } else if (aggregationLevel === 'Yearly') {
-    startDate.setMonth(0, 1); // Start of year
-    endDate.setMonth(11, 31); // End of year
-  }
-  
-  const mappedAggregationLevel = aggregationLevel === 'Yearly' ? 'Monthly' : aggregationLevel;
-const allIntervals = generateAllIntervals(startDate, endDate, mappedAggregationLevel);
-
   const datasets: any[] = [];
   
   if (filters.secondaryView === 'Difficulty') {
     ['Easy', 'Medium', 'Hard'].forEach(difficulty => {
       const dataMap: { [key: string]: number } = {};
       
-      // Populate data map with actual values
+      // Initialize all intervals with 0
+      allIntervals.forEach(interval => {
+        dataMap[interval] = 0;
+      });
+      
+      // Populate with actual data
       Object.keys(timeGroups).forEach(date => {
         const submissions = timeGroups[date] || [];
-        
         if (filters.primaryView === 'Submissions') {
           dataMap[date] = submissions.filter(sub => sub.metadata?.difficulty === difficulty).length;
         } else {
-          const solvedProblems = new Set<string>();
+          const solvedProblems = new Set();
           submissions.forEach(sub => {
             if (sub.status === 10 && sub.metadata?.difficulty === difficulty) {
               solvedProblems.add(sub.titleSlug);
@@ -55,8 +35,7 @@ const allIntervals = generateAllIntervals(startDate, endDate, mappedAggregationL
         }
       });
       
-      // Fill missing intervals with zeros
-      const data = fillMissingIntervals(dataMap, allIntervals);
+      const data = allIntervals.map(interval => dataMap[interval] || 0);
       
       datasets.push({
         label: difficulty,
@@ -156,26 +135,28 @@ const allIntervals = generateAllIntervals(startDate, endDate, mappedAggregationL
   }
   
   return {
-    labels: allIntervals.map(formatDateLabel),
+    labels: allIntervals.map(interval => formatDateLabel(interval, aggregationLevel)),
     datasets,
     aggregationLevel,
-    timeRange: {
-      start: startDate,
-      end: endDate
-    }
+    timeRange: dateRange
   };
 }
 
 
 
-function formatDateLabel(dateStr: string): string {
-  if (dateStr.length === 4) {
-    return dateStr; // Year
-  } else if (dateStr.length === 7) {
+// Enhanced date formatting
+function formatDateLabel(dateStr: string, aggregationLevel: 'Daily' | 'Monthly' | 'Yearly'): string {
+  if (aggregationLevel === 'Yearly') {
+    return dateStr; // Just the year
+  } else if (aggregationLevel === 'Monthly') {
     const [year, month] = dateStr.split('-');
-    return `${year}-${month}`;
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${monthNames[parseInt(month) - 1]} ${year}`;
   } else {
-    return dateStr; // Daily format
+    // Daily format: DD-MM-YYYY
+    const date = new Date(dateStr);
+    return `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()}`;
   }
 }
 
@@ -250,7 +231,7 @@ function getDateOfISOWeek(weekKey: string): Date {
 function generateAllIntervals(
   startDate: Date,
   endDate: Date,
-  aggregationLevel: 'Daily' | 'Weekly' | 'Monthly'
+  aggregationLevel: 'Daily' | 'Monthly' | 'Yearly'
 ): string[] {
   const intervals: string[] = [];
   let current = new Date(startDate);
@@ -260,21 +241,22 @@ function generateAllIntervals(
       intervals.push(current.toISOString().split('T')[0]);
       current.setDate(current.getDate() + 1);
     }
-  } else if (aggregationLevel === 'Weekly') {
-    current = getDateOfISOWeek(getWeekKey(startDate));
-    while (current <= endDate) {
-      intervals.push(getWeekKey(current));
-      current.setDate(current.getDate() + 7);
-    }
-  } else { // Monthly
+  } else if (aggregationLevel === 'Monthly') {
     current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
     while (current <= endDate) {
       intervals.push(`${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`);
       current.setMonth(current.getMonth() + 1);
     }
+  } else { // Yearly
+    current = new Date(startDate.getFullYear(), 0, 1);
+    while (current <= endDate) {
+      intervals.push(current.getFullYear().toString());
+      current.setFullYear(current.getFullYear() + 1);
+    }
   }
   return intervals;
 }
+
 
 function fillMissingIntervals(
   dataMap: { [key: string]: number },
@@ -287,104 +269,99 @@ function fillMissingIntervals(
 // === MAIN EXPORTED FUNCTIONS ===
 
 const DIFFICULTY_COLORS = { 'Easy': '#58b8b9', 'Medium': '#f4ba40', 'Hard': '#e24a41' };
-const STATUS_COLORS = { 'Accepted': '#5db666', 'Failed': '#e66b62' };
+const STATUS_COLORS = { 'Accepted': '#5db666', 'Failed': '#393939' };
 const LANGUAGE_COLORS = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b', '#eb4d4b', '#6c5ce7', '#a29bfe', '#fd79a8', '#e84393'];
 
+// Updated main function
 export function getInteractiveChartStats(
   processedData: ProcessedData,
   filters: InteractiveChartFilters
 ): InteractiveChartData | null {
-  // This function remains largely the same as your original
-  // ... (code for getInteractiveChartStats)
   const { submissions } = processedData;
   if (!submissions.length) return null;
-
-  // Filter submissions by time range and difficulty
+  
+  // Get extended date range (to today)
+  const fullDateRange = getExtendedDateRange(submissions, false);
+  
+  // Filter submissions by brush window or time range
   let filteredSubmissions = submissions;
+  let effectiveDateRange = fullDateRange;
   
   if (filters.brushWindow) {
     const [start, end] = filters.brushWindow;
     filteredSubmissions = submissions.filter(sub => 
       sub.date >= start && sub.date <= end
     );
+    effectiveDateRange = { start, end };
   } else if (filters.timeRange !== 'All Time') {
-    const cutoffDate = new Date(); // Placeholder, implement getTimeRangeCutoff if needed
+    const cutoffDate = getTimeRangeCutoff(filters.timeRange);
     filteredSubmissions = submissions.filter(sub => sub.date >= cutoffDate);
+    effectiveDateRange = { start: cutoffDate, end: fullDateRange.end };
   }
-
+  
   if (filters.difficulty !== 'All') {
-    filteredSubmissions = filteredSubmissions.filter(sub => 
+    filteredSubmissions = filteredSubmissions.filter(sub =>
       sub.metadata?.difficulty === filters.difficulty
     );
   }
-
-  // Determine aggregation level based on time range
-  const aggregationLevel = getAggregationLevel(filteredSubmissions);
+  
+  // Determine aggregation level
+  const aggregationLevel = getAggregationLevel(filteredSubmissions, false);
   
   // Group submissions by time period
   const timeGroups = groupByTimePeriod(filteredSubmissions, aggregationLevel);
   
-  // Create chart data based on secondary view
-  const chartData = createChartData(timeGroups, filters, aggregationLevel);
+  // Create chart data with complete date range
+  const chartData = createChartData(timeGroups, filters, aggregationLevel, effectiveDateRange);
   
   return chartData;
 }
 
+// Updated navigator function
 export function getBrushChartData(processedData: ProcessedData): BrushChartData | null {
   const { submissions } = processedData;
   if (!submissions.length) return null;
-
-  const allDates = submissions.map(s => s.date);
-  const startDate = new Date(Math.min(...allDates.map(d => d.getTime())));
-  const endDate = new Date(Math.max(...allDates.map(d => d.getTime())));
-
-  // === NEW: Determine aggregation level for the navigator chart ===
-  const daysDiff = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
-  let aggregationLevel: 'Daily' | 'Weekly' | 'Monthly';
-  if (daysDiff > 365 * 2) {
-    aggregationLevel = 'Monthly';
-  } else if (daysDiff > 90) {
-    aggregationLevel = 'Weekly';
-  } else {
-    aggregationLevel = 'Daily';
-  }
-
-  // Generate a complete list of intervals for the chosen aggregation level
-  const allIntervals = generateAllIntervals(startDate, endDate, aggregationLevel);
-
-  // Group submissions by the chosen aggregation level
+  
+  // Always use full range from first submission to today for navigator
+  const dateRange = getExtendedDateRange(submissions, true);
+  
+  // Determine aggregation level for navigator
+  const aggregationLevel = getAggregationLevel(submissions, true);
+  
+  // Generate complete intervals
+  const allIntervals = generateAllIntervals(dateRange.start, dateRange.end, aggregationLevel);
+  
+  // Group submissions
   const groupedData: { [key: string]: any[] } = {};
+  
+  // Initialize all intervals with empty arrays
+  allIntervals.forEach(interval => {
+    groupedData[interval] = [];
+  });
+  
+  // Populate with actual submissions
   submissions.forEach(sub => {
     let key: string;
     if (aggregationLevel === 'Daily') {
       key = sub.date.toISOString().split('T')[0];
-    } else if (aggregationLevel === 'Weekly') {
-      key = getWeekKey(sub.date);
-    } else { // Monthly
+    } else if (aggregationLevel === 'Monthly') {
       key = `${sub.date.getFullYear()}-${String(sub.date.getMonth() + 1).padStart(2, '0')}`;
+    } else {
+      key = sub.date.getFullYear().toString();
     }
-    if (!groupedData[key]) groupedData[key] = [];
-    groupedData[key].push(sub);
+    
+    if (groupedData[key]) {
+      groupedData[key].push(sub);
+    }
   });
-
-  // Create the final data array, filling in missing intervals with 0
-  const data = fillMissingIntervals(
-    Object.fromEntries(
-      Object.entries(groupedData).map(([date, subs]) => [date, subs.length])
-    ),
-    allIntervals
-  );
   
-  // Convert weekly/monthly keys back to dates for the D3 scale
-  const labelsAsDates = allIntervals.map(label => {
-      if (aggregationLevel === 'Weekly') return getDateOfISOWeek(label);
-      return new Date(label); // Works for 'YYYY-MM-DD' and 'YYYY-MM'
-  });
-
+  // Create data array with counts
+  const data = allIntervals.map(interval => groupedData[interval]?.length || 0);
+  
   return {
-    labels: labelsAsDates.map(d => d.toISOString().split('T')[0]), // Return labels as string dates
+    labels: allIntervals.map(interval => formatDateLabel(interval, aggregationLevel)),
     data,
-    fullTimeRange: { start: startDate, end: endDate }
+    fullTimeRange: dateRange
   };
 }
 
@@ -467,14 +444,18 @@ export function getTooltipData(
 }
 
 // These functions remain the same
-function getAggregationLevel(submissions: any[]): 'Daily' | 'Monthly' | 'Yearly' {
+// Better aggregation logic - considers optimal bar count
+function getAggregationLevel(submissions: any[], isNavigator: boolean = false): 'Daily' | 'Monthly' | 'Yearly' {
   if (!submissions.length) return 'Daily';
+  
   const start = new Date(Math.min(...submissions.map(s => s.date.getTime())));
-  const end = new Date(Math.max(...submissions.map(s => s.date.getTime())));
+  const end = isNavigator ? new Date() : new Date(Math.max(...submissions.map(s => s.date.getTime())));
   const daysDiff = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
-  if (daysDiff < 90) return 'Daily';
-  if (daysDiff < 730) return 'Monthly';
-  return 'Yearly';
+  
+  // Optimal bar counts: 15-60 bars for good visualization
+  if (daysDiff <= 90) return 'Daily';        // Up to 90 bars
+  if (daysDiff <= 1095) return 'Monthly';    // Up to 36 bars (3 years)
+  return 'Yearly';                           // For longer periods
 }
 
 function groupByTimePeriod(submissions: any[], level: 'Daily' | 'Monthly' | 'Yearly') {
@@ -490,3 +471,15 @@ function groupByTimePeriod(submissions: any[], level: 'Daily' | 'Monthly' | 'Yea
   return groups;
 }
 
+// Enhanced date range extension to today
+function getExtendedDateRange(submissions: any[], isNavigator: boolean = false): { start: Date; end: Date } {
+  if (!submissions.length) {
+    const today = new Date();
+    return { start: today, end: today };
+  }
+  
+  const start = new Date(Math.min(...submissions.map(s => s.date.getTime())));
+  const end = isNavigator ? new Date() : new Date(); // Always extend to today
+  
+  return { start, end };
+}

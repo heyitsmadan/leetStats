@@ -141,6 +141,10 @@ export interface SkillMatrixOptions {
 
 // Add these interfaces to your existing types.ts
 
+// Add this to your existing types if not present
+export type AggregationLevel = 'Daily' | 'Monthly' | 'Yearly';
+
+// Update InteractiveChartData interface
 export interface InteractiveChartData {
   labels: string[];
   datasets: {
@@ -150,7 +154,7 @@ export interface InteractiveChartData {
     borderColor: string;
     stack?: string;
   }[];
-  aggregationLevel: 'Daily' | 'Monthly' | 'Yearly';
+  aggregationLevel: AggregationLevel;
   timeRange: { start: Date; end: Date };
 }
 

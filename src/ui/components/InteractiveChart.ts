@@ -154,40 +154,46 @@ export function renderOrUpdateInteractiveChart(
     const chartData = getInteractiveChartStats(processedData, currentFilters);
     if (!chartData) return;
 
-    mainChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: chartData.labels,
-        datasets: chartData.datasets.map(dataset => ({
-          ...dataset,
-          maxBarThickness: 20
-        }))
+    // In the initializeMainChart function, update the Chart.js options:
+mainChart = new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: chartData.labels,
+    datasets: chartData.datasets.map(dataset => ({
+      ...dataset,
+      maxBarThickness: 20  // Ensure max bar width
+    }))
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: { enabled: false, external: handleTooltip }
+    },
+    scales: {
+      x: {
+        stacked: true,
+        grid: { display: false },
+        ticks: { 
+          color: '#bdbeb3',
+          maxTicksLimit: 12,  // Limit number of labels to prevent crowding
+          maxRotation: 45,    // Rotate labels if needed
+          minRotation: 0
+        }
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          legend: { display: false },
-          tooltip: { enabled: false, external: handleTooltip }
-        },
-        scales: {
-          x: {
-            stacked: true,
-            grid: { display: false },
-            ticks: { color: '#bdbeb3' }
-          },
-          y: {
-            stacked: true,
-            beginAtZero: true,
-            grid: { display: true, color: 'rgba(189, 190, 179, 0.1)' },
-            ticks: { color: '#bdbeb3' }
-          }
-        },
-        elements: { bar: { borderRadius: 4, borderSkipped: 'bottom' } },
-        animation: { duration: 500, easing: 'easeInOutQuart' }
+      y: {
+        stacked: true,
+        beginAtZero: true,
+        grid: { display: false },
+        ticks: { color: '#bdbeb3' }
       }
-    });
+    },
+    elements: { bar: { borderRadius: 4, borderSkipped: 'bottom' } },
+    animation: { duration: 500, easing: 'easeInOutQuart' }
+  }
+});
   }
 
   function initializeBrushChart() {
@@ -314,11 +320,24 @@ export function renderOrUpdateInteractiveChart(
     dimmedClip.select(".dim-right-rect").attr("width", 0);
   }, 0);
 
-  const xAxis = d3.axisBottom(xScale)
-    .ticks(d3.timeYear.every(1))
-    .tickFormat((domainValue, index) => {
-      return d3.timeFormat("'%y")(domainValue as Date);
-    });
+  // Update the brush chart x-axis formatting
+const xAxis = d3.axisBottom(xScale)
+  .ticks(Math.min(6, Math.ceil(width / 100)))  // Limit ticks based on width
+  .tickFormat((domainValue, index) => {
+    const date = domainValue as Date;
+    const daysDiff = (xScale.domain()[1].getTime() - xScale.domain()[0].getTime()) / (1000 * 60 * 60 * 24);
+    
+    if (daysDiff <= 90) {
+      // Daily: show DD-MM format
+      return d3.timeFormat("%d-%m")(date);
+    } else if (daysDiff <= 1095) {
+      // Monthly: show MMM YY format
+      return d3.timeFormat("%b %y")(date);
+    } else {
+      // Yearly: show YYYY format
+      return d3.timeFormat("%Y")(date);
+    }
+  });
 
   g.append("g")
     .attr("class", "axis")
