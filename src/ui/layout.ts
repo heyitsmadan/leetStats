@@ -858,39 +858,40 @@ function setupTabLogic(
   statsPane: HTMLElement,
   processedData: ProcessedData
 ) {
-  // Track active states
+  const ACTIVE_CLASSES = 'text-label-1 dark:text-dark-label-1 bg-fill-3 dark:bg-dark-fill-3'.split(' ');
   let isStatsActive = false;
-  const activeTabs = new WeakMap<Element, boolean>();
-  
-  // Find all LeetCode tabs
-  const leetcodeTabs = Array.from(tabBar.querySelectorAll('.cursor-pointer'))
-    .filter(t => !t.contains(statsTab));
-  
-  // Initialize active states
-  leetcodeTabs.forEach(tab => {
-    const active = tab.querySelector('div')?.classList.contains('bg-fill-3');
-    activeTabs.set(tab, !!active);
-  });
+  let lastActiveTab: Element | null = null;
+
+  // Initialize: Find which tab is currently active
+  const initActiveTab = () => {
+    const tabs = Array.from(tabBar.querySelectorAll('.cursor-pointer'));
+    for (const tab of tabs) {
+      const innerDiv = tab.querySelector('div');
+      if (innerDiv && ACTIVE_CLASSES.every(c => innerDiv.classList.contains(c))) {
+        lastActiveTab = tab;
+        return;
+      }
+    }
+    // Fallback to first tab if none active
+    lastActiveTab = tabs[0] || null;
+  };
+  initActiveTab();
 
   // Stats tab click handler
   statsTab.addEventListener('click', () => {
+    if (isStatsActive) return;
     isStatsActive = true;
     
-    // Deactivate all LeetCode tabs
-    leetcodeTabs.forEach(tab => {
-      const innerDiv = tab.querySelector('div');
-      if (innerDiv) {
-        innerDiv.classList.remove('text-label-1', 'dark:text-dark-label-1', 
-                                 'bg-fill-3', 'dark:bg-dark-fill-3');
-      }
-    });
+    // Deactivate previously active tab
+    if (lastActiveTab && lastActiveTab !== statsTab) {
+      const activeInner = lastActiveTab.querySelector('div');
+      if (activeInner) activeInner.classList.remove(...ACTIVE_CLASSES);
+    }
     
     // Activate stats tab
     const statsInner = statsTab.querySelector('div');
-    if (statsInner) {
-      statsInner.classList.add('text-label-1', 'dark:text-dark-label-1', 
-                              'bg-fill-3', 'dark:bg-dark-fill-3');
-    }
+    if (statsInner) statsInner.classList.add(...ACTIVE_CLASSES);
+    lastActiveTab = statsTab;
     
     // Hide all non-stats content
     Array.from(contentSection.children).forEach(child => {
@@ -910,7 +911,7 @@ function setupTabLogic(
     `);
     rightElements.forEach(el => (el as HTMLElement).style.display = 'none');
     
-    // First-time chart rendering with optimization
+    // First-time chart rendering
     if (!window.statsRendered) {
       requestAnimationFrame(() => {
         renderAllCharts(processedData);
@@ -919,17 +920,20 @@ function setupTabLogic(
     }
   });
 
-  // LeetCode tab click handlers
+  // LeetCode tab click handler
+  const leetcodeTabs = Array.from(tabBar.querySelectorAll('.cursor-pointer')).filter(t => t !== statsTab);
   leetcodeTabs.forEach(tab => {
     tab.addEventListener('click', () => {
       isStatsActive = false;
       
       // Deactivate stats tab
       const statsInner = statsTab.querySelector('div');
-      if (statsInner) {
-        statsInner.classList.remove('text-label-1', 'dark:text-dark-label-1', 
-                                   'bg-fill-3', 'dark:bg-dark-fill-3');
-      }
+      if (statsInner) statsInner.classList.remove(...ACTIVE_CLASSES);
+      
+      // Activate clicked tab
+      const tabInner = tab.querySelector('div');
+      if (tabInner) tabInner.classList.add(...ACTIVE_CLASSES);
+      lastActiveTab = tab;
       
       // Hide stats content
       statsPane.style.display = 'none';
@@ -943,12 +947,12 @@ function setupTabLogic(
       rightElements.forEach(el => (el as HTMLElement).style.display = '');
       
       // Show content for this tab
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         const content = Array.from(contentSection.children).find(
           c => c !== tabBar && c !== statsPane
         );
         if (content) (content as HTMLElement).style.display = 'block';
-      }, 50);
+      });
     });
   });
   
