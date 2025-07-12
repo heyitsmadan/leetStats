@@ -23,7 +23,12 @@ let interactiveChartFilters = {
   timeRange: 'All Time' as TimeRange,
   difficulty: 'All' as Difficulty,
 };
-
+// Add to very top of layout.ts
+declare global {
+  interface Window {
+    statsRendered?: boolean;
+  }
+}
 const styles = {
   // === Structural Headers ===
   sectionHeader: "text-2xl font-semibold text-gray-100", // Added margin-bottom for spacing
@@ -79,21 +84,69 @@ let skillMatrixOptions = {
 /**
  * Main function to inject and manage the tabbed stats UI.
  */
+// Add at top of file
+const MAX_RETRIES = 5;
+const RETRY_DELAY = 300;
+
+/** Main function to inject stats UI */
 export function renderPageLayout(processedData: ProcessedData) {
-  const tabBar = document.querySelector('div.lc-lg\\:max-w-\\[calc\\(100\\%_-_316px\\)\\] a[href="/submissions/"]')?.closest('div.flex.w-full');
-  const contentSection = tabBar?.parentElement;
-  if (!tabBar || !contentSection || document.getElementById('lc-stats-tab')) return;
-
-  const statsTab = createStatsTab(tabBar);
-  if (!statsTab) return;
-
-  const statsPane = createStatsPaneWithGrid();
-  contentSection.appendChild(statsPane);
+  let retries = 0;
   
-  renderAllCharts(processedData);
+  const injectStats = () => {
+    // 1. Find MAIN container with multiple fallbacks
+    const mainContainer = 
+      document.querySelector('.lc-lg\\:max-w-\\[calc\\(100\\%_-_316px\\)\\]') ||
+      document.querySelector('[class*="max-w-[calc(100%_-_316px)]"]') ||
+      document.querySelector('.w-full.overflow-visible'); // Fallback selector
 
-  setupTabLogic(statsTab, tabBar, contentSection, statsPane);
-  setupFilterListeners(processedData);
+    if (!mainContainer) {
+      if (retries++ < MAX_RETRIES) {
+        setTimeout(injectStats, RETRY_DELAY);
+        console.log(`Retrying injection (${retries}/${MAX_RETRIES})...`);
+      } else {
+        console.error('Stats injection failed: Main container not found');
+      }
+      return;
+    }
+
+    // 2. Find tab bar container
+    const tabBar = mainContainer.querySelector('div.flex.w-full.items-center.overflow-y-hidden');
+    
+    // 3. Find content container (multiple fallbacks)
+    const contentSection = 
+      mainContainer.querySelector('div.space-y-\\[18px\\]') ||
+      mainContainer.querySelector('[class*="space-y-["]') || // Generic class matcher
+      mainContainer.children[1]; // Fallback to second child
+
+    if (!tabBar || !contentSection) {
+      console.error('Tab elements not found:', { tabBar, contentSection });
+      return;
+    }
+
+    // 4. Create and inject stats tab
+    const statsTab = createStatsTab();
+    const discussTab = Array.from(tabBar.children).find(el => 
+      el.textContent?.includes('Discuss')
+    );
+    
+    if (discussTab) {
+      discussTab.after(statsTab);
+    } else {
+      tabBar.append(statsTab);
+      console.warn('Used fallback tab injection');
+    }
+
+    // 5. Create stats content pane
+    const statsPane = createStatsPaneWithGrid();
+    contentSection.append(statsPane);
+
+    // 6. Setup tab switching logic
+    setupTabLogic(statsTab, tabBar, contentSection, statsPane, processedData);
+    console.log('Stats UI injected successfully');
+  };
+
+  // Initial injection attempt
+  injectStats();
 }
 
 
@@ -798,42 +851,112 @@ function createStatsPaneWithGrid(): HTMLElement {
 
 // (The rest of the helper functions: setupTabLogic, createStatsTab, etc. remain the same)
 // ... all other helper functions from the previous version go here ...
-function setupTabLogic(statsTab: HTMLElement, tabBar: Element, contentSection: Element, statsPane: HTMLElement) {
-    const originalTabs = Array.from(tabBar.querySelectorAll('div.cursor-pointer:not(#lc-stats-tab)'));
-    let lastVisibleLeetCodePane: HTMLElement | null = findVisibleLeetCodePane(contentSection, tabBar, statsPane);
-
-    originalTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            deactivateStatsTab(statsTab);
-            statsPane.style.display = 'none';
-            setTimeout(() => {
-                lastVisibleLeetCodePane = findVisibleLeetCodePane(contentSection, tabBar, statsPane);
-            }, 50);
-        });
+function setupTabLogic(
+  statsTab: HTMLElement,
+  tabBar: Element,
+  contentSection: Element,
+  statsPane: HTMLElement,
+  processedData: ProcessedData
+) {
+  // 1. Track active state
+  let isStatsActive = false;
+  let originalContent: Element | null = null;
+  
+  // 2. Mutation observer for content changes
+  const observer = new MutationObserver(mutations => {
+    mutations.forEach(mutation => {
+      if (!isStatsActive && mutation.addedNodes.length > 0) {
+        // Hide stats when new content appears
+        statsPane.style.display = 'none';
+        originalContent = contentSection.lastElementChild;
+      }
     });
+  });
+  
+  observer.observe(contentSection, { childList: true });
 
-    statsTab.addEventListener('click', () => {
-        originalTabs.forEach(t => deactivateOriginalTab(t));
-        activateStatsTab(statsTab);
-        if (lastVisibleLeetCodePane) {
-            lastVisibleLeetCodePane.style.display = 'none';
-        }
-        statsPane.style.display = 'block';
+  // 3. Stats tab click handler - MODIFIED SECTION
+  statsTab.addEventListener('click', () => {
+    isStatsActive = true;
+    
+    // Hide all non-stats content
+    Array.from(contentSection.children).forEach(child => {
+      if (child !== statsPane && child !== tabBar) { // Preserve tab bar
+        (child as HTMLElement).style.display = 'none';
+      }
     });
+    
+    // Show stats content
+    statsPane.style.display = 'block';
+    
+    // Hide only right-aligned elements, not the entire tab bar
+    const rightElements = tabBar.querySelectorAll(`
+      .ml-auto,
+      a[href*="/submissions/"],
+      a[href*="/problem-list/"]
+    `);
+    rightElements.forEach(el => (el as HTMLElement).style.display = 'none');
+    
+    // Set active tab style
+    const innerDiv = statsTab.querySelector('div');
+    if (innerDiv) {
+      innerDiv.classList.add(...ACTIVE_INNER_DIV_CLASSES);
+    }
+    
+    // Render charts on first activation
+    if (!window.statsRendered) {
+      renderAllCharts(processedData);
+      window.statsRendered = true;
+    }
+  });
+
+  // 4. Other tabs click handlers
+  const otherTabs = Array.from(tabBar.querySelectorAll('.cursor-pointer')).filter(
+    t => t !== statsTab
+  );
+  
+  otherTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      isStatsActive = false;
+      statsPane.style.display = 'none';
+      
+      // Remove active style from stats tab
+      const innerDiv = statsTab.querySelector('div');
+      if (innerDiv) {
+        innerDiv.classList.remove(...ACTIVE_INNER_DIV_CLASSES);
+      }
+      
+      // Restore right-aligned elements
+      const rightElements = tabBar.querySelectorAll(`
+        .ml-auto,
+        a[href*="/submissions/"],
+        a[href*="/problem-list/"]
+      `);
+      rightElements.forEach(el => (el as HTMLElement).style.display = '');
+      
+      // Restore original content
+      if (originalContent) {
+        (originalContent as HTMLElement).style.display = 'block';
+      }
+    });
+  });
+  
+  // Initialize the tab bar as visible
+  (tabBar as HTMLElement).style.display = 'flex';
 }
 
-function createStatsTab(tabBar: Element): HTMLElement | null {
-    const sampleTab = tabBar.querySelector('div.cursor-pointer:nth-child(2)');
-    if (!sampleTab) return null;
-    const statsTab = sampleTab.cloneNode(true) as HTMLElement;
-    statsTab.id = 'lc-stats-tab';
-    const textSpan = statsTab.querySelector('span:last-child');
-    if (textSpan) textSpan.textContent = 'Stats';
-    const iconSpan = statsTab.querySelector('span:first-child');
-    if (iconSpan) iconSpan.textContent = '✨';
-    const rightAlignedContainer = tabBar.querySelector('div.ml-auto, a.ml-auto');
-    tabBar.insertBefore(statsTab, rightAlignedContainer);
-    return statsTab;
+/** Creates stats tab element */
+function createStatsTab(): HTMLElement {
+  const tab = document.createElement('div');
+  tab.id = 'lc-stats-tab';
+  tab.className = 'cursor-pointer';
+  tab.innerHTML = `
+    <div class="lc-md:space-x-2 flex items-center rounded-[5px] px-5 py-[10px] font-medium hover:text-label-1 dark:hover:text-dark-label-1">
+      <span class="lc-md:inline hidden text-2xl">✨</span>
+      <span class="whitespace-nowrap">Stats</span>
+    </div>
+  `;
+  return tab;
 }
 
 function activateStatsTab(tab: HTMLElement) {
