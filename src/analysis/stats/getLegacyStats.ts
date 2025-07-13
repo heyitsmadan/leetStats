@@ -98,7 +98,7 @@ if (nemesisProblem) {
     problemSlug: nemesisProblem.slug,
     icon: '⚔️',
     stat: nemesisProblem.failedSubmissions,
-    personalNote: `...this was personal`
+    personalNote: `..that was personal`
   });
 }
 
