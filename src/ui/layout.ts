@@ -170,6 +170,7 @@ function renderAllCharts(processedData: ProcessedData) {
     renderSubmissionSignature(processedData); // <-- ADD THIS
     renderLanguageChart(processedData); // <-- ADD THIS
     renderSkillMatrix(processedData); // Add this line
+    setupFilterListeners(processedData);
     setTimeout(() => {
   legacyStats.records.forEach((record: any) => {
     if (record.subStats) {
