@@ -23,9 +23,9 @@ export function renderOrUpdateMiniBarChart(
       datasets: [{
         data: [data.easy, data.medium, data.hard],
         backgroundColor: [
-          'rgba(88, 184, 185, 0.8)',  // Green for Easy
-          'rgba(251, 191, 36, 0.8)', // Yellow for Medium
-          'rgba(239, 68, 68, 0.8)'   // Red for Hard
+          'rgb(88, 184, 185)',  // Green for Easy
+          'rgb(251, 191, 36)', // Yellow for Medium
+          'rgb(239, 68, 68)'   // Red for Hard
         ],
         borderColor: [
           'rgb(88, 184, 185)',
