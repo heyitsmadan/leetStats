@@ -100,7 +100,23 @@ export function renderOrUpdateSkillMatrixHeatmap(
         expandedRows.delete(topic);
         const chartRow = topicRow.nextElementSibling;
         if (chartRow && chartRow.classList.contains('expanded-row')) {
-            chartRow.remove();
+            const expandableContent = chartRow.querySelector('.expandable-content') as HTMLElement;
+            if (expandableContent) {
+                // Set current height explicitly, then animate to 0 with opacity fade
+                expandableContent.style.maxHeight = expandableContent.scrollHeight + 'px';
+                expandableContent.style.opacity = '1';
+                // Force reflow
+                expandableContent.offsetHeight;
+                expandableContent.style.maxHeight = '0px';
+                expandableContent.style.opacity = '0';
+                
+                // Remove row after animation completes
+                expandableContent.addEventListener('transitionend', () => {
+                    if (chartRow.parentNode) {
+                        chartRow.remove();
+                    }
+                }, { once: true });
+            }
         }
         const chartId = `skill-chart-${topic.replace(/\s+/g, '-')}`;
         if (charts.has(chartId)) {
@@ -123,10 +139,25 @@ export function renderOrUpdateSkillMatrixHeatmap(
         topicRow.insertAdjacentElement('afterend', newRow);
         addChartControlListeners(newRow, topic);
         
+        // Get the expandable content and measure its natural height
+        const expandableContent = newRow.querySelector('.expandable-content') as HTMLElement;
+        if (expandableContent) {
+            // Temporarily set max-height to auto to measure content
+            expandableContent.style.maxHeight = 'auto';
+            const scrollHeight = expandableContent.scrollHeight;
+            
+            // Reset to 0 with opacity 0, then animate to the measured height with opacity 1
+            expandableContent.style.maxHeight = '0px';
+            expandableContent.style.opacity = '0';
+            // Force reflow
+            expandableContent.offsetHeight;
+            expandableContent.style.maxHeight = scrollHeight + 'px';
+            expandableContent.style.opacity = '1';
+        }
         
         button.querySelector('span')!.textContent = '−';
         
-        // Properly defer chart rendering
+        // Defer chart rendering
         requestAnimationFrame(() => {
             requestAnimationFrame(() => {
                 setTimeout(() => {
@@ -137,6 +168,9 @@ export function renderOrUpdateSkillMatrixHeatmap(
         });
     }
 }
+
+
+
 
 
 
@@ -162,6 +196,7 @@ export function renderOrUpdateSkillMatrixHeatmap(
     function getChartRowHtml(topic: string): string {
     return `
         <td colspan="5" class="p-0 bg-layer-1 dark:bg-dark-layer-1">
+        <div class="expandable-content">
             <div class="p-4 border-t-2 border-divider-3 dark:border-dark-divider-3">
                 <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
                     <div class="ml-[21px]">
@@ -234,7 +269,17 @@ export function renderOrUpdateSkillMatrixHeatmap(
                     <canvas id="skill-chart-${topic.replace(/\s+/g, '-')}" class="w-full h-full"></canvas>
                 </div>
             </div>
+            </div>
         </td>
+        <style>
+        .expandable-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s ease, opacity 0.4s ease;;
+}
+
+
+        </style>
     `;
 }
 
