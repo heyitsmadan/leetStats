@@ -306,14 +306,14 @@ function fillMissingIntervals(
 const DIFFICULTY_COLORS = { 'Easy': '#58b8b9', 'Medium': '#f4ba40', 'Hard': '#e24a41' };
 const STATUS_COLORS = { 'Accepted': '#5db666', 'Failed': '#393939' };
 const LANGUAGE_COLORS = [
-  '#FFDAC1', // Peach
-  '#E2F0CB', // Light sage
-  '#F4C2C2', // Dusty rose (very muted)
-  '#D6EAF8', // Powder blue
-  '#E8DAEF', // Lilac
-  '#D5F4E6', // Pale mint
-  '#F9E79F', // Cream (muted yellow)
-  '#FADBD8'  // Blush (very pale pink)
+  '#FFB997', // Warm peach
+  '#B4D9A6', // Soft sage green
+  '#E09CA4', // Rosy blush
+  '#A7C7E7', // Clear powder blue
+  '#C5A3DC', // Muted lavender
+  '#9ED9CC', // Minty teal
+  '#F7C873', // Mellow sunflower
+  '#F2A6A0'  // Warm coral pink
 ];
 
 // Updated main function

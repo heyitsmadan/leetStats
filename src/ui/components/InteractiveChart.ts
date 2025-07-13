@@ -390,6 +390,9 @@ const xAxis = d3.axisBottom(xScale)
     if (!chartData) return;
     mainChart.data.labels = chartData.labels;
     mainChart.data.datasets = chartData.datasets;
+    // Update legend visibility based on current filter
+    const showLegend = currentFilters.secondaryView === 'Language';
+    mainChart.options.plugins!.legend!.display = showLegend;
     mainChart.update('none'); // Use 'none' for faster updates when brushing
   }
 
