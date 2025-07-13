@@ -75,7 +75,7 @@ function createChartData(
         backgroundColor: DIFFICULTY_COLORS[difficulty as keyof typeof DIFFICULTY_COLORS],
         borderColor: DIFFICULTY_COLORS[difficulty as keyof typeof DIFFICULTY_COLORS],
         stack: 'main',
-        maxBarThickness: 20,
+        maxBarThickness: 30,
       });
     });
   } else if (filters.secondaryView === 'Status') {
@@ -119,7 +119,7 @@ function createChartData(
         backgroundColor: STATUS_COLORS.Accepted,
         borderColor: STATUS_COLORS.Accepted,
         stack: 'main',
-        maxBarThickness: 20,
+        maxBarThickness: 30,
       },
       {
         label: 'Failed',
@@ -127,7 +127,7 @@ function createChartData(
         backgroundColor: filters.primaryView === 'Problems Solved' ? '#d1e7dd' : STATUS_COLORS.Failed,
         borderColor: filters.primaryView === 'Problems Solved' ? '#d1e7dd' : STATUS_COLORS.Failed,
         stack: 'main',
-        maxBarThickness: 20,
+        maxBarThickness: 30,
       }
     );
   } else if (filters.secondaryView === 'Language') {
@@ -165,7 +165,7 @@ function createChartData(
         backgroundColor: LANGUAGE_COLORS[index % LANGUAGE_COLORS.length],
         borderColor: LANGUAGE_COLORS[index % LANGUAGE_COLORS.length],
         stack: 'main',
-        maxBarThickness: 20,
+        maxBarThickness: 30,
       });
     });
   }
