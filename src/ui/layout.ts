@@ -37,7 +37,7 @@ const styles = {
   // === Milestone Styles ===
   milestoneEvent: "text-base font-semibold text-gray-200", // Brightest text for the title
   milestoneDate: "text-sm text-gray-400 dark:text-dark-label-2", // Secondary info
-  milestoneProblem: "text-sm text-gray-500", // Can be a problem name or a mono ID
+  milestoneProblem: "text-sm text-gray-500 hover:underline", // Can be a problem name or a mono ID
 
   // === Trophy Card Styles (to be used with new design below) ===
   trophyName: "text-base font-semibold text-gray-200", // Unchanged, as requested.
@@ -242,12 +242,12 @@ ${legacyStats.milestones.map((milestone: any) => {
         </div>
         ${milestone.type === 'submissions' ? `
           <a href="https://leetcode.com/submissions/detail/${milestone.submissionId || milestone.id}/" 
-   class="inline-flex items-center gap-1 ${styles.milestoneProblem}">
+   class="inline-flex items-center gap-1 ${styles.milestoneProblem}" target="_blank" rel="noopener noreferrer">
   Submission #${milestone.submissionId || milestone.id}
 </a>
         ` : milestone.problemTitle ? `
           <a href="https://leetcode.com/problems/${milestone.problemSlug}/" 
-   class="inline-flex items-center gap-1 ${styles.milestoneProblem}">
+   class="inline-flex items-center gap-1 ${styles.milestoneProblem} target="_blank" rel="noopener noreferrer">
   ${milestone.problemTitle}
 </a>
         ` : ''}
@@ -274,7 +274,7 @@ ${legacyStats.milestones.map((milestone: any) => {
             ${trophy.title}
         </div>
         <div class="border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b"></div>
-        <a href="https://leetcode.com/problems/${trophy.problemSlug}/" class="${styles.trophyProblem}">
+        <a href="https://leetcode.com/problems/${trophy.problemSlug}/" class="${styles.trophyProblem}" target="_blank" rel="noopener noreferrer">
             ${trophy.problemTitle}
         </a>
         
