@@ -23,12 +23,12 @@ export function renderOrUpdateMiniBarChart(
       datasets: [{
         data: [data.easy, data.medium, data.hard],
         backgroundColor: [
-          'rgba(34, 197, 94, 0.8)',  // Green for Easy
+          'rgba(88, 184, 185, 0.8)',  // Green for Easy
           'rgba(251, 191, 36, 0.8)', // Yellow for Medium
           'rgba(239, 68, 68, 0.8)'   // Red for Hard
         ],
         borderColor: [
-          'rgb(34, 197, 94)',
+          'rgb(88, 184, 185)',
           'rgb(251, 191, 36)',
           'rgb(239, 68, 68)'
         ],
@@ -36,23 +36,26 @@ export function renderOrUpdateMiniBarChart(
       }]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false
-        }
-      },
-      scales: {
-        x: {
-          display: false
-        },
-        y: {
-          display: false,
-          beginAtZero: true
-        }
-      }
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      display: false
+    },
+    tooltip: {
+      enabled: false // Disable tooltips
     }
+  },
+  scales: {
+    x: {
+      display: false
+    },
+    y: {
+      display: false,
+      beginAtZero: true
+    }
+  }
+}
   };
 
   const chart = new Chart(canvas, config);
