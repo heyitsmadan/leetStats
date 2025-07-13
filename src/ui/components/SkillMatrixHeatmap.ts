@@ -645,30 +645,56 @@ const scaleConfig = timeScaleConfig[localOpts.view];
 
     // Helper Functions
     function getHeatmapColor(value: number, metric: 'problemsSolved' | 'avgTries' | 'firstAceRate'): string {
-    const bestColor = { r: 93, g: 182, b: 102 };   // #5db666
-    const worstColor = { r: 230, g: 107, b: 98 };  // #e66b62
+    const bestColor = { r: 93, g: 182, b: 102 };   // #5db666 (Green)
+    const middleColor = { r: 244, g: 186, b: 64 }; // #f4ba40 (Yellow)
+    const worstColor = { r: 230, g: 107, b: 98 };  // #e66b62 (Red)
     
+    // Percent represents "badness": 0.0 is best (green), 0.5 is middle (yellow), 1.0 is worst (red)
     let percent = 0;
+
     if (metric === 'avgTries') {
-        // For average attempts, lower is better
-        if (value <= 1) percent = 0; // Best case
-        else percent = Math.min(1, (value - 1) / 4); // Worst case approaches 1
+        // Lower is better. Anything >= 6 attempts is considered "worst".
+        // Use an exponential scale to penalize higher attempts more.
+        const WORST_CASE_ATTEMPTS = 4;
+        if (value <= 1) {
+            percent = 0; // Best case
+        } else {
+            const scale = (value - 1) / (WORST_CASE_ATTEMPTS - 1);
+            percent = Math.min(1, scale ** 1.5); // Power of 1.5 makes it non-linear
+        }
     } else if (metric === 'problemsSolved') {
-        // ✅ NEW: For problems solved, higher is better (similar to acceptance rate)
-        // Use a reasonable scale - assume max ~50 problems per topic as "excellent"
-        const maxExpected = 20;
-        percent = 1 - Math.min(1, value / maxExpected);
-    } else {
-        // For first ace rate, higher is better
-        percent = 1 - (value / 100); // Invert so 100% = 0 (best), 0% = 1 (worst)
+        // Higher is better. Target of 30 problems for "mastery".
+        // Use a sqrt scale for diminishing returns.
+        const TARGET_PROBLEMS = 20;
+        const ratio = Math.min(1, value / TARGET_PROBLEMS);
+        percent = 1 - Math.sqrt(ratio); // The sqrt makes the color improve faster at the beginning.
+    } else { // firstAceRate
+        // Higher is better (0-100).
+        // Use a sqrt scale so high percentages (e.g., 80%+) look very good.
+        const ratio = value / 100;
+        percent = 1 - Math.sqrt(ratio); // An ACE rate of 25% will be the 0.5 (yellow) mark.
     }
     
-    const r = Math.round(bestColor.r + percent * (worstColor.r - bestColor.r));
-    const g = Math.round(bestColor.g + percent * (worstColor.g - bestColor.g));
-    const b = Math.round(bestColor.b + percent * (worstColor.b - bestColor.b));
+    let r, g, b;
+    
+    if (percent <= 0.5) {
+        // Interpolate between best (green) and middle (yellow)
+        const localPercent = percent * 2;
+        r = Math.round(bestColor.r + localPercent * (middleColor.r - bestColor.r));
+        g = Math.round(bestColor.g + localPercent * (middleColor.g - bestColor.g));
+        b = Math.round(bestColor.b + localPercent * (middleColor.b - bestColor.b));
+    } else {
+        // Interpolate between middle (yellow) and worst (red)
+        const localPercent = (percent - 0.5) * 2;
+        r = Math.round(middleColor.r + localPercent * (worstColor.r - middleColor.r));
+        g = Math.round(middleColor.g + localPercent * (worstColor.g - middleColor.g));
+        b = Math.round(middleColor.b + localPercent * (worstColor.b - middleColor.b));
+    }
 
+    // You had a 0.6 opacity in your example, which is great for softening the colors.
     return `rgba(${r}, ${g}, ${b}, 0.6)`;
 }
+
 
 
     function getTextColor(backgroundColor: string): string {
