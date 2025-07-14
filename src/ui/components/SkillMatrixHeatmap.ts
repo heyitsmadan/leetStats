@@ -516,7 +516,7 @@ function aggregateTimeSeriesData(
 
     console.log(`[Heatmap] Creating datasets...`);
     const datasets: any[] = [];
-    const colors = { easy: '#00af8c', medium: '#ffb800', hard: '#ff375f', aggregate: '#5db666' };
+    const colors = { easy: '#58b8b9', medium: '#f4ba40', hard: '#e24a41', aggregate: '#5db666' };
     
     // In the renderChart function, update the dataset creation:
     if (localOpts.split) {
