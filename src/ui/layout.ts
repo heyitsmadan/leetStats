@@ -386,7 +386,17 @@ function renderSkillMatrix(processedData: ProcessedData) {
   const container = document.getElementById('skill-matrix-container') as HTMLElement;
   if (!container) return;
   
-  const skillMatrixData = getSkillMatrixStats(processedData, currentFilters, skillMatrixOptions.timeRange );
+  // FIX: Pass a modified filter object to getSkillMatrixStats.
+  // This creates a copy of the main filters but forces 'difficulty' to 'All'.
+  // This prevents the main difficulty dropdown from affecting the skill matrix.
+  // The skill matrix's own time range (from skillMatrixOptions.timeRange) is
+  // passed as the third argument and is expected to be used for filtering time.
+  const skillMatrixData = getSkillMatrixStats(
+    processedData,
+    { ...currentFilters, difficulty: 'All' },
+    skillMatrixOptions.timeRange
+  );
+
   if (skillMatrixData) {
     container.style.display = 'block';
     skillMatrixHeatmap = renderOrUpdateSkillMatrixHeatmap(
