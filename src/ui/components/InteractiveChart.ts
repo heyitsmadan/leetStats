@@ -29,27 +29,28 @@ export function renderOrUpdateInteractiveChart(
   }
 
   // Create the HTML structure
+  // ## CHANGE: Reordered toggles and updated default active states.
   container.innerHTML = `
     <div class="interactive-chart-container">
       <!-- Global Toggles -->
       <div class="flex justify-between items-center mb-4">
         <!-- Primary Toggle (Left) -->
         <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
-          <button id="primary-submissions" data-view="Submissions" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
-            Submissions
-          </button>
-          <button id="primary-problems" data-view="Problems Solved" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
+          <button id="primary-problems" data-view="Problems Solved" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
             Problems Solved
+          </button>
+          <button id="primary-submissions" data-view="Submissions" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
+            Submissions
           </button>
         </div>
         
         <!-- Secondary Toggle (Right) -->
         <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
-          <button id="secondary-difficulty" data-view="Difficulty" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
-            Difficulty
-          </button>
           <button id="secondary-language" data-view="Language" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
             Language
+          </button>
+          <button id="secondary-difficulty" data-view="Difficulty" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
+            Difficulty
           </button>
           <button id="secondary-status" data-view="Status" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
             Status
@@ -135,7 +136,13 @@ export function renderOrUpdateInteractiveChart(
   document.head.appendChild(style);
 
   // Initialize state
-  let currentFilters: InteractiveChartFilters = { ...initialFilters };
+  // ## FIX: Explicitly set default filters to match the default UI state.
+  // This ensures the chart's initial data load is synced with the active buttons.
+  let currentFilters: InteractiveChartFilters = { 
+    ...initialFilters,
+    primaryView: 'Problems Solved',
+    secondaryView: 'Difficulty',
+  };
   let mainChart: Chart | null = null;
   let brushData: BrushChartData | null = null;
 
@@ -154,235 +161,237 @@ export function renderOrUpdateInteractiveChart(
     const chartData = getInteractiveChartStats(processedData, currentFilters);
     if (!chartData) return;
     const showLegend = currentFilters.secondaryView === 'Language';
-    // In the initializeMainChart function, update the Chart.js options:
-mainChart = new Chart(ctx, {
-  type: 'bar',
-  data: {
-    labels: chartData.labels,
-    datasets: chartData.datasets.map(dataset => ({
-      ...dataset,
-      maxBarThickness: 20,  // Ensure max bar width
-    }))
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    interaction: { mode: 'index', intersect: false },
-    plugins: {
-      legend: { display: showLegend, // ✅ Conditional legend
-          labels: {
-            boxWidth: 12,
-            padding: 15,
-            font: {
-              size: 12
-            },
-            color: '#bdbeb3', // ✅ Makes legend markers circular instead of squares
-          } },
-      tooltip: { enabled: false, external: handleTooltip }
-    },
-    scales: {
-      x: {
-        stacked: true,
-        grid: { display: false },
-        ticks: { 
-          color: '#bdbeb3',
-          maxTicksLimit: 12,  // Limit number of labels to prevent crowding
-          maxRotation: 45,    // Rotate labels if needed
-          minRotation: 0
-        }
+
+    mainChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: chartData.labels,
+        datasets: chartData.datasets.map(dataset => ({
+          ...dataset,
+          maxBarThickness: 20,
+        }))
       },
-      y: {
-        stacked: true,
-        beginAtZero: true,
-        grid: { display: false },
-        ticks: { color: '#bdbeb3' }
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { 
+              display: showLegend,
+              labels: {
+                boxWidth: 12,
+                padding: 15,
+                font: { size: 12 },
+                color: '#bdbeb3',
+              } 
+          },
+          tooltip: { enabled: false, external: handleTooltip }
+        },
+        scales: {
+          x: {
+            stacked: true,
+            grid: { display: false },
+            ticks: { 
+              color: '#bdbeb3',
+              maxTicksLimit: 12,
+              maxRotation: 45,
+              minRotation: 0
+            }
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            grid: { display: false },
+            ticks: { color: '#bdbeb3' }
+          }
+        },
+        elements: { bar: { borderRadius: 4, borderSkipped: 'bottom' } },
+        animation: { duration: 500, easing: 'easeInOutQuart' }
       }
-    },
-    elements: { bar: { borderRadius: 4, borderSkipped: 'bottom' } },
-    animation: { duration: 500, easing: 'easeInOutQuart' }
-  }
-});
+    });
   }
 
   function initializeBrushChart() {
-  brushData = getBrushChartData(processedData);
-  if (!brushData || !mainChart) return;
+    brushData = getBrushChartData(processedData);
+    if (!brushData || !mainChart) return;
 
-  const svg = d3.select(container.querySelector('#brush-chart'));
-  const margin = { top: 10, right: 20, bottom: 25, left: 20 };
-  
-  // === FIX: Get width from the main chart's canvas for perfect alignment ===
-  const mainChartCanvas = container.querySelector('#main-chart') as HTMLElement;
-  const containerWidth = mainChartCanvas.offsetWidth;
-  // Validate dimensions before proceeding
-  if (containerWidth <= 0) {
-      console.warn('Container width not ready, retrying...');
-      setTimeout(initializeBrushChart, 100);
-      return;
-  }
-  const width = containerWidth - margin.left - margin.right;
-  const height = 80 - margin.top - margin.bottom;
-
-  svg.selectAll("*").remove();
-  svg.attr("width", containerWidth).attr("height", 80);
-
-  const g = svg.append("g")
-    .attr("transform", `translate(${margin.left},${margin.top})`);
-
-  // Create clip path definitions
-  const defs = g.append("defs");
-  
-  // General navigator clip path
-  defs.append("clipPath")
-    .attr("id", "navigator-clip")
-    .append("rect")
-    .attr("width", width)
-    .attr("height", height);
-  
-  // Clip path for the selected (normal) area
-  const selectedClip = defs.append("clipPath")
-    .attr("id", "selected-area-clip")
-    .append("rect")
-    .attr("x", 0)
-    .attr("y", 0)
-    .attr("width", width)  // Initially full width
-    .attr("height", height);
-
-  // Clip path for the dimmed areas (everything except selected)
-  const dimmedClip = defs.append("clipPath")
-    .attr("id", "dimmed-area-clip");
-  
-  // Left dimmed rectangle
-  dimmedClip.append("rect")
-    .attr("class", "dim-left-rect")
-    .attr("x", 0)
-    .attr("y", 0)
-    .attr("width", 0)  // Initially no width
-    .attr("height", height);
-  
-  // Right dimmed rectangle  
-  dimmedClip.append("rect")
-    .attr("class", "dim-right-rect")
-    .attr("x", width)
-    .attr("y", 0)
-    .attr("width", 0)  // Initially no width
-    .attr("height", height);
-
-  const xScale = d3.scaleTime()
-    .domain(d3.extent(brushData.labels, d => new Date(d)) as [Date, Date])
-    .range([0, width]);
-
-  const yScale = d3.scaleLinear()
-    .domain([0, d3.max(brushData.data) as number])
-    .range([height, 0]);
-
-  const area = d3.area<any>()
-    .x((d, i) => xScale(new Date(brushData!.labels[i])))
-    .y0(height)
-    .y1((d, i) => yScale(brushData!.data[i]))
-    .curve(d3.curveBasis);
-
-  const chartArea = g.append("g")
-    .attr("clip-path", "url(#navigator-clip)");
-
-  // Create TWO identical area charts with different styling and clipping
-  
-  // Normal area (clipped to selected region)
-  chartArea.append("path")
-    .datum(brushData.data)
-    .attr("class", "navigator-area-selected")
-    .attr("d", area)
-    .attr("clip-path", "url(#selected-area-clip)")
-    .style("fill", "#5db666")
-    .style("fill-opacity", 0.25)
-    .style("stroke", "#5db666")
-    .style("stroke-width", 1.5)
-    .style("stroke-opacity", 0.8);
-
-  // Dimmed area (clipped to non-selected regions)
-  chartArea.append("path")
-    .datum(brushData.data)
-    .attr("class", "navigator-area-dimmed")
-    .attr("d", area)
-    .attr("clip-path", "url(#dimmed-area-clip)")
-    .style("fill", "#5db666")
-    .style("fill-opacity", 0.1)  // Much dimmer
-    .style("stroke", "#5db666")
-    .style("stroke-width", 1.5)
-    .style("stroke-opacity", 0.3);  // Much dimmer
-
-  const brush = d3.brushX()
-    .extent([[0, 0], [width, height]])
-    .handleSize(8) // Slightly larger handles for easier grabbing
-    .on("brush end", handleBrush);
-
-  const brushG = g.append("g").attr("class", "brush");
-  brush(brushG);
-
-  // Set initial brush to full extent
-  setTimeout(() => {
-    brushG.call(brush.move, [0, width]);
-    // Initialize clips for full selection
-    selectedClip.attr("x", 0).attr("width", width);
-    dimmedClip.select(".dim-left-rect").attr("width", 0);
-    dimmedClip.select(".dim-right-rect").attr("width", 0);
-  }, 0);
-
-  // Update the brush chart x-axis formatting
-const xAxis = d3.axisBottom(xScale)
-  .ticks(Math.min(6, Math.ceil(width / 100)))  // Limit ticks based on width
-  .tickFormat((domainValue, index) => {
-    const date = domainValue as Date;
-    const daysDiff = (xScale.domain()[1].getTime() - xScale.domain()[0].getTime()) / (1000 * 60 * 60 * 24);
+    const svg = d3.select(container.querySelector('#brush-chart'));
+    const margin = { top: 10, right: 20, bottom: 25, left: 20 };
     
-    if (daysDiff <= 90) {
-      // Daily: show DD-MM format
-      return d3.timeFormat("%d-%m")(date);
-    } else if (daysDiff <= 1095) {
-      // Monthly: show MMM YY format
-      return d3.timeFormat("%b %y")(date);
-    } else {
-      // Yearly: show YYYY format
-      return d3.timeFormat("%Y")(date);
+    const mainChartCanvas = container.querySelector('#main-chart') as HTMLElement;
+    const containerWidth = mainChartCanvas.offsetWidth;
+
+    if (containerWidth <= 0) {
+        console.warn('Container width not ready, retrying...');
+        setTimeout(initializeBrushChart, 100);
+        return;
     }
-  });
+    const width = containerWidth - margin.left - margin.right;
+    const height = 80 - margin.top - margin.bottom;
 
-  g.append("g")
-    .attr("class", "axis")
-    .attr("transform", `translate(0,${height})`)
-    .call(xAxis);
+    svg.selectAll("*").remove();
+    svg.attr("width", containerWidth).attr("height", 80);
 
-  function handleBrush(event: any) {
-    if (!event.sourceEvent) return;
-    const selection = event.selection;
-    if (!selection || !brushData) return;
+    const g = svg.append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    const [x0, x1] = selection;
+    const defs = g.append("defs");
     
-    // Update the clip paths to match exact brush boundaries
+    defs.append("clipPath")
+      .attr("id", "navigator-clip")
+      .append("rect")
+      .attr("width", width)
+      .attr("height", height);
     
-    // Selected area clip: show only between x0 and x1
-    selectedClip
-      .attr("x", x0)
-      .attr("width", x1 - x0);
+    const selectedClip = defs.append("clipPath")
+      .attr("id", "selected-area-clip")
+      .append("rect")
+      .attr("x", 0).attr("y", 0)
+      .attr("width", width).attr("height", height);
+
+    const dimmedClip = defs.append("clipPath")
+      .attr("id", "dimmed-area-clip");
     
-    // Dimmed areas clip: show left and right of selection
-    dimmedClip.select(".dim-left-rect")
-      .attr("x", 0)
-      .attr("width", x0);
+    dimmedClip.append("rect")
+      .attr("class", "dim-left-rect")
+      .attr("x", 0).attr("y", 0)
+      .attr("width", 0).attr("height", height);
+    
+    dimmedClip.append("rect")
+      .attr("class", "dim-right-rect")
+      .attr("x", width).attr("y", 0)
+      .attr("width", 0).attr("height", height);
+
+    const xScale = d3.scaleTime()
+      .domain(d3.extent(brushData.labels, d => new Date(d)) as [Date, Date])
+      .range([0, width]);
+
+    const yScale = d3.scaleLinear()
+      .domain([0, d3.max(brushData.data) as number])
+      .range([height, 0]);
+
+    const area = d3.area<any>()
+      .x((d, i) => xScale(new Date(brushData!.labels[i])))
+      .y0(height)
+      .y1((d, i) => yScale(brushData!.data[i]))
+      .curve(d3.curveBasis);
+
+    const chartArea = g.append("g")
+      .attr("clip-path", "url(#navigator-clip)");
+
+    chartArea.append("path")
+      .datum(brushData.data)
+      .attr("class", "navigator-area-selected")
+      .attr("d", area)
+      .attr("clip-path", "url(#selected-area-clip)")
+      .style("fill", "#5db666").style("fill-opacity", 0.25)
+      .style("stroke", "#5db666").style("stroke-width", 1.5).style("stroke-opacity", 0.8);
+
+    chartArea.append("path")
+      .datum(brushData.data)
+      .attr("class", "navigator-area-dimmed")
+      .attr("d", area)
+      .attr("clip-path", "url(#dimmed-area-clip)")
+      .style("fill", "#5db666").style("fill-opacity", 0.1)
+      .style("stroke", "#5db666").style("stroke-width", 1.5).style("stroke-opacity", 0.3);
+
+    const brush = d3.brushX()
+      .extent([[0, 0], [width, height]])
+      .handleSize(8)
+      .on("brush end", handleBrush);
+
+    const brushG = g.append("g").attr("class", "brush");
+    brush(brushG);
+
+    // ## CHANGE: Set initial brush to last 12 months (or since first submission)
+    // This logic replaces the previous `setTimeout` that selected the full range.
+    setTimeout(() => {
+        const [minDate, maxDate] = xScale.domain();
+
+        // Guard against empty data
+        if (!minDate || !maxDate) {
+            brushG.call(brush.move, [0, width]);
+            selectedClip.attr("x", 0).attr("width", width);
+            dimmedClip.select(".dim-left-rect").attr("width", 0);
+            dimmedClip.select(".dim-right-rect").attr("width", 0);
+            return;
+        }
+
+        // Calculate the start date for the initial selection
+        const twelveMonthsAgo = new Date(maxDate);
+        twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
         
-    dimmedClip.select(".dim-right-rect")
-      .attr("x", x1)
-      .attr("width", width - x1);
+        // The start date is the later of "12 months ago" or the "first submission date"
+        const initialStartDate = new Date(Math.max(twelveMonthsAgo.getTime(), minDate.getTime()));
+        const initialEndDate = maxDate;
 
-    const startDate = xScale.invert(x0);
-    const endDate = xScale.invert(x1);
+        // Convert dates to pixel values for the brush
+        const initialX0 = xScale(initialStartDate);
+        const initialX1 = xScale(initialEndDate);
 
-    currentFilters.brushWindow = [startDate, endDate];
-    updateMainChart();
+        // Programmatically move the brush to the initial selection
+        brushG.call(brush.move, [initialX0, initialX1]);
+
+        // Manually update clips because the brush handler will ignore this programmatic move
+        selectedClip
+          .attr("x", initialX0)
+          .attr("width", initialX1 - initialX0);
+        
+        dimmedClip.select(".dim-left-rect")
+          .attr("x", 0)
+          .attr("width", initialX0);
+            
+        dimmedClip.select(".dim-right-rect")
+          .attr("x", initialX1)
+          .attr("width", width - initialX1);
+
+        // Manually update the main chart for the initial view to match the brush
+        currentFilters.brushWindow = [initialStartDate, initialEndDate];
+        updateMainChart();
+    }, 0);
+
+    const xAxis = d3.axisBottom(xScale)
+      .ticks(Math.min(6, Math.ceil(width / 100)))
+      .tickFormat((domainValue, index) => {
+        const date = domainValue as Date;
+        const daysDiff = (xScale.domain()[1].getTime() - xScale.domain()[0].getTime()) / (1000 * 60 * 60 * 24);
+        
+        if (daysDiff <= 90) return d3.timeFormat("%d-%m")(date);
+        else if (daysDiff <= 1095) return d3.timeFormat("%b %y")(date);
+        else return d3.timeFormat("%Y")(date);
+      });
+
+    g.append("g")
+      .attr("class", "axis")
+      .attr("transform", `translate(0,${height})`)
+      .call(xAxis);
+
+    function handleBrush(event: any) {
+      if (!event.sourceEvent) return; // Important: Prevents infinite loops on programmatic brushing
+      const selection = event.selection;
+      if (!selection || !brushData) return;
+
+      const [x0, x1] = selection;
+      
+      selectedClip
+        .attr("x", x0)
+        .attr("width", x1 - x0);
+      
+      dimmedClip.select(".dim-left-rect")
+        .attr("x", 0)
+        .attr("width", x0);
+          
+      dimmedClip.select(".dim-right-rect")
+        .attr("x", x1)
+        .attr("width", width - x1);
+
+      const startDate = xScale.invert(x0);
+      const endDate = xScale.invert(x1);
+
+      currentFilters.brushWindow = [startDate, endDate];
+      updateMainChart();
+    }
   }
-}
-
 
   function updateMainChart() {
     if (!mainChart) return;
@@ -390,14 +399,12 @@ const xAxis = d3.axisBottom(xScale)
     if (!chartData) return;
     mainChart.data.labels = chartData.labels;
     mainChart.data.datasets = chartData.datasets;
-    // Update legend visibility based on current filter
     const showLegend = currentFilters.secondaryView === 'Language';
     mainChart.options.plugins!.legend!.display = showLegend;
-    mainChart.update('none'); // Use 'none' for faster updates when brushing
+    mainChart.update('none');
   }
 
   function setupEventListeners() {
-    // ... (event listeners remain the same)
     const primaryButtons = container.querySelectorAll('[id^="primary-"]');
     primaryButtons.forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -426,7 +433,6 @@ const xAxis = d3.axisBottom(xScale)
   }
 
   function handleTooltip(context: any) {
-    // ... (tooltip handler remains the same)
     const tooltipEl = container.querySelector('#chart-tooltip') as HTMLElement;
     if (!tooltipEl) return;
     const tooltipModel = context.tooltip;
