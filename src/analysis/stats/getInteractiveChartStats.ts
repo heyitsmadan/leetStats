@@ -306,15 +306,33 @@ function fillMissingIntervals(
 const DIFFICULTY_COLORS = { 'Easy': '#58b8b9', 'Medium': '#f4ba40', 'Hard': '#e24a41' };
 const STATUS_COLORS = { 'Accepted': '#5db666', 'Failed': '#393939' };
 const LANGUAGE_COLORS = [
-  '#FFB997', // Warm peach
-  '#B4D9A6', // Soft sage green
-  '#E09CA4', // Rosy blush
-  '#A7C7E7', // Clear powder blue
-  '#C5A3DC', // Muted lavender
-  '#9ED9CC', // Minty teal
-  '#F7C873', // Mellow sunflower
-  '#F2A6A0'  // Warm coral pink
+  '#C5A3DC', // soft lavender
+  '#A7C7E7', // baby blue
+  '#E09CA4', // rose pink
+  '#FFB997', // peach
+  '#B4D9A6', // mint green
+  '#9ED9CC', // aqua
+  '#F2A6A0', // coral pink
+  '#F6D6AD', // pastel apricot
+  '#AFCBFF', // sky blue
+  '#DDBDD5', // dusty mauve
+  '#FCD5CE', // pastel salmon
+  '#C9E4DE', // pale seafoam
+  '#EFD3D7', // light blush
+  '#B5EAD7', // mint cream
+  '#FFDAC1', // soft peach
+  '#C7CEEA', // periwinkle
+  '#FFB5E8', // candy pink
+  '#FFABAB', // cherry blossom
+  '#D5AAFF', // pastel purple
+  '#A0E7E5', // cyan mint
+  '#B2F7EF', // pale teal
+  '#E3C6FF', // light lilac
+  '#F7C5CC', // soft rose
+  '#F1F7B5', // mellow yellow
+  '#C2F784'  // fresh green
 ];
+
 
 // Updated main function
 export function getInteractiveChartStats(
