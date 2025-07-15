@@ -1,11 +1,12 @@
+// src/api/api.ts
 import type { RawSubmission, SubmissionListResponse, ProblemMetadata } from '../types';
 
 /**
- * Fetches all submissions from the LeetCode API newer than a given timestamp.
+ * Fetches all submissions from the LeetCode API newer than a given submission ID.
  */
 export async function fetchAllSubmissions(
   updateUICallback: (message: string) => void,
-  minTimestamp: number = 0
+  lastSubmissionId: string = '0'
 ): Promise<RawSubmission[]> {
   const graphqlUrl = 'https://leetcode.com/graphql';
   const query = `
@@ -23,7 +24,7 @@ export async function fetchAllSubmissions(
   let hasNext = true;
   let page = 1;
 
-  console.log(`📡 Fetching submissions after timestamp ${minTimestamp}...`);
+  console.log(`📡 Fetching submissions after ID ${lastSubmissionId}...`);
   updateUICallback('📡 Fetching new submissions...');
 
   while (hasNext) {
@@ -43,23 +44,25 @@ export async function fetchAllSubmissions(
         updateUICallback('⚠️ Unexpected response format. Check console.');
         break;
       }
-      
+
+      // Filter submissions that are newer than the last fetched submission ID
       const recentSubmissions = pageData.submissions.filter(
-        s => parseInt(s.timestamp, 10) > minTimestamp
+        s => parseInt(s.id, 10) > parseInt(lastSubmissionId, 10)
       );
-      
+
       allNewSubmissions.push(...recentSubmissions);
 
+      // Stop if we found submissions older than or equal to our last ID
+      // or if there are no more pages
       if (recentSubmissions.length < pageData.submissions.length || !pageData.hasNext) {
         hasNext = false;
       } else {
         offset += limit;
       }
-      
+
       updateUICallback(`📥 Fetched ${allNewSubmissions.length} new submissions... (Page ${page})`);
       page++;
       await new Promise(r => setTimeout(r, 200));
-
     } catch (err) {
       console.error('❌ Error during fetch:', err);
       updateUICallback('❌ Error during fetch. Check console for details.');
@@ -70,7 +73,6 @@ export async function fetchAllSubmissions(
   console.log(`🏁 Done. Total new submissions fetched: ${allNewSubmissions.length}`);
   return allNewSubmissions;
 }
-
 
 /**
  * Fetches metadata for a single problem if it's not already cached.

@@ -1,27 +1,32 @@
+// src/api/storage.ts
 import type { RawSubmission, CachedSubmissions, ProblemMetadata, CachedMetadata } from '../types';
 
 /**
- * Saves the complete list of submissions and the latest timestamp to storage.
+ * Saves the complete list of submissions and the latest submission ID to storage.
  */
 export async function saveSubmissionsToStorage(submissions: RawSubmission[]): Promise<void> {
   if (submissions.length === 0) return;
-  
-  const latestTimestamp = Math.max(...submissions.map(s => parseInt(s.timestamp, 10)));
+
+  // Find the highest submission ID (assuming IDs are numeric)
+  const latestSubmissionId = Math.max(...submissions.map(s => parseInt(s.id, 10))).toString();
+
   const dataToSave: CachedSubmissions = {
     submissions,
-    latestFetchedTimestamp: latestTimestamp,
+    latestFetchedSubmissionId: latestSubmissionId,
   };
+
   await chrome.storage.local.set(dataToSave);
 }
 
 /**
- * Loads submissions and the last fetched timestamp from storage.
+ * Loads submissions and the last fetched submission ID from storage.
  */
 export async function loadSubmissionsFromStorage(): Promise<CachedSubmissions> {
-  const data = await chrome.storage.local.get(['submissions', 'latestFetchedTimestamp']);
+  const data = await chrome.storage.local.get(['submissions', 'latestFetchedSubmissionId']);
+  
   return {
     submissions: data.submissions || [],
-    latestFetchedTimestamp: data.latestFetchedTimestamp || 0,
+    latestFetchedSubmissionId: data.latestFetchedSubmissionId || '0',
   };
 }
 

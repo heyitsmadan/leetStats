@@ -27,11 +27,12 @@ export interface ProblemMetadata {
   topics: string[];
 }
 
-// The shape of the cached data in chrome.storage.local
+// src/types.ts - Update the CachedSubmissions interface
 export interface CachedSubmissions {
   submissions: RawSubmission[];
-  latestFetchedTimestamp: number;
+  latestFetchedSubmissionId: string; // Changed from latestFetchedTimestamp
 }
+
 
 export interface CachedMetadata {
   [slug: string]: ProblemMetadata;
