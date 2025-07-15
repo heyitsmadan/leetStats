@@ -90,71 +90,97 @@ const RETRY_DELAY = 300;
 
 /** Main function to inject stats UI */
 export function renderPageLayout(processedData: ProcessedData) {
-  let retries = 0;
+  // 1. Find the main container (A)
+  const contentContainer = document.querySelector('.space-y-\\[18px\\]') || 
+                          document.querySelector('[class*="space-y-["]');
   
-  const injectStats = () => {
-    // 1. Find MAIN container with multiple fallbacks
-    const mainContainer = 
-      document.querySelector('.lc-lg\\:max-w-\\[calc\\(100\\%_-_316px\\)\\]') ||
-      document.querySelector('[class*="max-w-[calc(100%_-_316px)]"]') ||
-      document.querySelector('.w-full.overflow-visible'); // Fallback selector
-
-    if (!mainContainer) {
-      if (retries++ < MAX_RETRIES) {
-        setTimeout(injectStats, RETRY_DELAY);
-        console.log(`Retrying injection (${retries}/${MAX_RETRIES})...`);
-      } else {
-        console.error('Stats injection failed: Main container not found');
-      }
-      return;
-    }
-
-    // 2. Find tab bar container
-    const tabBar = mainContainer.querySelector('div.flex.w-full.items-center.overflow-y-hidden');
-    
-    // 3. Find content container (multiple fallbacks)
-    const contentSection = 
-      mainContainer.querySelector('div.space-y-\\[18px\\]') ||
-      mainContainer.querySelector('[class*="space-y-["]') || // Generic class matcher
-      mainContainer.children[1]; // Fallback to second child
-
-    if (!tabBar || !contentSection) {
-      console.error('Tab elements not found:', { tabBar, contentSection });
-      return;
-    }
-
-    // 4. Create and inject stats tab
-    const statsTab = createStatsTab();
-    const discussTab = Array.from(tabBar.children).find(el => 
-      el.textContent?.includes('Discuss')
-    );
-    
-    if (discussTab) {
-      discussTab.after(statsTab);
-    } else {
-      tabBar.append(statsTab);
-      console.warn('Used fallback tab injection');
-    }
-
-    // 5. Create stats content pane
-    const statsPane = createStatsPaneWithGrid();
-    contentSection.append(statsPane);
-
-    // 6. Setup tab switching logic
-    setupTabLogic(statsTab, tabBar, contentSection, statsPane, processedData);
-
-    // 7. Pre-render all charts on page load
-  if (!window.statsRendered) {
-    requestAnimationFrame(() => {
-      renderAllCharts(processedData);
-      window.statsRendered = true;
-    });
+  if (!contentContainer) {
+    console.error('Content container not found');
+    return;
   }
-    console.log('Stats UI injected successfully');
+
+  // 2. Create and insert stats tab immediately
+  const tabBar = contentContainer.firstElementChild as HTMLElement;
+  if (!tabBar || !tabBar.classList.contains('flex')) {
+    console.error('Tab bar not found');
+    return;
+  }
+
+  const statsTab = createStatsTab();
+  const discussTab = Array.from(tabBar.children).find(el => 
+    el.textContent?.includes('Discuss')
+  );
+  
+  if (discussTab) {
+    discussTab.after(statsTab);
+  } else {
+    tabBar.append(statsTab);
+  }
+
+  // 3. Create stats content pane
+  const statsPane = createStatsPaneWithGrid();
+  contentContainer.append(statsPane);
+  statsPane.style.display = 'none'; // Start hidden
+
+  // 4. Setup content observer
+  let contentObserver: MutationObserver | null = null;
+  
+  const startContentObservation = () => {
+    // Clean up any existing observer
+    if (contentObserver) contentObserver.disconnect();
+    
+    contentObserver = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        // Check if LeetCode content pane exists
+        const leetcodeContent = Array.from(contentContainer.children).find(
+          child => child !== tabBar && child !== statsPane
+        );
+        
+        if (leetcodeContent) {
+          // Initialize tab logic now that content exists
+          setupTabLogic(statsTab, tabBar, contentContainer, statsPane, processedData);
+          contentObserver?.disconnect();
+          contentObserver = null;
+          return;
+        }
+      }
+    });
+    
+    // Observe for child additions
+    contentObserver.observe(contentContainer, {
+      childList: true,
+      subtree: false
+    });
+    
+    // Set timeout as fallback
+    setTimeout(() => {
+      if (contentObserver) {
+        console.warn('Content not detected, forcing setup');
+        setupTabLogic(statsTab, tabBar, contentContainer, statsPane, processedData);
+        contentObserver.disconnect();
+        contentObserver = null;
+      }
+    }, 5000);
   };
 
-  // Initial injection attempt
-  injectStats();
+  // 5. Check if content already exists
+  const initialContent = Array.from(contentContainer.children).find(
+    child => child !== tabBar && child !== statsPane
+  );
+  
+  if (initialContent) {
+    setupTabLogic(statsTab, tabBar, contentContainer, statsPane, processedData);
+    // First-time chart rendering
+    if (!window.statsRendered) {
+      requestAnimationFrame(() => {
+        renderAllCharts(processedData);
+        window.statsRendered = true;
+      });
+    }
+  } else {
+    console.log('Waiting for LeetCode content to load...');
+    startContentObservation();
+  }
 }
 
 
@@ -896,6 +922,18 @@ function setupTabLogic(
   };
   initActiveTab();
 
+  // Function to hide non-stats content
+  const hideNonStatsContent = () => {
+    Array.from(contentSection.children).forEach(child => {
+      if (child !== statsPane && child !== tabBar) {
+        (child as HTMLElement).style.display = 'none';
+      }
+    });
+  };
+
+  // Initial hide of non-stats content if needed
+  if (isStatsActive) hideNonStatsContent();
+
   // Stats tab click handler
   statsTab.addEventListener('click', () => {
     if (isStatsActive) return;
@@ -913,11 +951,7 @@ function setupTabLogic(
     lastActiveTab = statsTab;
     
     // Hide all non-stats content
-    Array.from(contentSection.children).forEach(child => {
-      if (child !== statsPane && child !== tabBar) {
-        (child as HTMLElement).style.display = 'none';
-      }
-    });
+    hideNonStatsContent();
     
     // Show stats content
     statsPane.style.display = 'block';
@@ -960,12 +994,15 @@ function setupTabLogic(
       rightElements.forEach(el => (el as HTMLElement).style.display = '');
       
       // Show content for this tab
-      requestAnimationFrame(() => {
-        const content = Array.from(contentSection.children).find(
-          c => c !== tabBar && c !== statsPane
-        );
-        if (content) (content as HTMLElement).style.display = 'block';
-      });
+      const content = Array.from(contentSection.children).find(
+        c => c !== tabBar && c !== statsPane
+      );
+      
+      if (content) {
+        (content as HTMLElement).style.display = 'block';
+      } else {
+        console.warn('Content not found for tab', tab.textContent);
+      }
     });
   });
   
