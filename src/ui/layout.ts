@@ -42,7 +42,7 @@ const styles = {
   // === Trophy Card Styles (to be used with new design below) ===
   trophyName: "text-base font-semibold text-gray-200", // Unchanged, as requested.
 trophyProblem: "text-sm text-sky-400 hover:underline", // The problem link remains a prominent secondary element.
-trophyDescription: "text-xs text-gray-400", // **Crucial Change**: Made smaller (xs) and a standard gray.
+trophyDescription: "text-[13px] text-gray-400", // **Crucial Change**: Made smaller (xs) and a standard gray.
 trophyPersonalNote: "text-xs italic text-gray-500 dark:text-dark-label-2", // Muted, tertiary text
 
   // === Records Section Styles (to be used with new design below) ===
