@@ -186,7 +186,7 @@ export function renderOrUpdateInteractiveChart(
             stacked: true,
             beginAtZero: true,
             grid: { display: false },
-            ticks: { color: '#bdbeb3' }
+            ticks: { color: '#bdbeb3', precision: 0 }
           }
         },
         elements: { bar: { borderRadius: 4, borderSkipped: 'bottom' } },
