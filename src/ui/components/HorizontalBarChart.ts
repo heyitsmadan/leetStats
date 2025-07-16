@@ -84,7 +84,6 @@ export function renderOrUpdateHorizontalBarChart(
         const tooltipData = data.tooltipsData[dataIndex];
         const breakdown = tooltipData.solvedBreakdown;
 
-        // FIX: Use tooltipData.label which is now correctly passed
         let innerHtml = `<div class="tooltip-header">${tooltipData.label}</div>`;
         innerHtml += `<div class="tooltip-subheader">Acceptance Rate: <span class="tooltip-subheader-value">${tooltipData.rate}</span></div>`;
         
@@ -132,11 +131,11 @@ export function renderOrUpdateHorizontalBarChart(
         indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
-        // FIX: Make tooltip easier to trigger on small bars
+        // FIX: Change interaction mode to 'index' with axis 'y' for stable hover on stacked bars
         interaction: {
             mode: 'index',
+            axis: 'y',
             intersect: false,
-            axis: 'y'
         },
         plugins: {
             legend: { display: false },

@@ -3,6 +3,17 @@ import type { CumulativeChartStats } from '../../types';
 
 export type CumulativeLineChartInstance = Chart<'line', number[], string>;
 
+// FIX: Helper function to get the ordinal suffix for a day (1st, 2nd, 3rd, 4th)
+function getOrdinalSuffix(day: number): string {
+    if (day > 3 && day < 21) return 'th';
+    switch (day % 10) {
+        case 1: return "st";
+        case 2: return "nd";
+        case 3: return "rd";
+        default: return "th";
+    }
+}
+
 function getOrCreateTooltip(chart: Chart): HTMLElement {
     let tooltipEl = chart.canvas.parentNode?.querySelector('div.chart-tooltip') as HTMLElement;
 
@@ -82,12 +93,18 @@ export function renderOrUpdateCumulativeLineChart(
         const dataIndex = tooltipModel.dataPoints[0]?.dataIndex;
         if (dataIndex === undefined) return;
 
-        const label = tooltipModel.title?.[0] || '';
+        const rawLabel = tooltipModel.title?.[0] || '';
         const datasets = context.chart.config.data.datasets;
 
+        // FIX: Reformat date for tooltip header
+        const date = new Date(rawLabel);
+        const day = date.getDate();
+        const month = date.toLocaleString('default', { month: 'long' });
+        const year = date.getFullYear();
+        const formattedDate = `${day}${getOrdinalSuffix(day)} ${month} ${year}`;
+        
         let totalSubmissions = 0, easy = 0, medium = 0, hard = 0;
         
-        // FIX: Check for the correct dataset labels
         datasets.forEach(dataset => {
             const value = dataset.data[dataIndex] as number;
             if (dataset.label === 'Total Submissions') totalSubmissions = value;
@@ -97,7 +114,7 @@ export function renderOrUpdateCumulativeLineChart(
         });
         const totalProblems = easy + medium + hard;
 
-        let innerHtml = `<div class="tooltip-header">${label}</div>`;
+        let innerHtml = `<div class="tooltip-header">${formattedDate}</div>`;
         innerHtml += `<div class="tooltip-subheader">Total Problems Solved: <span class="tooltip-subheader-value">${totalProblems}</span></div>`;
         innerHtml += `<div class="tooltip-subheader">Total Submissions: <span class="tooltip-subheader-value">${totalSubmissions}</span></div>`;
         innerHtml += `<div class="tooltip-divider"></div>`;
@@ -132,7 +149,20 @@ export function renderOrUpdateCumulativeLineChart(
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-            x: { grid: { display: false }, ticks: { color: '#bdbeb3' } },
+            x: { 
+                grid: { display: false }, 
+                ticks: { 
+                    color: '#bdbeb3',
+                    // FIX: Limit number of labels and format them
+                    maxTicksLimit: 6,
+                    callback: function(value, index, ticks) {
+                        // 'value' is the index, 'this.getLabelForValue(value)' gets the actual label (ISO string)
+                        const label = this.getLabelForValue(value as number);
+                        const date = new Date(label);
+                        return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+                    }
+                } 
+            },
             y: { beginAtZero: true, grid: { display: false }, ticks: { color: '#bdbeb3' } },
         },
         plugins: {
