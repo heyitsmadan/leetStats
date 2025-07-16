@@ -211,18 +211,25 @@ function getTimeRangeCutoff(timeRange: string): Date {
 
 function getDateRangeFromLabel(label: string, level: 'Daily' | 'Monthly' | 'Yearly'): { start: Date; end: Date } {
   if (level === 'Daily') {
-    const start = new Date(label);
-    const end = new Date(start.getTime() + 24 * 60 * 60 * 1000);
+    // Handles "DD-MM-YYYY" format from formatDateLabel
+    const [day, month, year] = label.split('-').map(Number);
+    const start = new Date(year, month - 1, day);
+    const end = new Date(year, month - 1, day, 23, 59, 59, 999); // Full day
     return { start, end };
   } else if (level === 'Monthly') {
-    const [year, month] = label.split('-').map(Number);
-    const start = new Date(year, month - 1, 1);
-    const end = new Date(year, month, 0);
+    // Handles "Mon YYYY" format from formatDateLabel (e.g., "Jul 2025")
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const [monthStr, yearStr] = label.split(' ');
+    const month = monthNames.indexOf(monthStr);
+    const year = parseInt(yearStr);
+    const start = new Date(year, month, 1);
+    const end = new Date(year, month + 1, 0, 23, 59, 59, 999); // Last moment of the month
     return { start, end };
-  } else {
+  } else { // Yearly
+    // Handles "YYYY" format
     const year = parseInt(label);
     const start = new Date(year, 0, 1);
-    const end = new Date(year, 11, 31);
+    const end = new Date(year, 11, 31, 23, 59, 59, 999); // Last moment of the year
     return { start, end };
   }
 }
@@ -434,77 +441,76 @@ export function getBrushChartData(processedData: ProcessedData): BrushChartData 
 export function getTooltipData(
   processedData: ProcessedData,
   date: string,
-  filters: InteractiveChartFilters
+  filters: InteractiveChartFilters,
+  aggregationLevel: 'Daily' | 'Monthly' | 'Yearly' // accepting the level as an argument
 ): TooltipData | null {
-  // This function remains largely the same as your original
-  // ... (code for getTooltipData)
-    const { submissions, problemMap } = processedData;
-  
-  // Parse date based on aggregation level
-  const aggregationLevel = getAggregationLevel(submissions);
+  const { submissions } = processedData;
+
   const dateRange = getDateRangeFromLabel(date, aggregationLevel);
-  
-  const periodSubmissions = submissions.filter(sub => 
+
+  const periodSubmissions = submissions.filter(sub =>
     sub.date >= dateRange.start && sub.date <= dateRange.end
   );
 
+  // This check is now removed, allowing tooltips for empty bars:
   if (!periodSubmissions.length) return null;
 
-  // Calculate problems solved in this period
-  const uniqueProblems = new Set(
-    periodSubmissions
-      .filter(sub => sub.status === 10) // Accepted
-      .map(sub => sub.titleSlug)
-  );
+  const totalSubmissionsInPeriod = periodSubmissions.length;
+  const acceptedSubmissions = periodSubmissions.filter(sub => sub.status === 10);
+  const uniqueProblemsSolved = new Set(acceptedSubmissions.map(sub => sub.titleSlug));
 
   const breakdown: { [key: string]: number } = {};
-  
+  let acceptanceRate: number | undefined = undefined;
+
   if (filters.secondaryView === 'Difficulty') {
     ['Easy', 'Medium', 'Hard'].forEach(difficulty => {
+      let count = 0;
       if (filters.primaryView === 'Submissions') {
-        breakdown[difficulty] = periodSubmissions
-          .filter(sub => sub.metadata?.difficulty === difficulty)
-          .length;
-      } else {
-        const solvedProblems = new Set<string>();
-        periodSubmissions.forEach(sub => {
-          if (sub.status === 10 && sub.metadata?.difficulty === difficulty) {
-            solvedProblems.add(sub.titleSlug);
+        count = periodSubmissions.filter(sub => sub.metadata?.difficulty === difficulty).length;
+      } else { // Problems Solved
+        const solvedInDifficulty = new Set<string>();
+        acceptedSubmissions.forEach(sub => {
+          if (sub.metadata?.difficulty === difficulty) {
+            solvedInDifficulty.add(sub.titleSlug);
           }
         });
-        breakdown[difficulty] = solvedProblems.size;
+        count = solvedInDifficulty.size;
       }
+      if (count > 0) breakdown[difficulty] = count;
+    });
+  } else if (filters.secondaryView === 'Language') {
+    const allLanguagesInPeriod = new Set(periodSubmissions.map(sub => sub.lang));
+    allLanguagesInPeriod.forEach(lang => {
+      let count = 0;
+      if (filters.primaryView === 'Submissions') {
+        count = periodSubmissions.filter(sub => sub.lang === lang).length;
+      } else { // Problems Solved
+        const solvedInLang = new Set<string>();
+        acceptedSubmissions.forEach(sub => {
+          if (sub.lang === lang) {
+            solvedInLang.add(sub.titleSlug);
+          }
+        });
+        count = solvedInLang.size;
+      }
+      if (count > 0) breakdown[lang] = count;
     });
   } else if (filters.secondaryView === 'Status') {
     if (filters.primaryView === 'Submissions') {
-      breakdown['Accepted'] = periodSubmissions.filter(sub => sub.status === 10).length;
-      breakdown['Failed'] = periodSubmissions.filter(sub => sub.status !== 10).length;
-    } else {
-      breakdown['Accepted'] = uniqueProblems.size;
-      breakdown['Failed'] = 0;
-    }
-  } else if (filters.secondaryView === 'Language') {
-    const allLanguages = new Set(periodSubmissions.map(sub => sub.lang));
-    allLanguages.forEach(lang => {
-      if (filters.primaryView === 'Submissions') {
-        breakdown[lang] = periodSubmissions.filter(sub => sub.lang === lang).length;
-      } else {
-        const solvedProblems = new Set<string>();
-        periodSubmissions.forEach(sub => {
-          if (sub.status === 10 && sub.lang === lang) {
-            solvedProblems.add(sub.titleSlug);
-          }
-        });
-        breakdown[lang] = solvedProblems.size;
+      const acceptedCount = acceptedSubmissions.length;
+      breakdown['Accepted'] = acceptedCount;
+      if (totalSubmissionsInPeriod > 0) {
+        acceptanceRate = (acceptedCount / totalSubmissionsInPeriod) * 100;
       }
-    });
+    }
   }
 
   return {
     date,
-    totalSubmissions: periodSubmissions.length,
-    problemsSolved: uniqueProblems.size,
-    breakdown
+    totalSubmissions: totalSubmissionsInPeriod,
+    problemsSolved: uniqueProblemsSolved.size,
+    breakdown,
+    acceptanceRate
   };
 }
 

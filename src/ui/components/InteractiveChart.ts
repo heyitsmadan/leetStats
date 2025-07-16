@@ -82,56 +82,39 @@ export function renderOrUpdateInteractiveChart(
 
     .chart-tooltip {
       position: absolute;
-      background: #353535;
-      border: 1px solid #4a4a4a;
+      top: 0;
+      left: 0;
+      background: #282828;
+      border: 2px solid #393939;
       border-radius: 8px;
       padding: 12px;
-      font-size: 14px;
+      font-size: 13px;
       color: #f9ffff;
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-      pointer-events: none;
       z-index: 1000;
-      display: none;
+      width: max-content;
       max-width: 300px;
+      /* Animation properties */
+      opacity: 0;
+      pointer-events: none; /* Important for smooth interaction */
+      transition: opacity 0.2s ease, transform 0.15s ease-out;
     }
 
-    /* === REVISED NAVIGATOR/BRUSH STYLES === */
-
-    .navigator-container .axis .domain,
-    .navigator-container .axis .tick line {
-        stroke: #bdbeb3;
-        stroke-opacity: 0.5;
-    }
-
-    .navigator-container .axis .tick text {
-        fill: #bdbeb3;
-        font-size: 11px;
-        font-family: inherit;
-    }
-
-    .navigator-area {
-        fill: #5db666;
-        fill-opacity: 0.25;
-        stroke: #5db666;
-        stroke-width: 1.5;
-        stroke-opacity: 0.8;
-    }
-
-    /* The selection rectangle is now a semi-transparent highlight */
-    .brush .selection {
-      fill: rgba(249, 255, 255, 0.0); /* Lighter highlight color */
-      stroke: #bdbeb3; /* Crisp white border */
-      stroke-width: 1px;
-      shape-rendering: crispEdges;
-    }
-
-    .brush .handle {
-      fill: #353535;
-      stroke: #bdbeb3;
-      stroke-width: 1px;
-      rx: 3;
-      ry: 3;
-    }
+    /* ... (the rest of your CSS styles for the tooltip and navigator are fine) ... */
+    .tooltip-header { font-weight: 500; margin-bottom: 8px; color: #f9ffff; }
+    .tooltip-subheader { margin-bottom: 12px; font-size: 12px; color: #bdbeb3; }
+    .tooltip-subheader-value { font-weight: 500; color: #f9ffff; margin-left: 6px; }
+    .tooltip-divider { border-top: 1px solid #353535; margin: 10px 0; }
+    .tooltip-breakdown-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
+    .tooltip-breakdown-item { display: flex; align-items: center; justify-content: space-between; font-size: 12px; gap: 16px}
+    .tooltip-breakdown-label { display: flex; align-items: center; gap: 8px; color: #bdbeb3; }
+    .tooltip-breakdown-value { font-weight: 500; color: #f9ffff; }
+    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+    .navigator-container .axis .domain, .navigator-container .axis .tick line { stroke: #bdbeb3; stroke-opacity: 0.5; }
+    .navigator-container .axis .tick text { fill: #bdbeb3; font-size: 11px; font-family: inherit; }
+    .navigator-area { fill: #5db666; fill-opacity: 0.25; stroke: #5db666; stroke-width: 1.5; stroke-opacity: 0.8; }
+    .brush .selection { fill: rgba(249, 255, 255, 0.0); stroke: #bdbeb3; stroke-width: 1px; shape-rendering: crispEdges; }
+    .brush .handle { fill: #353535; stroke: #bdbeb3; stroke-width: 1px; rx: 3; ry: 3; }
   `;
   document.head.appendChild(style);
 
@@ -145,6 +128,7 @@ export function renderOrUpdateInteractiveChart(
   };
   let mainChart: Chart | null = null;
   let brushData: BrushChartData | null = null;
+  let currentChartData: InteractiveChartData | null = null; // <-- ADD THIS LINE
 
   // Initialize charts after DOM is ready
   setTimeout(() => {
@@ -174,7 +158,7 @@ export function renderOrUpdateInteractiveChart(
       options: {
         responsive: true,
         maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: false },
+        interaction: { mode: 'index', intersect: true },
         plugins: {
           legend: { 
               display: showLegend,
@@ -395,10 +379,15 @@ export function renderOrUpdateInteractiveChart(
 
   function updateMainChart() {
     if (!mainChart) return;
-    const chartData = getInteractiveChartStats(processedData, currentFilters);
-    if (!chartData) return;
-    mainChart.data.labels = chartData.labels;
-    mainChart.data.datasets = chartData.datasets;
+    currentChartData = getInteractiveChartStats(processedData, currentFilters); // <-- Store chart data
+    if (!currentChartData) {
+        mainChart.data.labels = [];
+        mainChart.data.datasets = [];
+        mainChart.update('none');
+        return;
+    };
+    mainChart.data.labels = currentChartData.labels;
+    mainChart.data.datasets = currentChartData.datasets;
     const showLegend = currentFilters.secondaryView === 'Language';
     mainChart.options.plugins!.legend!.display = showLegend;
     mainChart.update('none');
@@ -432,6 +421,7 @@ export function renderOrUpdateInteractiveChart(
     });
   }
 
+  // Replace the entire handleTooltip function with this new version
   function handleTooltip(context: any) {
     const tooltipEl = container.querySelector('#chart-tooltip') as HTMLElement;
     if (!tooltipEl) return;
@@ -439,43 +429,105 @@ export function renderOrUpdateInteractiveChart(
 
     if (tooltipModel.opacity === 0) {
       tooltipEl.style.opacity = '0';
+      tooltipEl.style.pointerEvents = 'none';
       return;
     }
 
     const dataIndex = tooltipModel.dataPoints[0]?.dataIndex;
-    if (dataIndex === undefined) return;
+    const label = mainChart?.data.labels?.[dataIndex] as string;
+    
+    if (dataIndex === undefined || !label || !currentChartData) return;
 
-    const chartData = getInteractiveChartStats(processedData, currentFilters);
-    if (!chartData) return;
-
-    const label = chartData.labels[dataIndex];
-    const tooltipData = getTooltipData(processedData, label, currentFilters);
+    const tooltipData = getTooltipData(processedData, label, currentFilters, currentChartData.aggregationLevel);
+    
     if (!tooltipData) return;
 
-    let innerHtml = `<div class="font-medium mb-2">${tooltipData.date}</div>`;
-    innerHtml += `<div class="text-sm space-y-1">`;
-    innerHtml += `<div>Total Submissions: <span class="font-medium text-white">${tooltipData.totalSubmissions}</span></div>`;
-    innerHtml += `<div>Problems Solved: <span class="font-medium text-white">${tooltipData.problemsSolved}</span></div>`;
-    innerHtml += `</div>`;
-    
-    if (Object.keys(tooltipData.breakdown).length > 0) {
-        innerHtml += '<div class="mt-2 pt-2 border-t" style="border-color: rgba(189, 190, 179, 0.2);">';
-        Object.entries(tooltipData.breakdown).forEach(([key, value]) => {
-            if (Number(value) > 0) {
-               innerHtml += `<div class="text-sm">${key}: <span class="font-medium text-white">${value}</span></div>`;
+    // --- NEW: Date Formatting Logic ---
+    let tooltipHeaderDate = tooltipData.date; // Default to the original label
+
+    if (currentChartData.aggregationLevel === 'Daily') {
+        const [day, month, year] = tooltipData.date.split('-').map(Number);
+        
+        const getOrdinalSuffix = (d: number) => {
+            if (d > 3 && d < 21) return 'th';
+            switch (d % 10) {
+                case 1:  return "st";
+                case 2:  return "nd";
+                case 3:  return "rd";
+                default: return "th";
             }
-        });
-        innerHtml += '</div>';
+        };
+
+        const monthNames = ["January", "February", "March", "April", "May", "June",
+                            "July", "August", "September", "October", "November", "December"];
+        
+        tooltipHeaderDate = `${day}${getOrdinalSuffix(day)} ${monthNames[month - 1]} ${year}`;
     }
 
+    // --- HTML Building (uses the new formatted date) ---
+    let innerHtml = `<div class="tooltip-header">${tooltipHeaderDate}</div>`;
+    // ... rest of the function is unchanged (it will now use the formatted date)
+
+    if (currentFilters.primaryView === 'Problems Solved') {
+      innerHtml += `<div class="tooltip-subheader">Problems Solved: <span class="tooltip-subheader-value">${tooltipData.problemsSolved}</span></div>`;
+    } else {
+      innerHtml += `<div class="tooltip-subheader">Submissions: <span class="tooltip-subheader-value">${tooltipData.totalSubmissions}</span></div>`;
+    }
+    const hasBreakdown = Object.keys(tooltipData.breakdown).length > 0 || tooltipData.acceptanceRate !== undefined;
+    if (hasBreakdown) {
+      innerHtml += `<div class="tooltip-divider"></div><ul class="tooltip-breakdown-list">`;
+      if (currentFilters.secondaryView === 'Difficulty') {
+        const colors: { [key: string]: string } = { 'Easy': '#58b8b9', 'Medium': '#f4ba40', 'Hard': '#e24a41' };
+        Object.entries(tooltipData.breakdown).forEach(([key, value]) => {
+          innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors[key]};"></span> ${key}</span><span class="tooltip-breakdown-value">${value}</span></li>`;
+        });
+      } else if (currentFilters.secondaryView === 'Language') {
+        Object.entries(tooltipData.breakdown).sort((a, b) => b[1] - a[1]).forEach(([key, value]) => {
+          innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label">${key}</span><span class="tooltip-breakdown-value">${value}</span></li>`;
+        });
+      } else if (currentFilters.secondaryView === 'Status' && currentFilters.primaryView === 'Submissions') {
+        innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: #5db666;"></span> Accepted</span><span class="tooltip-breakdown-value">${tooltipData.breakdown['Accepted'] || 0}</span></li>`;
+        if (tooltipData.acceptanceRate !== undefined) {
+          innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label">Acceptance Rate</span><span class="tooltip-breakdown-value">${tooltipData.acceptanceRate.toFixed(1)}%</span></li>`;
+        }
+      }
+      innerHtml += `</ul>`;
+    }
     tooltipEl.innerHTML = innerHtml;
     
+    // --- Positioning ---
     const position = context.chart.canvas.getBoundingClientRect();
+    const tooltipWidth = tooltipEl.offsetWidth;
+    const chartWidth = position.width;
+
+    // Get the actual bar element from the tooltip context
+    const activeElement = context.tooltip.dataPoints[0]?.element;
+
+    if (!activeElement) {
+        // Hide tooltip if no bar is active
+        tooltipEl.style.opacity = '0';
+        return;
+    }
+
+    const barHalfWidth = activeElement.width / 2;
+    // The bar's right edge, relative to the chart canvas
+    const barRightEdgeX = activeElement.x + barHalfWidth;
+    // The bar's left edge, relative to the chart canvas
+    const barLeftEdgeX = activeElement.x - barHalfWidth;
+    const desiredOffset = 10; // The 10px offset you want
+
+    // Default position: place tooltip 10px to the right of the bar
+    let newLeft = barRightEdgeX + desiredOffset;
+
+    // Check if the default position would go off-screen
+    if (newLeft + tooltipWidth > chartWidth) {
+        // Flipped position: place tooltip 10px to the left of the bar
+        newLeft = barLeftEdgeX - tooltipWidth - desiredOffset;
+    }
+
     tooltipEl.style.opacity = '1';
-    tooltipEl.style.position = 'absolute';
-    tooltipEl.style.left = position.left + window.pageXOffset + tooltipModel.caretX + 'px';
-    tooltipEl.style.top = position.top + window.pageYOffset + tooltipModel.caretY - tooltipEl.offsetHeight - 8 + 'px';
-    tooltipEl.style.pointerEvents = 'none';
+    tooltipEl.style.pointerEvents = 'auto';
+    tooltipEl.style.transform = `translate(${position.left + window.pageXOffset + newLeft}px, ${position.top + window.pageYOffset + tooltipModel.caretY - tooltipEl.offsetHeight / 2}px)`;
   }
 
   return {
