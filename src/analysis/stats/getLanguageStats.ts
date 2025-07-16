@@ -3,15 +3,8 @@ import type { ProcessedData, Difficulty, TimeRange } from '../../types';
 const STATUS_ACCEPTED = 10;
 const GLOW_THRESHOLD = 10; // Min submissions for a language to be considered for the "best" glow
 
-// Helper function to format dates nicely
 const formatDate = (date: Date) => date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 
-/**
- * Calculates all necessary data for the Language Stats horizontal bar chart.
- * @param processedData The main processed data object.
- * @param filters An object containing the current filter settings.
- * @returns Data formatted for the Chart.js component, or null if no data.
- */
 export function getLanguageStats(
   processedData: ProcessedData,
   filters: { timeRange: TimeRange; difficulty: Difficulty }
@@ -19,7 +12,6 @@ export function getLanguageStats(
   const { submissions } = processedData;
   const { timeRange, difficulty } = filters;
 
-  // Filter submissions (existing code remains the same)
   const now = new Date();
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -41,7 +33,6 @@ export function getLanguageStats(
       return null;
   }
 
-  // Aggregate data by language (existing code remains the same)
   const langMap = new Map<string, {
     accepted: number;
     failed: number;
@@ -79,7 +70,6 @@ export function getLanguageStats(
     if (sub.date > bucket.lastUsed) bucket.lastUsed = sub.date;
   }
   
-  // Find the "best" language for glow effect
   let bestLang = '';
   let maxRate = -1;
 
@@ -94,7 +84,6 @@ export function getLanguageStats(
     }
   });
 
-  // Format data for Chart.js
   const sortedLangs = Array.from(langMap.entries()).sort((a, b) => (b[1].accepted + b[1].failed) - (a[1].accepted + a[1].failed));
 
   return {
@@ -103,17 +92,19 @@ export function getLanguageStats(
       {
         label: 'Accepted',
         data: sortedLangs.map(entry => entry[1].accepted),
-        backgroundColor: '#5db666', // Updated color
+        backgroundColor: '#5db666',
       },
       {
         label: 'Failed',
         data: sortedLangs.map(entry => entry[1].failed),
-        backgroundColor: '#393939', // Updated color
+        backgroundColor: '#393939',
       }
     ],
     tooltipsData: sortedLangs.map(entry => ({
+        // FIX: Add the label property for the tooltip header
+        label: entry[0],
         total: entry[1].accepted + entry[1].failed,
-        accepted: entry[1].accepted, // Add this line
+        accepted: entry[1].accepted,
         rate: entry[1].accepted + entry[1].failed > 0 ? ((entry[1].accepted / (entry[1].accepted + entry[1].failed)) * 100).toFixed(1) + '%' : 'N/A',
         solvedBreakdown: { E: entry[1].solvedEasy, M: entry[1].solvedMedium, H: entry[1].solvedHard },
         firstUsed: formatDate(entry[1].firstUsed),
@@ -122,4 +113,3 @@ export function getLanguageStats(
     bestLang,
   };
 }
-

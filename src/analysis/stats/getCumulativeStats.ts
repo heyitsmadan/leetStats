@@ -16,7 +16,8 @@ Chart.register(TimeScale, LinearScale, PointElement, LineElement, Tooltip, Legen
 
 // Helper to format date based on view
 const formatDate = (date: Date, view: CumulativeView): string => {
-    if (view === 'Daily') return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    // FIX: Use 'long' month format for Daily view
+    if (view === 'Daily') return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
     if (view === 'Monthly') return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short' });
     return date.toLocaleDateString(undefined, { year: 'numeric' });
 };
@@ -44,14 +45,14 @@ const generateDateRange = (startDate: Date, endDate: Date, view: CumulativeView)
 export function getCumulativeStats(
     processedData: ProcessedData,
     filters: { timeRange: TimeRange; difficulty: Difficulty; cumulativeView: CumulativeView }
-): CumulativeChartStats {
+): CumulativeChartStats | null {
 
     const { timeRange, difficulty, cumulativeView } = filters;
     const { submissions } = processedData;
 
-    // 1. Filter submissions based on TimeRange and Difficulty
+    // 1. Filter submissions based on TimeRange ONLY. Difficulty filter will be applied later.
     const now = new Date();
-    const filteredSubmissions = submissions.filter(sub => {
+    const timeFilteredSubmissions = submissions.filter(sub => {
         const submissionDate = sub.date;
         let inTimeRange = false;
 
@@ -75,22 +76,17 @@ export function getCumulativeStats(
                 inTimeRange = submissionDate >= getPastDate(365);
                 break;
         }
-
-        const inDifficulty = difficulty === 'All' || sub.metadata?.difficulty === difficulty;
-
-        return inTimeRange && inDifficulty;
+        return inTimeRange;
     });
 
-    if (filteredSubmissions.length === 0) {
+    if (timeFilteredSubmissions.length === 0) {
         return { labels: [], datasets: [] };
     }
 
-    // 2. Determine date range for complete timeline
-    const submissionDates = filteredSubmissions.map(sub => sub.date);
+    const submissionDates = timeFilteredSubmissions.map(sub => sub.date);
     const minDate = new Date(Math.min(...submissionDates.map(d => d.getTime())));
     const maxDate = new Date(Math.max(...submissionDates.map(d => d.getTime())));
 
-    // Normalize dates based on view
     let startDate: Date, endDate: Date;
     if (cumulativeView === 'Daily') {
         startDate = new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate());
@@ -98,12 +94,11 @@ export function getCumulativeStats(
     } else if (cumulativeView === 'Monthly') {
         startDate = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
         endDate = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
-    } else { // Yearly
+    } else {
         startDate = new Date(minDate.getFullYear(), 0, 1);
         endDate = new Date(maxDate.getFullYear(), 0, 1);
     }
 
-    // 3. Group submissions by the selected view
     const groupedData = new Map<string, {
         submissions: number;
         easySolved: Set<string>;
@@ -111,7 +106,7 @@ export function getCumulativeStats(
         hardSolved: Set<string>;
     }>();
 
-    for (const sub of filteredSubmissions) {
+    for (const sub of timeFilteredSubmissions) {
         let key: string;
         const date = sub.date;
 
@@ -119,7 +114,7 @@ export function getCumulativeStats(
             key = new Date(date.getFullYear(), date.getMonth(), date.getDate()).toISOString();
         } else if (cumulativeView === 'Monthly') {
             key = new Date(date.getFullYear(), date.getMonth(), 1).toISOString();
-        } else { // Yearly
+        } else {
             key = new Date(date.getFullYear(), 0, 1).toISOString();
         }
 
@@ -139,7 +134,6 @@ export function getCumulativeStats(
         }
     }
 
-    // 4. Generate complete date range and fill missing data points
     const allDates = generateDateRange(startDate, endDate, cumulativeView);
     
     const labels: string[] = [];
@@ -158,13 +152,11 @@ export function getCumulativeStats(
         const group = groupedData.get(key);
 
         if (group) {
-            // Data exists for this date
             cumulativeSubmissions += group.submissions;
             group.easySolved.forEach(slug => solvedEasy.add(slug));
             group.mediumSolved.forEach(slug => solvedMedium.add(slug));
             group.hardSolved.forEach(slug => solvedHard.add(slug));
         }
-        // If no data exists, cumulative values remain the same
 
         labels.push(formatDate(date, cumulativeView));
         totalSubmissionsData.push(cumulativeSubmissions);
@@ -173,71 +165,47 @@ export function getCumulativeStats(
         hardData.push(solvedHard.size);
     }
 
-    // 5. Format for Chart.js with updated colors and conditional datasets
-const datasets = [
-    {
-        label: 'Total Submissions',
-        data: totalSubmissionsData,
-        borderColor: '#393939',
-        fill: false,
-        tension: 0.4,
-    }
-];
-
-// Only add difficulty-specific datasets if difficulty is 'All' or matches the specific difficulty
-if (difficulty === 'All') {
-    datasets.push(
+    const datasets = [
         {
+            label: 'Total Submissions',
+            data: totalSubmissionsData,
+            borderColor: '#393939',
+            fill: false,
+            tension: 0.4,
+        }
+    ];
+
+    // Now, apply the difficulty filter to decide which datasets to SHOW
+    if (difficulty === 'All' || difficulty === 'Easy') {
+        datasets.push({
             label: 'Easy Solved',
             data: easyData,
             borderColor: '#58b8b9',
             fill: false,
             tension: 0.4,
-        },
-        {
+        });
+    }
+    if (difficulty === 'All' || difficulty === 'Medium') {
+        datasets.push({
             label: 'Medium Solved',
             data: mediumData,
             borderColor: '#f4ba40',
             fill: false,
             tension: 0.4,
-        },
-        {
+        });
+    }
+    if (difficulty === 'All' || difficulty === 'Hard') {
+        datasets.push({
             label: 'Hard Solved',
             data: hardData,
             borderColor: '#e24a41',
             fill: false,
             tension: 0.4,
-        }
-    );
-} else if (difficulty === 'Easy') {
-    datasets.push({
-        label: 'Easy Solved',
-        data: easyData,
-        borderColor: '#58b8b9',
-        fill: false,
-        tension: 0.4,
-    });
-} else if (difficulty === 'Medium') {
-    datasets.push({
-        label: 'Medium Solved',
-        data: mediumData,
-        borderColor: '#f4ba40',
-        fill: false,
-        tension: 0.4,
-    });
-} else if (difficulty === 'Hard') {
-    datasets.push({
-        label: 'Hard Solved',
-        data: hardData,
-        borderColor: '#e24a41',
-        fill: false,
-        tension: 0.4,
-    });
-}
+        });
+    }
 
-return {
-    labels,
-    datasets
-};
-
+    return {
+        labels,
+        datasets
+    };
 }

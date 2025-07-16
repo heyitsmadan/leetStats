@@ -358,25 +358,31 @@ function getOrdinalSuffix(num: number): string {
 
 function renderCodingClock(processedData: ProcessedData) {
     const canvas = document.getElementById('coding-clock-chart') as HTMLCanvasElement;
-    if (!canvas) return;
+    // FIX: Ensure the canvas and its parent element exist
+    if (!canvas || !canvas.parentElement) return; 
+    
     const chartData = getCodingClockStats(processedData, currentFilters);
     if(chartData) {
-        canvas.style.display = 'block';
-        codingClockChart = renderOrUpdateStackedBarChart(canvas, chartData, codingClockChart);
+        canvas.parentElement.style.display = 'block';
+        // FIX: Pass the parent container, not the canvas itself
+        codingClockChart = renderOrUpdateStackedBarChart(canvas.parentElement, chartData, codingClockChart);
     } else {
-        canvas.style.display = 'none';
+        canvas.parentElement.style.display = 'none';
     }
 }
 
 function renderCumulativeChart(processedData: ProcessedData) {
     const canvas = document.getElementById('cumulative-chart') as HTMLCanvasElement;
-    if (!canvas) return;
+    // FIX: Ensure the canvas and its parent element exist
+    if (!canvas || !canvas.parentElement) return;
+
     const chartData = getCumulativeStats(processedData, currentFilters);
     if (chartData) {
-        canvas.style.display = 'block';
-        cumulativeLineChart = renderOrUpdateCumulativeLineChart(canvas, chartData, cumulativeLineChart);
+        canvas.parentElement.style.display = 'block';
+        // FIX: Pass the parent container, not the canvas itself
+        cumulativeLineChart = renderOrUpdateCumulativeLineChart(canvas.parentElement, chartData, cumulativeLineChart);
     } else {
-        canvas.style.display = 'none';
+        canvas.parentElement.style.display = 'none';
     }
 }
 
@@ -385,25 +391,31 @@ function renderCumulativeChart(processedData: ProcessedData) {
  */
 function renderSubmissionSignature(processedData: ProcessedData) {
     const canvas = document.getElementById('submission-signature-chart') as HTMLCanvasElement;
-    if (!canvas) return;
+    // FIX: Ensure the canvas and its parent element exist
+    if (!canvas || !canvas.parentElement) return;
+
     const chartData = getSubmissionSignatureStats(processedData, currentFilters);
     if (chartData) {
-        canvas.style.display = 'block';
-        signatureChart = renderOrUpdateDoughnutChart(canvas, chartData, currentFilters, signatureChart);
+        canvas.parentElement.style.display = 'block';
+        // FIX: Pass the parent container, not the canvas itself
+        signatureChart = renderOrUpdateDoughnutChart(canvas.parentElement, chartData, currentFilters, signatureChart);
     } else {
-        canvas.style.display = 'none';
+        canvas.parentElement.style.display = 'none';
     }
 }
 
 function renderLanguageChart(processedData: ProcessedData) {
     const canvas = document.getElementById('language-stats-chart') as HTMLCanvasElement;
-    if (!canvas) return;
+    // FIX: Ensure the canvas and its parent element exist
+    if (!canvas || !canvas.parentElement) return;
+
     const chartData = getLanguageStats(processedData, currentFilters);
     if (chartData) {
-        canvas.style.display = 'block';
-        languageChart = renderOrUpdateHorizontalBarChart(canvas, chartData, currentFilters, languageChart);
+        canvas.parentElement.style.display = 'block';
+        // FIX: Pass the parent container, not the canvas itself
+        languageChart = renderOrUpdateHorizontalBarChart(canvas.parentElement, chartData, currentFilters, languageChart);
     } else {
-        canvas.style.display = 'none';
+        canvas.parentElement.style.display = 'none';
     }
 }
 
