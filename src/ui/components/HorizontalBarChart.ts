@@ -108,22 +108,40 @@ export function renderOrUpdateHorizontalBarChart(
         const activeElement = context.tooltip.dataPoints[0]?.element as BarElement;
         if (!activeElement) return;
 
-        const container = context.chart.canvas.parentNode as HTMLElement;
-        const desiredOffset = 15;
-        
-        let newLeft = activeElement.x + desiredOffset;
-        if (newLeft + tooltipEl.offsetWidth > container.offsetWidth) {
-             newLeft = activeElement.x - tooltipEl.offsetWidth - desiredOffset;
-        }
+        // --- MODIFICATION START ---
+        // Calculate the total value for the hovered bar to find its end position.
+        const totalValue = context.chart.data.datasets.reduce((sum, dataset) => {
+            const value = dataset.data[dataIndex];
+            // Ensure value is a number before adding.
+            return sum + (Number(value) || 0);
+        }, 0);
 
+        // Get the pixel coordinate for the end of the entire stacked bar.
+        const barEndPixelPosition = context.chart.scales.x.getPixelForValue(totalValue);
+
+        const chartContainer = context.chart.canvas.parentNode as HTMLElement;
+        const desiredOffset = 15; // Space between bar and tooltip
+
+        // Position the tooltip to the right of the entire bar.
+        const newLeft = barEndPixelPosition + desiredOffset;
+
+        // Vertically center the tooltip on the bar's y position.
         let newTop = activeElement.y - tooltipEl.offsetHeight / 2;
-        if (newTop < 0) newTop = 0;
-        if (newTop + tooltipEl.offsetHeight > container.offsetHeight) {
-            newTop = container.offsetHeight - tooltipEl.offsetHeight;
+
+        // Adjust vertical position to stay within the container's bounds.
+        if (newTop < 0) {
+            newTop = 0;
         }
+        if (newTop + tooltipEl.offsetHeight > chartContainer.offsetHeight) {
+            newTop = chartContainer.offsetHeight - tooltipEl.offsetHeight;
+        }
+        // --- MODIFICATION END ---
 
         tooltipEl.style.opacity = '1';
-        tooltipEl.style.pointerEvents = 'auto';
+        // --- FIX ---
+        // Set pointer-events to 'none' to prevent the tooltip from capturing mouse events,
+        // which was causing the flickering issue.
+        tooltipEl.style.pointerEvents = 'none';
         tooltipEl.style.transform = `translate(${newLeft}px, ${newTop}px)`;
     };
 
@@ -131,7 +149,6 @@ export function renderOrUpdateHorizontalBarChart(
         indexAxis: 'y',
         responsive: true,
         maintainAspectRatio: false,
-        // FIX: Change interaction mode to 'index' with axis 'y' for stable hover on stacked bars
         interaction: {
             mode: 'index',
             axis: 'y',
