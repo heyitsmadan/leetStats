@@ -112,17 +112,18 @@ export interface LegacyStats {
 export interface SkillMatrixData {
   topics: string[];
   metrics: {
-    problemsSolved: { [topic: string]: number }; // ✅ CHANGED: Replace acceptanceRate
+    problemsSolved: { [topic: string]: number };
     avgTries: { [topic: string]: number };
     firstAceRate: { [topic: string]: number };
   };
   timeSeriesData: {
     [topic: string]: {
-      problemsSolved: TimeSeriesPoint[]; // ✅ CHANGED: Replace acceptanceRate
+      problemsSolved: TimeSeriesPoint[];
       avgTries: TimeSeriesPoint[];
       firstAceRate: TimeSeriesPoint[];
     };
   };
+  timeRangeStart: string; 
 }
 
 export interface TimeSeriesPoint {
@@ -178,4 +179,5 @@ export interface TooltipData {
   totalSubmissions: number;
   problemsSolved: number;
   breakdown: { [key: string]: number };
+  acceptanceRate?: number;
 }
