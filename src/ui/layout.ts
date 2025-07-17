@@ -70,7 +70,8 @@ let currentFilters = {
     timeRange: 'All Time' as TimeRange,
     difficulty: 'All' as Difficulty,
     clockView: 'DayOfWeek' as ClockView,
-    cumulativeView: 'Monthly' as CumulativeView,
+    // *** CHANGE: Set a temporary default. This will be corrected on load. ***
+    cumulativeView: 'Daily' as CumulativeView, 
 };
 // Add this to your state management section
 let skillMatrixHeatmap: SkillMatrixHeatmapInstance | undefined;
@@ -189,6 +190,7 @@ export function renderPageLayout(processedData: ProcessedData) {
  * A master function to render or update all charts at once.
  */
 function renderAllCharts(processedData: ProcessedData) {
+  setInitialCumulativeView(processedData);
    renderInteractiveChart(processedData); // Add this line BEFORE 
     renderLegacySection(processedData); // Add this line
     renderCodingClock(processedData);
@@ -1111,4 +1113,38 @@ function updateCumulativeViewToggle(activeView: CumulativeView) {
             button.setAttribute('data-state', view === activeView ? 'active' : 'inactive');
         }
     }
+}
+
+// In layout.ts, add this new function somewhere before setupFilterListeners
+
+/**
+ * Calculates the best initial cumulative view based on the total time span of submissions.
+ * This should be called once on initial load.
+ */
+function setInitialCumulativeView(processedData: ProcessedData) {
+    // Default to 'Daily' if there are no submissions
+    let initialView: CumulativeView = 'Daily';
+
+    if (processedData.submissions.length > 1) {
+        // Sort to be safe, though data should already be sorted
+        const sortedSubs = processedData.submissions.sort((a, b) => a.date.getTime() - b.date.getTime());
+        const firstSubDate = sortedSubs[0].date;
+        const lastSubDate = sortedSubs[sortedSubs.length - 1].date;
+        
+        // Calculate the difference in days
+        const dayDifference = (lastSubDate.getTime() - firstSubDate.getTime()) / (1000 * 3600 * 24);
+
+        if (dayDifference > 365 * 5) { // More than 2 years of history
+            initialView = 'Yearly';
+        } else if (dayDifference > 90) { // More than 3 months of history
+            initialView = 'Monthly';
+        } else { // Less than 3 months
+            initialView = 'Daily';
+        }
+    }
+    
+    // Set the calculated view as the current filter
+    currentFilters.cumulativeView = initialView;
+    // Update the toggle buttons to reflect this initial state
+    updateCumulativeViewToggle(initialView);
 }

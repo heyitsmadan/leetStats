@@ -3,7 +3,7 @@ import type { CumulativeChartStats, Difficulty, CumulativeView, TimeRange } from
 
 export type CumulativeLineChartInstance = Chart<'line', number[], string>;
 
-// Helper function to get the ordinal suffix for a day (1st, 2nd, 3rd, 4th)
+// Helper function to get the ordinal suffix for a day (e.g., 1st, 2nd, 3rd)
 function getOrdinalSuffix(day: number): string {
     if (day > 3 && day < 21) return 'th';
     switch (day % 10) {
@@ -55,14 +55,12 @@ function getOrCreateTooltip(chart: Chart): HTMLElement {
 export function renderOrUpdateCumulativeLineChart(
     container: HTMLElement,
     chartData: CumulativeChartStats,
-    // *** FIX: Pass filters object for more context ***
     filters: { difficulty: Difficulty; cumulativeView: CumulativeView; timeRange: TimeRange },
     existingChart?: CumulativeLineChartInstance
 ): CumulativeLineChartInstance {
     const canvas = container.querySelector('canvas') as HTMLCanvasElement;
     if (!canvas) throw new Error('Canvas element not found in the container.');
 
-    // *** FIX: Restore original point styling by processing datasets ***
     const processedChartData = {
         ...chartData,
         datasets: chartData.datasets.map(dataset => ({
@@ -84,14 +82,20 @@ export function renderOrUpdateCumulativeLineChart(
         const dataIndex = tooltipModel.dataPoints[0]?.dataIndex;
         if (dataIndex === undefined) return;
 
-        const rawLabel = tooltipModel.title?.[0] || '';
+        const rawLabel = tooltipModel.title?.[0] || ''; // This is the ISO date string
         const datasets = context.chart.config.data.datasets;
-
         const date = new Date(rawLabel);
-        const day = date.getDate();
-        const month = date.toLocaleString('default', { month: 'long' });
-        const year = date.getFullYear();
-        const formattedDate = `${day}${getOrdinalSuffix(day)} ${month} ${year}`;
+
+        // Format tooltip header based on the cumulative view (This logic is correct and remains)
+        let formattedDate: string;
+        if (filters.cumulativeView === 'Yearly') {
+            formattedDate = date.toLocaleDateString(undefined, { year: 'numeric' });
+        } else if (filters.cumulativeView === 'Monthly') {
+            formattedDate = date.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+        } else { // Daily
+            const day = date.getDate();
+            formattedDate = `${day}${getOrdinalSuffix(day)} ${date.toLocaleString('default', { month: 'long' })} ${date.getFullYear()}`;
+        }
         
         let totalSubmissions = 0, easy = 0, medium = 0, hard = 0;
         
@@ -104,35 +108,27 @@ export function renderOrUpdateCumulativeLineChart(
         });
         const totalProblems = easy + medium + hard;
 
+        // Build tooltip HTML
         let innerHtml = `<div class="tooltip-header">${formattedDate}</div>`;
         innerHtml += `<div class="tooltip-subheader">Total Problems Solved: <span class="tooltip-subheader-value">${totalProblems}</span></div>`;
         innerHtml += `<div class="tooltip-subheader">Total Submissions: <span class="tooltip-subheader-value">${totalSubmissions}</span></div>`;
         innerHtml += `<div class="tooltip-divider"></div>`;
         innerHtml += `<ul class="tooltip-breakdown-list">`;
         const colors: { [key: string]: string } = { 'Easy': '#58b8b9', 'Medium': '#f4ba40', 'Hard': '#e24a41' };
-        
-        if (filters.difficulty === 'All' || filters.difficulty === 'Easy') {
-            innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors['Easy']};"></span> Easy</span><span class="tooltip-breakdown-value">${easy}</span></li>`;
-        }
-        if (filters.difficulty === 'All' || filters.difficulty === 'Medium') {
-            innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors['Medium']};"></span> Medium</span><span class="tooltip-breakdown-value">${medium}</span></li>`;
-        }
-        if (filters.difficulty === 'All' || filters.difficulty === 'Hard') {
-            innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors['Hard']};"></span> Hard</span><span class="tooltip-breakdown-value">${hard}</span></li>`;
-        }
+        if (filters.difficulty === 'All' || filters.difficulty === 'Easy') innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors['Easy']};"></span> Easy</span><span class="tooltip-breakdown-value">${easy}</span></li>`;
+        if (filters.difficulty === 'All' || filters.difficulty === 'Medium') innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors['Medium']};"></span> Medium</span><span class="tooltip-breakdown-value">${medium}</span></li>`;
+        if (filters.difficulty === 'All' || filters.difficulty === 'Hard') innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors['Hard']};"></span> Hard</span><span class="tooltip-breakdown-value">${hard}</span></li>`;
         innerHtml += `</ul>`;
-
         tooltipEl.innerHTML = innerHtml;
 
+        // Position tooltip
         const parentContainer = context.chart.canvas.parentNode as HTMLElement;
         let newLeft = tooltipModel.caretX + 15;
         let newTop = tooltipModel.caretY;
-
         if (newLeft + tooltipEl.offsetWidth > parentContainer.offsetWidth) newLeft = tooltipModel.caretX - tooltipEl.offsetWidth - 15;
         if (newTop + tooltipEl.offsetHeight > parentContainer.offsetHeight) newTop = parentContainer.offsetHeight - tooltipEl.offsetHeight;
         if (newLeft < 0) newLeft = 0;
         if (newTop < 0) newTop = 0;
-
         tooltipEl.style.opacity = '1';
         tooltipEl.style.transform = `translate(${newLeft}px, ${newTop}px)`;
     };
@@ -141,58 +137,61 @@ export function renderOrUpdateCumulativeLineChart(
         responsive: true,
         maintainAspectRatio: false,
         scales: {
-            // *** FIX: Reverted to category scale to fix hover. Dynamic formatting is now in the callback. ***
             x: { 
                 grid: { display: false }, 
                 ticks: { 
                     color: '#bdbeb3',
                     maxTicksLimit: 6,
+                    // *** FIX: Format x-axis labels based on the TimeRange filter ***
                     callback: function(value, index, ticks) {
-                        const label = this.getLabelForValue(value as number); // label is ISO string
+                        const label = this.getLabelForValue(value as number);
                         const date = new Date(label);
                         const range = filters.timeRange;
                         
+                        // For short time ranges, show Month and Day
+                        if (range === 'Last 30 Days' || range === 'Last 90 Days') {
+                            return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); // "Sep 17"
+                        }
+
+                        // For a year-long range, show Month and Year
+                        if (range === 'Last 365 Days') {
+                             return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' }); // "Sep 2024"
+                        }
+                        
+                        // For 'All Time', the format depends on the total span
                         if (range === 'All Time') {
                             const labels = this.chart.data.labels as string[];
-                            if (labels.length > 0) {
+                            if (labels && labels.length > 1) {
                                 const firstDate = new Date(labels[0]);
                                 const lastDate = new Date(labels[labels.length - 1]);
-                                const yearDiff = lastDate.getFullYear() - firstDate.getFullYear();
-                                if (yearDiff >= 2) {
-                                     return date.toLocaleDateString(undefined, { year: 'numeric' });
+                                const yearDifference = lastDate.getFullYear() - firstDate.getFullYear();
+
+                                // If data spans 2 or more years, just show the year
+                                if (yearDifference >= 2) {
+                                    return date.toLocaleDateString(undefined, { year: 'numeric' }); // "2024"
                                 }
                             }
-                            return date.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
+                            // Default for 'All Time' if span is less than 2 years is Month and Year
+                            return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' }); // "Sep 2024"
                         }
-                        if (range === 'Last 365 Days') {
-                            return date.toLocaleDateString(undefined, { month: 'short', year: '2-digit' });
-                        }
-                        // Default for Last 90/30 Days
-                        return date.toLocaleDateString(undefined, { day: '2-digit', month: '2-digit' });
+
+                        // A fallback format
+                        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
                     }
                 } 
             },
-            // *** FIX: Reverted y-axis grid to original styling ***
             y: { beginAtZero: true, grid: { display: false }, ticks: { color: '#bdbeb3' } },
         },
         plugins: {
             legend: { display: false },
-            tooltip: {
-                enabled: false,
-                external: handleTooltip,
-                mode: 'index',
-                intersect: false,
-            },
+            tooltip: { enabled: false, external: handleTooltip, mode: 'index', intersect: false },
         },
-        interaction: {
-            mode: 'index',
-            intersect: false,
-        },
+        interaction: { mode: 'index', intersect: false },
     };
 
     const config: ChartConfiguration<'line', number[], string> = {
         type: 'line',
-        data: processedChartData, // Use the data with styling restored
+        data: processedChartData,
         options: options,
     };
 
