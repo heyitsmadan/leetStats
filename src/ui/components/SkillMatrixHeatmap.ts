@@ -267,19 +267,86 @@ export function renderOrUpdateSkillMatrixHeatmap(
                 </div>
                 <div class="relative h-60 w-full bg-layer-1 dark:bg-dark-layer-1">
                     <canvas id="skill-chart-${topic.replace(/\s+/g, '-')}" class="w-full h-full"></canvas>
+                    <div id="tooltip-${topic.replace(/\s+/g, '-')}" class="chart-tooltip"></div>
                 </div>
             </div>
             </div>
         </td>
         <style>
-        .expandable-content {
-  max-height: 0;
-  overflow: hidden;
-  transition: max-height 0.4s ease, opacity 0.4s ease;;
-}
-
-
-        </style>
+    .expandable-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.4s ease, opacity 0.4s ease;
+    }
+    .chart-tooltip {
+        position: absolute;
+        top: 0;
+        left: 0;
+        background: #282828;
+        border: 2px solid #393939;
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 13px;
+        color: #f9ffff;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        width: max-content;
+        max-width: 300px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease, transform 0.15s ease-out;
+    }
+    .tooltip-header { 
+        font-weight: 500; 
+        margin-bottom: 8px; 
+        color: #f9ffff; 
+    }
+    .tooltip-subheader { 
+        margin-bottom: 12px; 
+        font-size: 12px; 
+        color: #bdbeb3; 
+    }
+    .tooltip-subheader-value { 
+        font-weight: 500; 
+        color: #f9ffff; 
+        margin-left: 6px; 
+    }
+    .tooltip-divider { 
+        border-top: 1px solid #353535; 
+        margin: 10px 0; 
+    }
+    .tooltip-breakdown-list { 
+        list-style: none; 
+        padding: 0; 
+        margin: 0; 
+        display: flex; 
+        flex-direction: column; 
+        gap: 5px; 
+    }
+    .tooltip-breakdown-item { 
+        display: flex; 
+        align-items: center; 
+        justify-content: space-between; 
+        font-size: 12px; 
+        gap: 16px;
+    }
+    .tooltip-breakdown-label { 
+        display: flex; 
+        align-items: center; 
+        gap: 8px; 
+        color: #bdbeb3; 
+    }
+    .tooltip-breakdown-value { 
+        font-weight: 500; 
+        color: #f9ffff; 
+    }
+    .status-dot { 
+        display: inline-block; 
+        width: 8px; 
+        height: 8px; 
+        border-radius: 50%; 
+    }
+</style>
     `;
 }
 
@@ -411,13 +478,13 @@ function aggregateTimeSeriesData(
         
         // Create period-end date for proper chart display
         let periodDate: string;
-        if (view === 'Monthly') {
-            const [year, month] = period.split('-');
-            const lastDayOfMonth = new Date(parseInt(year), parseInt(month), 0).getDate();
-            periodDate = `${year}-${month}-${lastDayOfMonth.toString().padStart(2, '0')}`;
-        } else {
-            periodDate = `${period}-12-31`;
-        }
+if (view === 'Monthly') {
+    // For 'Monthly' view, 'period' is 'YYYY-MM'. Set date to the 1st.
+    periodDate = `${period}-01`;
+} else {
+    // For 'Yearly' view, 'period' is 'YYYY'. Set date to Jan 1st.
+    periodDate = `${period}-01-01`;
+}
         
         aggregated.push({
             date: periodDate,
@@ -433,213 +500,190 @@ function aggregateTimeSeriesData(
 
 
  function renderChart(topic: string) {
-    console.log(`[Heatmap] Starting renderChart for topic: "${topic}"`);
-    
-    const canvas = container.querySelector(`#skill-chart-${topic.replace(/\s+/g, '-')}`) as HTMLCanvasElement;
-    if (!canvas) {
-        console.error(`[Heatmap] Canvas not found`);
-        return;
-    }
+        const canvas = container.querySelector(`#skill-chart-${topic.replace(/\s+/g, '-')}`) as HTMLCanvasElement;
+        if (!canvas || !canvas.getContext) return;
 
-    // Check canvas dimensions
-    console.log(`[Heatmap] Canvas dimensions: ${canvas.offsetWidth}x${canvas.offsetHeight}`);
-    if (canvas.offsetWidth === 0 || canvas.offsetHeight === 0) {
-        console.error(`[Heatmap] Canvas has zero dimensions`);
-        return;
-    }
+        const chartId = canvas.id;
+        if (charts.has(chartId)) {
+            charts.get(chartId)!.destroy();
+            charts.delete(chartId);
+        }
 
-    const chartId = canvas.id;
-    if (charts.has(chartId)) {
-        charts.get(chartId)!.destroy();
-        charts.delete(chartId);
-    }
+        const ctx = canvas.getContext('2d')!;
+        const timeSeries = data.timeSeriesData[topic];
+        const localOpts = chartOptions.get(topic)!;
+        const metricData = timeSeries?.[localOpts.metric];
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-        console.error(`[Heatmap] Failed to get 2D context`);
-        return;
-    }
+        if (!metricData || metricData.length === 0) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = 'rgb(107, 114, 128)';
+            ctx.textAlign = 'center';
+            ctx.font = '14px sans-serif';
+            ctx.fillText('No data available', canvas.width / 2, canvas.height / 2);
+            return;
+        }
 
-    const timeSeries = data.timeSeriesData[topic];
-    const localOpts = chartOptions.get(topic)!;
-    
-    if (!timeSeries || !localOpts) {
-        console.warn(`[Heatmap] Missing data or options`);
-        return;
-    }
-    
-    const metricData = timeSeries[localOpts.metric];
-    console.log(`[Heatmap] Data validation - Topic: "${topic}", Metric: "${localOpts.metric}", Points: ${metricData?.length || 0}`);
+        const aggregatedData = aggregateTimeSeriesData(metricData, localOpts.view);
+        const colors = { easy: '#58b8b9', medium: '#f4ba40', hard: '#e24a41', aggregate: '#5db666' };
+        const datasets: any[] = [];
 
-    if (!metricData || metricData.length === 0) {
-        console.warn(`[Heatmap] No metric data available`);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = 'rgb(107, 114, 128)';
-        ctx.textAlign = 'center';
-        ctx.fillText('No data available', canvas.width / 2, canvas.height / 2);
-        return;
-    }
-
-    // **CRITICAL**: Detailed data inspection
-    console.log(`[Heatmap] Raw sample data points:`, JSON.stringify(metricData.slice(0, 3), null, 2));
-    const aggregatedData = aggregateTimeSeriesData(metricData, localOpts.view);
-    // Validate and sanitize data
-    // const validData = metricData.filter(point => {
-    //     const date = new Date(point.date);
-    //     const isValidDate = !isNaN(date.getTime());
-    //     const isValidValue = typeof point.value === 'number' && !isNaN(point.value) && isFinite(point.value);
-        
-    //     if (!isValidDate) {
-    //         console.error(`[Heatmap] Invalid date: "${point.date}"`);
-    //         return false;
-    //     }
-    //     if (!isValidValue) {
-    //         console.error(`[Heatmap] Invalid value: ${point.value}`);
-    //         return false;
-    //     }
-    //     return true;
-    // });
-    const validData = metricData
-    console.log(`[Heatmap] Filtered ${metricData.length} -> ${validData.length} valid data points`);
-
-    if (validData.length === 0) {
-        console.error(`[Heatmap] No valid data points after filtering`);
-        ctx.fillStyle = 'rgb(255, 0, 0)';
-        ctx.textAlign = 'center';
-        ctx.fillText('Invalid data format', canvas.width / 2, canvas.height / 2);
-        return;
-    }
-
-    // Limit data points for performance (testing with 50 points max)
-    // const limitedData = validData.slice(-50);
-    console.log(`[Heatmap] Using ${validData.length} data points (limited for performance)`);
-
-    console.log(`[Heatmap] Creating datasets...`);
-    const datasets: any[] = [];
-    const colors = { easy: '#58b8b9', medium: '#f4ba40', hard: '#e24a41', aggregate: '#5db666' };
-    
-    // In the renderChart function, update the dataset creation:
-    if (localOpts.split) {
-        (['easy', 'medium', 'hard'] as const).forEach(diff => {
-            const diffData = aggregatedData
-                .filter(p => p[diff] !== undefined)
-                .map(p => ({ 
-                    x: p.date, 
-                    y: p[diff] 
-                }));
-            
-            if (diffData.length > 0) {
+        if (localOpts.split) {
+            (['easy', 'medium', 'hard'] as const).forEach(diff => {
                 datasets.push({
                     label: diff.charAt(0).toUpperCase() + diff.slice(1),
-                    data: diffData,
+                    data: aggregatedData.map(p => ({ x: p.date, y: p[diff] })),
                     borderColor: colors[diff],
-                    tension: 0.4,
-                    cubicInterpolationMode: 'monotone',
-                    pointRadius: 0,
-                    pointHoverRadius: 0,
                 });
-            }
-        });
-    } else {
-        const overallData = aggregatedData.map(p => ({ x: p.date, y: p.value }));
-        datasets.push({
-            label: 'Overall',
-            data: overallData, 
-            borderColor: colors.aggregate,
-            tension: 0.4,
-            cubicInterpolationMode: 'monotone',
-            pointRadius: 0,
-            pointHoverRadius: 0,
-        });
-    }
-
-
-    console.log(`[Heatmap] Created ${datasets.length} datasets`);
-    console.log(`[Heatmap] Sample dataset structure:`, JSON.stringify(datasets[0], null, 2));
-
-    // **SIMPLIFIED CHART CONFIG FOR TESTING**
-    console.log(`[Heatmap] About to create Chart.js instance...`);
-    // In renderChart function, update the time scale configuration
-const timeScaleConfig = {
-    'Daily': { unit: 'day', tooltipFormat: 'MMM dd, yyyy' },
-    'Monthly': { unit: 'month', tooltipFormat: 'MMM yyyy' },
-    'Yearly': { unit: 'year', tooltipFormat: 'yyyy' }
-} as const;
-
-const scaleConfig = timeScaleConfig[localOpts.view];
-
-// Apply aggregation to your data
-    try {
-    const chart = new Chart(ctx, {
-        type: 'line',
-        data: { datasets },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            backgroundColor: 'transparent', // Match table background // Match table background
-                // ✅ NEW: Disable all interactions and tooltips
-                interaction: {
-                    intersect: false,
-                    mode: null as any, // Disable all interactions
-                },
-            elements: {
-                point: { 
-                    radius: 0, // Remove circles
-                    hoverRadius: 0 
-                },
-                line: { tension: 0.4 }
-            },
-            scales: {
-                x: {
-                    type: 'time',
-                    time: {
-                        unit: scaleConfig.unit,
-                        tooltipFormat: scaleConfig.tooltipFormat
-                    },
-                    grid: {
-                        display: false // Remove gridlines
-                    }
-                },
-                y: {
-                    beginAtZero: localOpts.metric !== 'avgTries',
-                    min: localOpts.metric === 'avgTries' ? 1 : undefined, // ✅ Start at 1
-                    grid: {
-                        display: false // Remove gridlines
-                    }
-                }
-            },
-            plugins: {
-                legend: { 
-                    display: false
-                }
-            }
+            });
+        } else {
+            datasets.push({
+                label: 'Overall',
+                data: aggregatedData.map(p => ({ x: p.date, y: p.value })),
+                borderColor: colors.aggregate,
+            });
         }
-    });
-    
-    console.log(`[Heatmap] ✅ Chart created successfully!`);
-    charts.set(chartId, chart);
-    
-}catch (error) {
-    if (error instanceof Error) {
-        console.error(`[Heatmap] ❌ Chart creation failed:`, error);
-        console.error(`[Heatmap] Error stack:`, error.stack);
+        
+        const timeScaleConfig = {
+            'Daily': { unit: 'day', tooltipFormat: 'MMM dd, yyyy' },
+            'Monthly': { unit: 'month', tooltipFormat: 'MMM yyyy' },
+            'Yearly': { unit: 'year', tooltipFormat: 'yyyy' }
+        } as const;
 
-        // Show error on canvas
-        ctx.fillStyle = 'rgb(255, 0, 0)';
-        ctx.textAlign = 'center';
-        ctx.font = '12px sans-serif';
-        ctx.fillText(`Chart Error: ${error.message}`, canvas.width / 2, canvas.height / 2);
-    } else {
-        console.error(`[Heatmap] ❌ Chart creation failed with unknown error:`, error);
+        const chart = new Chart(ctx, {
+            type: 'line',
+            data: { datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false,
+                },
+                elements: {
+                    point: {
+                        radius: 0, // No points by default
+                        hoverRadius: 5, // Show a 5px radius circle on hover
+                        hoverBorderWidth: 2, // With a 2px border
+                    },
+                    line: {
+                        tension: 0.4,
+                        cubicInterpolationMode: 'monotone',
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: timeScaleConfig[localOpts.view].unit,
+                            tooltipFormat: timeScaleConfig[localOpts.view].tooltipFormat
+                        },
+                        grid: { display: false },
+                        ticks: { color: '#bdbeb3' }
+                    },
+                    y: {
+                        beginAtZero: localOpts.metric !== 'avgTries',
+                        min: localOpts.metric === 'avgTries' ? 1 : undefined,
+                        grid: { display: false },
+                        ticks: { color: '#bdbeb3' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        enabled: false, // Disable native tooltip
+                        // Located in: renderChart > options > plugins > tooltip
+// Replace the ENTIRE external callback function body with this:
 
-        ctx.fillStyle = 'rgb(255, 0, 0)';
-        ctx.textAlign = 'center';
-        ctx.font = '12px sans-serif';
-        ctx.fillText(`Unknown chart error`, canvas.width / 2, canvas.height / 2);
+external: (context) => {
+    // 1. Get references and handle hiding the tooltip
+    const tooltipId = `tooltip-${topic.replace(/\s+/g, '-')}`;
+    const tooltipEl = document.getElementById(tooltipId);
+    if (!tooltipEl) return;
+
+    const tooltipModel = context.tooltip;
+    if (tooltipModel.opacity === 0 || !tooltipModel.dataPoints.length) {
+        tooltipEl.style.opacity = '0';
+        tooltipEl.style.pointerEvents = 'none';
+        return;
     }
-}
 
+    // 2. Get the data for the hovered point
+    const dataIndex = tooltipModel.dataPoints[0].dataIndex;
+    const dataPoint = aggregatedData[dataIndex];
+    if (!dataPoint) {
+        tooltipEl.style.opacity = '0';
+        tooltipEl.style.pointerEvents = 'none';
+        return;
+    };
+
+    // 3. Build the tooltip's inner HTML (this logic is unchanged)
+    let formattedDate = new Date(dataPoint.date).toLocaleDateString('en-US', {
+        timeZone: 'UTC',
+        year: 'numeric',
+        month: localOpts.view === 'Daily' ? 'short' : 'long',
+        day: localOpts.view === 'Daily' ? 'numeric' : undefined,
+    });
+     if (localOpts.view === 'Yearly') {
+        formattedDate = new Date(dataPoint.date).getUTCFullYear().toString();
+    }
+
+    const metricLabels = { problemsSolved: 'Problems Solved', avgTries: 'Avg. Attempts', firstAceRate: 'First Ace Rate' };
+    const formatValue = (val: number, metric: string) => {
+        if (val === undefined || val === null) return 'N/A';
+        if (metric === 'avgTries') return val.toFixed(2);
+        if (metric === 'firstAceRate') return `${val.toFixed(1)}%`;
+        return Math.round(val).toString();
+    };
+
+    let innerHtml = `<div class="tooltip-header">${formattedDate}</div>`;
+    innerHtml += `<div class="tooltip-subheader">${metricLabels[localOpts.metric]}:<span class="tooltip-subheader-value">${formatValue(dataPoint.value, localOpts.metric)}</span></div>`;
+
+    if (localOpts.split) {
+        innerHtml += `<div class="tooltip-divider"></div><ul class="tooltip-breakdown-list">`;
+        (['Easy', 'Medium', 'Hard'] as const).forEach(diff => {
+            const value = dataPoint[diff.toLowerCase() as 'easy' | 'medium' | 'hard'];
+            if (value !== undefined && value !== null && value > 0) {
+                innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors[diff.toLowerCase() as 'easy' | 'medium' | 'hard']};"></span>${diff}</span><span class="tooltip-breakdown-value">${formatValue(value, localOpts.metric)}</span></li>`;
+            }
+        });
+        innerHtml += `</ul>`;
+    }
+
+    tooltipEl.innerHTML = innerHtml;
+
+    // 4. Position the tooltip (ADAPTED FROM THE WORKING CUMULATIVE CHART)
+    const container = context.chart.canvas.parentNode as HTMLElement;
+    if (!container) return;
+
+    // Default position is 15px to the right of the cursor
+    let newLeft = tooltipModel.caretX + 15;
+    let newTop = tooltipModel.caretY;
+
+    // If it overflows the right edge, flip it to the left of the cursor
+    if (newLeft + tooltipEl.offsetWidth > container.offsetWidth) {
+        newLeft = tooltipModel.caretX - tooltipEl.offsetWidth - 15;
+    }
+
+    // Prevent it from going off the top or left edges
+    if (newLeft < 0) newLeft = 0;
+    if (newTop < 0) newTop = 0;
+    
+    // Prevent it from going off the bottom edge
+    if (newTop + tooltipEl.offsetHeight > container.offsetHeight) {
+        newTop = container.offsetHeight - tooltipEl.offsetHeight;
+    }
+
+    // 5. Apply the position and make it visible
+    tooltipEl.style.opacity = '1';
+    tooltipEl.style.pointerEvents = 'none'; // This is safer to prevent flickering
+    tooltipEl.style.transform = `translate(${newLeft}px, ${newTop}px)`;
 }
+                    }
+                }
+            }
+        });
+        charts.set(chartId, chart);
+    }
 
 
 
@@ -664,7 +708,7 @@ const scaleConfig = timeScaleConfig[localOpts.view];
         }
     } else if (metric === 'problemsSolved') {
         // Higher is better. Target of 30 problems for "mastery".
-        // Use a sqrt scale for diminishing returns.
+        // Use a sqrt scale for diminishing returns.rgb(230, 107, 98)
         const TARGET_PROBLEMS = 20;
         const ratio = Math.min(1, value / TARGET_PROBLEMS);
         percent = 1 - Math.sqrt(ratio); // The sqrt makes the color improve faster at the beginning.
