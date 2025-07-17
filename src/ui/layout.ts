@@ -373,14 +373,25 @@ function renderCodingClock(processedData: ProcessedData) {
 
 function renderCumulativeChart(processedData: ProcessedData) {
     const canvas = document.getElementById('cumulative-chart') as HTMLCanvasElement;
-    // FIX: Ensure the canvas and its parent element exist
     if (!canvas || !canvas.parentElement) return;
 
     const chartData = getCumulativeStats(processedData, currentFilters);
-    if (chartData) {
+    
+    if (chartData && chartData.labels.length > 0) {
         canvas.parentElement.style.display = 'block';
-        // FIX: Pass the parent container, not the canvas itself
-        cumulativeLineChart = renderOrUpdateCumulativeLineChart(canvas.parentElement, chartData, cumulativeLineChart);
+        
+        // *** FIX: Pass the full filters object to the render function ***
+        // This gives the chart component all the context it needs for hover and labels.
+        cumulativeLineChart = renderOrUpdateCumulativeLineChart(
+            canvas.parentElement, 
+            chartData, 
+            {
+                difficulty: currentFilters.difficulty,
+                cumulativeView: currentFilters.cumulativeView,
+                timeRange: currentFilters.timeRange,
+            },
+            cumulativeLineChart
+        );
     } else {
         canvas.parentElement.style.display = 'none';
     }
@@ -469,20 +480,48 @@ function setupFilterListeners(processedData: ProcessedData) {
     timeRangeOptionElements?.forEach(option => {
         option.addEventListener('click', () => {
             const value = option.getAttribute('data-value') as TimeRange;
-            const span = timeRangeBtn.querySelector('span');
-            if (span) span.textContent = value;
-            
             currentFilters.timeRange = value;
-            timeRangeOptions.classList.add('hidden');
-            timeRangeBtn.setAttribute('aria-expanded', 'false');
             
-            // Update visual selection
-            timeRangeOptionElements.forEach(opt => {
-                opt.classList.remove('bg-fill-3', 'dark:bg-dark-fill-3', 'font-medium');
-            });
-            option.classList.add('bg-fill-3', 'dark:bg-dark-fill-3', 'font-medium');
+            // *** CHANGE: Replace previous logic with this new block ***
+            // --- Point 5: Set Default Cumulative View based on Time Range ---
+            let defaultView: CumulativeView;
+            if (value === 'Last 30 Days' || value === 'Last 90 Days') {
+                defaultView = 'Daily';
+            } else if (value === 'Last 365 Days') {
+                defaultView = 'Monthly';
+            } else { // 'All Time'
+                if (processedData.submissions.length > 0) {
+                    const firstSub = processedData.submissions.reduce((earliest, current) => 
+                        current.date < earliest.date ? current : earliest
+                    );
+                    const lastSub = processedData.submissions.reduce((latest, current) => 
+                        current.date > latest.date ? current : latest
+                    );
+                    const dayDifference = (lastSub.date.getTime() - firstSub.date.getTime()) / (1000 * 3600 * 24);
+
+                    if (dayDifference > 365 * 2) { // Over 2 years
+                        defaultView = 'Yearly';
+                    } else if (dayDifference > 90) { // Over 3 months
+                        defaultView = 'Monthly';
+                    } else {
+                        defaultView = 'Daily';
+                    }
+                } else {
+                    defaultView = 'Monthly'; // Default if no submissions
+                }
+            }
             
+            // Set the new default view and update the UI
+            currentFilters.cumulativeView = defaultView;
+            updateCumulativeViewToggle(defaultView);
+
+            // Update the dropdown button text
+            const btnText = timeRangeBtn.querySelector('span');
+            if(btnText) btnText.textContent = value;
+
+            // Re-render all charts with the new filters
             renderFilteredCharts(processedData);
+            timeRangeOptions.classList.add('hidden'); // Hide dropdown
         });
     });
 
@@ -564,52 +603,26 @@ function setupFilterListeners(processedData: ProcessedData) {
     });
 
     
-    // NEW: Three-button toggle logic for cumulative view
+    // Cumulative View Toggle Logic
     const dailyViewBtn = document.getElementById('daily-view-btn') as HTMLButtonElement;
     const monthlyViewBtn = document.getElementById('monthly-view-btn') as HTMLButtonElement;
     const yearlyViewBtn = document.getElementById('yearly-view-btn') as HTMLButtonElement;
 
-    // Daily button click handler
-    dailyViewBtn.addEventListener('click', () => {
-        if (currentFilters.cumulativeView !== 'Daily') {
-            currentFilters.cumulativeView = 'Daily';
-            
-            // Update button states
-            dailyViewBtn.setAttribute('data-state', 'active');
-            monthlyViewBtn.setAttribute('data-state', 'inactive');
-            yearlyViewBtn.setAttribute('data-state', 'inactive');
-            
-            renderCumulativeChart(processedData);
+    // *** CHANGE: Simplify the toggle button event listeners ***
+    const handleToggleClick = (view: CumulativeView) => {
+        if (currentFilters.cumulativeView !== view) {
+            currentFilters.cumulativeView = view;
+            updateCumulativeViewToggle(view);
+            renderCumulativeChart(processedData); // Re-render only this chart
         }
-    });
+    };
 
-    // Monthly button click handler
-    monthlyViewBtn.addEventListener('click', () => {
-        if (currentFilters.cumulativeView !== 'Monthly') {
-            currentFilters.cumulativeView = 'Monthly';
-            
-            // Update button states
-            monthlyViewBtn.setAttribute('data-state', 'active');
-            dailyViewBtn.setAttribute('data-state', 'inactive');
-            yearlyViewBtn.setAttribute('data-state', 'inactive');
-            
-            renderCumulativeChart(processedData);
-        }
-    });
-
-    // Yearly button click handler
-    yearlyViewBtn.addEventListener('click', () => {
-        if (currentFilters.cumulativeView !== 'Yearly') {
-            currentFilters.cumulativeView = 'Yearly';
-            
-            // Update button states
-            yearlyViewBtn.setAttribute('data-state', 'active');
-            dailyViewBtn.setAttribute('data-state', 'inactive');
-            monthlyViewBtn.setAttribute('data-state', 'inactive');
-            
-            renderCumulativeChart(processedData);
-        }
-    });
+    dailyViewBtn.addEventListener('click', () => handleToggleClick('Daily'));
+    monthlyViewBtn.addEventListener('click', () => handleToggleClick('Monthly'));
+    yearlyViewBtn.addEventListener('click', () => handleToggleClick('Yearly'));
+    
+    // Set initial toggle state on load
+    updateCumulativeViewToggle(currentFilters.cumulativeView);
 
 // Add skill matrix dropdown logic
 const skillMatrixBtn = document.getElementById('skill-matrix-time-filter-btn') as HTMLButtonElement;
@@ -1084,4 +1097,18 @@ function getMilestoneColor(type: string): string {
     'submissions': '#f9ffff'
   };
   return colorMap[type] || '#f9ffff'; // Default to problem color
+}
+
+function updateCumulativeViewToggle(activeView: CumulativeView) {
+    const buttons = {
+        'Daily': document.getElementById('daily-view-btn'),
+        'Monthly': document.getElementById('monthly-view-btn'),
+        'Yearly': document.getElementById('yearly-view-btn'),
+    };
+
+    for (const [view, button] of Object.entries(buttons)) {
+        if (button) {
+            button.setAttribute('data-state', view === activeView ? 'active' : 'inactive');
+        }
+    }
 }

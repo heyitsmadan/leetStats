@@ -1,35 +1,19 @@
 // src/analysis/stats/getCumulativeStats.ts
 
 import type { ProcessedData, Difficulty, TimeRange, CumulativeView, CumulativeChartStats } from '../../types';
-import { Chart,
-    TimeScale,
-    LinearScale,
-    PointElement,
-    LineElement,
-    Tooltip,
-    Legend,
-    Filler
-} from 'chart.js';
+import { Chart, TimeScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler } from 'chart.js';
 import 'chartjs-adapter-date-fns';
 
 Chart.register(TimeScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
 
-// Helper to format date based on view
-const formatDate = (date: Date, view: CumulativeView): string => {
-    // FIX: Use 'long' month format for Daily view
-    if (view === 'Daily') return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
-    if (view === 'Monthly') return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short' });
-    return date.toLocaleDateString(undefined, { year: 'numeric' });
-};
-
-// Helper to generate complete date range
+// Helper to generate a complete date range based on the view (Daily, Monthly, Yearly)
 const generateDateRange = (startDate: Date, endDate: Date, view: CumulativeView): Date[] => {
     const dates: Date[] = [];
-    const current = new Date(startDate);
-    
+    let current = new Date(startDate); // Use the provided start date directly
+
     while (current <= endDate) {
         dates.push(new Date(current));
-        
+
         if (view === 'Daily') {
             current.setDate(current.getDate() + 1);
         } else if (view === 'Monthly') {
@@ -38,67 +22,58 @@ const generateDateRange = (startDate: Date, endDate: Date, view: CumulativeView)
             current.setFullYear(current.getFullYear() + 1);
         }
     }
-    
     return dates;
 };
 
+// Main function to process data for the cumulative chart
 export function getCumulativeStats(
     processedData: ProcessedData,
     filters: { timeRange: TimeRange; difficulty: Difficulty; cumulativeView: CumulativeView }
 ): CumulativeChartStats | null {
 
     const { timeRange, difficulty, cumulativeView } = filters;
-    const { submissions } = processedData;
+    let allSubmissions = processedData.submissions;
 
-    // 1. Filter submissions based on TimeRange ONLY. Difficulty filter will be applied later.
-    const now = new Date();
-    const timeFilteredSubmissions = submissions.filter(sub => {
-        const submissionDate = sub.date;
-        let inTimeRange = false;
-
-        const getPastDate = (days: number) => {
-            const date = new Date(now);
-            date.setDate(now.getDate() - days);
-            return date;
-        };
-
-        switch (timeRange) {
-            case 'All Time':
-                inTimeRange = true;
-                break;
-            case 'Last 30 Days':
-                inTimeRange = submissionDate >= getPastDate(30);
-                break;
-            case 'Last 90 Days':
-                inTimeRange = submissionDate >= getPastDate(90);
-                break;
-            case 'Last 365 Days':
-                inTimeRange = submissionDate >= getPastDate(365);
-                break;
-        }
-        return inTimeRange;
-    });
-
-    if (timeFilteredSubmissions.length === 0) {
+    if (allSubmissions.length === 0) {
         return { labels: [], datasets: [] };
     }
 
-    const submissionDates = timeFilteredSubmissions.map(sub => sub.date);
-    const minDate = new Date(Math.min(...submissionDates.map(d => d.getTime())));
-    const maxDate = new Date(Math.max(...submissionDates.map(d => d.getTime())));
+    // Ensure submissions are sorted by date
+    allSubmissions.sort((a, b) => a.date.getTime() - b.date.getTime());
 
-    let startDate: Date, endDate: Date;
-    if (cumulativeView === 'Daily') {
-        startDate = new Date(minDate.getFullYear(), minDate.getMonth(), minDate.getDate());
-        endDate = new Date(maxDate.getFullYear(), maxDate.getMonth(), maxDate.getDate());
-    } else if (cumulativeView === 'Monthly') {
-        startDate = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
-        endDate = new Date(maxDate.getFullYear(), maxDate.getMonth(), 1);
-    } else {
-        startDate = new Date(minDate.getFullYear(), 0, 1);
-        endDate = new Date(maxDate.getFullYear(), 0, 1);
+    // --- Determine Chart Start and End Dates ---
+    const today = new Date();
+    let chartStartDate: Date;
+    const chartEndDate = today; // Chart always extends to today
+
+    const getPastDate = (days: number) => {
+        const date = new Date(today);
+        date.setDate(today.getDate() - days);
+        date.setHours(0, 0, 0, 0);
+        return date;
+    };
+
+    switch (timeRange) {
+        case 'Last 30 Days':
+            chartStartDate = getPastDate(30);
+            break;
+        case 'Last 90 Days':
+            chartStartDate = getPastDate(90);
+            break;
+        case 'Last 365 Days':
+            chartStartDate = getPastDate(365);
+            break;
+        case 'All Time':
+        default:
+            chartStartDate = new Date(allSubmissions[0].date);
+            chartStartDate.setHours(0, 0, 0, 0);
+            break;
     }
 
+    // Filter submissions to only those relevant for the calculations
+    const relevantSubmissions = allSubmissions.filter(sub => sub.date >= chartStartDate);
+
+    // Group submissions by the chosen time view
     const groupedData = new Map<string, {
         submissions: number;
         easySolved: Set<string>;
@@ -106,7 +81,7 @@ export function getCumulativeStats(
         hardSolved: Set<string>;
     }>();
 
-    for (const sub of timeFilteredSubmissions) {
+    for (const sub of allSubmissions) { // Group ALL submissions to correctly calculate initial state
         let key: string;
         const date = sub.date;
 
@@ -114,7 +89,7 @@ export function getCumulativeStats(
             key = new Date(date.getFullYear(), date.getMonth(), date.getDate()).toISOString();
         } else if (cumulativeView === 'Monthly') {
             key = new Date(date.getFullYear(), date.getMonth(), 1).toISOString();
-        } else {
+        } else { // Yearly
             key = new Date(date.getFullYear(), 0, 1).toISOString();
         }
 
@@ -125,7 +100,7 @@ export function getCumulativeStats(
         const group = groupedData.get(key)!;
         group.submissions += 1;
 
-        if (sub.status == 10 && sub.metadata) {
+        if (sub.status === 10 && sub.metadata) {
             switch (sub.metadata.difficulty) {
                 case 'Easy': group.easySolved.add(sub.titleSlug); break;
                 case 'Medium': group.mediumSolved.add(sub.titleSlug); break;
@@ -134,31 +109,43 @@ export function getCumulativeStats(
         }
     }
 
-    const allDates = generateDateRange(startDate, endDate, cumulativeView);
+    // *** FIX: Normalize the start date for the range generator ***
+    // This ensures the generated dates align with the keys in groupedData.
+    let normalizedChartStartDate = new Date(chartStartDate);
+    if (cumulativeView === 'Monthly') {
+        normalizedChartStartDate.setDate(1);
+    } else if (cumulativeView === 'Yearly') {
+        normalizedChartStartDate.setDate(1);
+        normalizedChartStartDate.setMonth(0);
+    }
     
+    const allDatesInRange = generateDateRange(normalizedChartStartDate, chartEndDate, cumulativeView);
+    
+    // Calculate cumulative values *before* the chart's start date to begin the lines correctly
+    const submissionsBeforeStart = allSubmissions.filter(sub => sub.date < normalizedChartStartDate);
+    let cumulativeSubmissions = submissionsBeforeStart.length;
+    const solvedEasy = new Set<string>(submissionsBeforeStart.filter(s => s.status === 10 && s.metadata?.difficulty === 'Easy').map(s => s.titleSlug));
+    const solvedMedium = new Set<string>(submissionsBeforeStart.filter(s => s.status === 10 && s.metadata?.difficulty === 'Medium').map(s => s.titleSlug));
+    const solvedHard = new Set<string>(submissionsBeforeStart.filter(s => s.status === 10 && s.metadata?.difficulty === 'Hard').map(s => s.titleSlug));
+
     const labels: string[] = [];
     const totalSubmissionsData: number[] = [];
     const easyData: number[] = [];
     const mediumData: number[] = [];
     const hardData: number[] = [];
 
-    let cumulativeSubmissions = 0;
-    const solvedEasy = new Set<string>();
-    const solvedMedium = new Set<string>();
-    const solvedHard = new Set<string>();
-
-    for (const date of allDates) {
+    for (const date of allDatesInRange) {
         const key = date.toISOString();
         const group = groupedData.get(key);
 
-        if (group) {
+        if (group && date >= normalizedChartStartDate) {
             cumulativeSubmissions += group.submissions;
             group.easySolved.forEach(slug => solvedEasy.add(slug));
             group.mediumSolved.forEach(slug => solvedMedium.add(slug));
             group.hardSolved.forEach(slug => solvedHard.add(slug));
         }
 
-        labels.push(formatDate(date, cumulativeView));
+        labels.push(date.toISOString());
         totalSubmissionsData.push(cumulativeSubmissions);
         easyData.push(solvedEasy.size);
         mediumData.push(solvedMedium.size);
@@ -169,43 +156,21 @@ export function getCumulativeStats(
         {
             label: 'Total Submissions',
             data: totalSubmissionsData,
-            borderColor: '#393939',
+            borderColor: '#393939', // *** FIX: Reverted to original color ***
             fill: false,
             tension: 0.4,
         }
     ];
 
-    // Now, apply the difficulty filter to decide which datasets to SHOW
     if (difficulty === 'All' || difficulty === 'Easy') {
-        datasets.push({
-            label: 'Easy Solved',
-            data: easyData,
-            borderColor: '#58b8b9',
-            fill: false,
-            tension: 0.4,
-        });
+        datasets.push({ label: 'Easy Solved', data: easyData, borderColor: '#58b8b9', fill: false, tension: 0.4 });
     }
     if (difficulty === 'All' || difficulty === 'Medium') {
-        datasets.push({
-            label: 'Medium Solved',
-            data: mediumData,
-            borderColor: '#f4ba40',
-            fill: false,
-            tension: 0.4,
-        });
+        datasets.push({ label: 'Medium Solved', data: mediumData, borderColor: '#f4ba40', fill: false, tension: 0.4 });
     }
     if (difficulty === 'All' || difficulty === 'Hard') {
-        datasets.push({
-            label: 'Hard Solved',
-            data: hardData,
-            borderColor: '#e24a41',
-            fill: false,
-            tension: 0.4,
-        });
+        datasets.push({ label: 'Hard Solved', data: hardData, borderColor: '#e24a41', fill: false, tension: 0.4 });
     }
 
-    return {
-        labels,
-        datasets
-    };
+    return { labels, datasets };
 }
