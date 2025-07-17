@@ -526,7 +526,7 @@ export function renderOrUpdateInteractiveChart(
     }
 
     tooltipEl.style.opacity = '1';
-    tooltipEl.style.pointerEvents = 'auto';
+    tooltipEl.style.pointerEvents = 'none';
     tooltipEl.style.transform = `translate(${position.left + window.pageXOffset + newLeft}px, ${position.top + window.pageYOffset + tooltipModel.caretY - tooltipEl.offsetHeight / 2}px)`;
   }
 

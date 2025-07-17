@@ -129,7 +129,7 @@ export function renderOrUpdateDoughnutChart(
         if (newTop < 0) newTop = 0;
 
         tooltipEl.style.opacity = '1';
-        tooltipEl.style.pointerEvents = 'auto';
+        tooltipEl.style.pointerEvents = 'none';
         tooltipEl.style.transform = `translate(${newLeft}px, ${newTop}px)`;
     };
 

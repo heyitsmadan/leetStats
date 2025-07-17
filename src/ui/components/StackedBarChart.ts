@@ -106,7 +106,7 @@ export function renderOrUpdateStackedBarChart(
         }
 
         tooltipEl.style.opacity = '1';
-        tooltipEl.style.pointerEvents = 'auto';
+        tooltipEl.style.pointerEvents = 'none';
         tooltipEl.style.transform = `translate(${newLeft}px, ${newTop}px)`;
     };
 
