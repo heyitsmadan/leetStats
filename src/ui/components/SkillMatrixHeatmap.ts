@@ -7,7 +7,7 @@ export interface SkillMatrixHeatmapInstance {
     destroy: () => void;
 }
 
-// NEW: Helper function to determine the best default chart view
+// Helper function to determine the best default chart view based on time span
 function getOptimalChartView(
     points: TimeSeriesPoint[] | undefined, 
     timeRange: TimeRange
@@ -34,6 +34,75 @@ function getOptimalChartView(
         default:
             return 'Monthly';
     }
+}
+
+/**
+ * [CORRECTED] Aggregates daily time series data into monthly or yearly buckets
+ * using the user's local timezone for grouping.
+ *
+ * @param points - The array of daily time series data points.
+ * @param view - The target aggregation level: 'Monthly' or 'Yearly'.
+ * @returns A new array of aggregated time series points.
+ */
+function aggregateTimeSeriesData(
+    points: TimeSeriesPoint[],
+    view: 'Daily' | 'Monthly' | 'Yearly'
+): TimeSeriesPoint[] {
+    if (view === 'Daily' || points.length === 0) {
+        return points;
+    }
+
+    const grouped = new Map<string, TimeSeriesPoint[]>();
+
+    points.forEach(point => {
+        const date = new Date(point.date); // This is a local date object
+        let key: string;
+
+        // --- CHANGE: Use local timezone methods instead of UTC ---
+        // This ensures aggregation aligns with the user's calendar.
+        if (view === 'Monthly') {
+            // Key: "YYYY-MM" e.g., "2023-04"
+            key = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
+        } else { // Yearly
+            // Key: "YYYY" e.g., "2023"
+            key = date.getFullYear().toString();
+        }
+
+        if (!grouped.has(key)) {
+            grouped.set(key, []);
+        }
+        grouped.get(key)!.push(point);
+    });
+
+    const aggregated: TimeSeriesPoint[] = [];
+
+    // For each period (month or year), find the last data point to represent
+    // the cumulative value at the end of that period.
+    for (const [period, periodPoints] of grouped.entries()) {
+        // Sort to find the latest point in the period
+        const sortedPoints = periodPoints.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        const lastPoint = sortedPoints[sortedPoints.length - 1];
+
+        let periodDateStr: string;
+        if (view === 'Monthly') {
+            // Use the first day of the month for the plot point.
+            periodDateStr = `${period}-01`;
+        } else { // Yearly
+            // Use the first day of the year for the plot point.
+            periodDateStr = `${period}-01-01`;
+        }
+
+        aggregated.push({
+            date: periodDateStr,
+            value: lastPoint.value,
+            easy: lastPoint.easy,
+            medium: lastPoint.medium,
+            hard: lastPoint.hard
+        });
+    }
+
+    // Ensure the final aggregated data is sorted chronologically.
+    return aggregated.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 }
 
 
@@ -153,7 +222,6 @@ export function renderOrUpdateSkillMatrixHeatmap(
             // Expand logic
             expandedRows.add(topic);
             
-            // NEW: Smartly determine the default view
             if (!chartOptions.has(topic)) {
                 const timeSeriesForMetric = data.timeSeriesData[topic]?.['problemsSolved'];
                 const optimalView = getOptimalChartView(timeSeriesForMetric, options.timeRange);
@@ -163,7 +231,6 @@ export function renderOrUpdateSkillMatrixHeatmap(
             
             const newRow = document.createElement('tr');
             newRow.className = 'expanded-row';
-            // Pass the default view to the HTML generator
             newRow.innerHTML = getChartRowHtml(topic, currentChartOptions.view);
             
             topicRow.insertAdjacentElement('afterend', newRow);
@@ -184,7 +251,6 @@ export function renderOrUpdateSkillMatrixHeatmap(
         }
     }
 
-    // UPDATED: Function now accepts a default view to set the active button
     function getChartRowHtml(topic: string, defaultView: 'Daily' | 'Monthly' | 'Yearly'): string {
         return `
             <td colspan="5" class="p-0 bg-layer-1 dark:bg-dark-layer-1">
@@ -379,55 +445,6 @@ export function renderOrUpdateSkillMatrixHeatmap(
         });
     }
 
-    function aggregateTimeSeriesData(
-        points: TimeSeriesPoint[], 
-        view: 'Daily' | 'Monthly' | 'Yearly'
-    ): TimeSeriesPoint[] {
-        if (view === 'Daily') return points;
-        
-        const grouped = new Map<string, TimeSeriesPoint[]>();
-        
-        points.forEach(point => {
-            const date = new Date(point.date);
-            let key: string;
-            
-            if (view === 'Monthly') {
-                key = `${date.getUTCFullYear()}-${(date.getUTCMonth() + 1).toString().padStart(2, '0')}`;
-            } else { // Yearly
-                key = date.getUTCFullYear().toString();
-            }
-            
-            if (!grouped.has(key)) {
-                grouped.set(key, []);
-            }
-            grouped.get(key)!.push(point);
-        });
-        
-        const aggregated: TimeSeriesPoint[] = [];
-        
-        for (const [period, periodPoints] of grouped.entries()) {
-            const sortedPoints = periodPoints.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-            const lastPoint = sortedPoints[sortedPoints.length - 1];
-            
-            let periodDateStr: string;
-            if (view === 'Monthly') {
-                periodDateStr = `${period}-01`;
-            } else {
-                periodDateStr = `${period}-01-01`;
-            }
-            
-            aggregated.push({
-                date: periodDateStr,
-                value: lastPoint.value,
-                easy: lastPoint.easy,
-                medium: lastPoint.medium,
-                hard: lastPoint.hard
-            });
-        }
-        
-        return aggregated.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    }
-
     function renderChart(topic: string) {
         const canvas = container.querySelector(`#skill-chart-${topic.replace(/\s+/g, '-')}`) as HTMLCanvasElement;
         if (!canvas) return;
@@ -539,14 +556,28 @@ export function renderOrUpdateSkillMatrixHeatmap(
                                 return;
                             };
 
-                            let formattedDate = new Date(dataPoint.date).toLocaleDateString('en-US', {
-                                timeZone: 'UTC',
-                                year: 'numeric',
-                                month: localOpts.view === 'Daily' ? 'short' : 'long',
-                                day: localOpts.view === 'Daily' ? 'numeric' : undefined,
-                            });
-                             if (localOpts.view === 'Yearly') {
-                                formattedDate = new Date(dataPoint.date).getUTCFullYear().toString();
+                            // --- [CORRECTED] Date formatting for tooltips ---
+                            let formattedDate: string;
+                            const pointDate = new Date(dataPoint.date);
+                            
+                            if (localOpts.view === 'Yearly') {
+                                // For a yearly key like "2023-01-01", we just want "2023"
+                                formattedDate = pointDate.getUTCFullYear().toString();
+                            } else if (localOpts.view === 'Monthly') {
+                                // For a monthly key like "2023-04-01", we want "April 2023"
+                                formattedDate = pointDate.toLocaleDateString(undefined, {
+                                    month: 'long',
+                                    year: 'numeric',
+                                    timeZone: 'UTC' // Keep UTC here to show 'January 2023' not 'December 2022' for a '2023-01-01' key
+                                });
+                            } else { // Daily
+                                // For a daily key, show the full date
+                                formattedDate = pointDate.toLocaleDateString(undefined, {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric',
+                                    timeZone: 'UTC' // Likewise, keep UTC to avoid day-before issues
+                                });
                             }
 
                             const metricLabels = { problemsSolved: 'Problems Solved', avgTries: 'Avg. Attempts', firstAceRate: 'First Ace Rate' };
