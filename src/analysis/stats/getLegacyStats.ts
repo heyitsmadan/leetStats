@@ -180,7 +180,7 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
         problemSlug: phoenixProblem.slug,
         icon: '🔥',
         stat: days,
-        personalNote: `...well, that took a while`
+        personalNote: `...we are so back`
       });
     }
   }
