@@ -1,4 +1,5 @@
 import { initialize } from '../core/main';
+import { FetchLoader } from './components/Loader';
 
 console.log("🚀 LeetCode Stats Extension Injected!");
 
@@ -8,27 +9,14 @@ if (window.location.pathname.startsWith('/u/')) {
 }
 
 function runAnalysis() {
-    // Create a simple UI element to show progress
-    // const statusDiv = document.createElement('div');
-    // statusDiv.style.position = 'fixed';
-    // statusDiv.style.bottom = '20px';
-    // statusDiv.style.left = '20px';
-    // statusDiv.style.padding = '10px 20px';
-    // statusDiv.style.backgroundColor = '#282828';
-    // statusDiv.style.color = '#fff';
-    // statusDiv.style.borderRadius = '8px';
-    // statusDiv.style.zIndex = '9999';
-    // statusDiv.style.fontFamily = 'monospace';
-    // statusDiv.textContent = 'LC Stats: Initializing...';
-    // document.body.appendChild(statusDiv);
+    // 1. Create an instance of our new loader component.
+    const loader = new FetchLoader();
 
-    const updateUICallback = (message: string) => {
-        console.log(message);
-        // statusDiv.textContent = `LC Statgs: ${message}`;
-    };
-
-    // Kick off the main process
-    initialize(updateUICallback).catch(error => {
+    // 2. Kick off the main process and pass the loader instance to it.
+    // The initialize function will now manage the loader's state (show, update, complete).
+    initialize(loader).catch(error => {
         console.error("Injection script caught an error:", error);
+        // The error is already handled and displayed by the loader in main.ts,
+        // so no need for extra UI handling here.
     });
 }

@@ -1,12 +1,60 @@
-// src/api/api.ts
-import type { RawSubmission, SubmissionListResponse, ProblemMetadata } from '../types';
+// src/core/api.ts
+import type {
+  RawSubmission,
+  SubmissionListResponse,
+  ProblemMetadata,
+  UserSubmissionsGraphQLResponse,
+} from '../types';
+
+/**
+ * Fetches the total number of accepted submissions for a user using the specified GraphQL query.
+ * @param username The LeetCode username.
+ * @returns The total number of accepted submissions.
+ */
+export async function fetchTotalAcceptedSubmissions(username: string): Promise<number> {
+  const graphqlUrl = 'https://leetcode.com/graphql';
+  const query = `
+    query userSubmissions($username: String!) {
+      matchedUser(username: $username) {
+        submitStatsGlobal {
+          acSubmissionNum {
+            difficulty
+            submissions
+          }
+        }
+      }
+    }
+  `;
+
+  try {
+    const res = await fetch(graphqlUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, variables: { username } }),
+      credentials: 'include',
+    });
+
+    const json: UserSubmissionsGraphQLResponse = await res.json();
+    const allStats = json.data.matchedUser.submitStatsGlobal.acSubmissionNum.find(
+      s => s.difficulty === 'All'
+    );
+
+    return allStats ? allStats.submissions : 0;
+  } catch (err) {
+    console.error('❌ Error fetching total accepted submissions:', err);
+    return 0; // Return a fallback value
+  }
+}
 
 /**
  * Fetches all submissions from the LeetCode API newer than a given submission ID.
+ * @param lastSubmissionId The ID of the last submission fetched previously.
+ * @param onProgress A callback function to report progress.
+ * @returns A promise that resolves to an array of new raw submissions.
  */
 export async function fetchAllSubmissions(
-  updateUICallback: (message: string) => void,
-  lastSubmissionId: string = '0'
+  lastSubmissionId: string = '0',
+  onProgress: (progress: { accepted: number; total: number }) => void
 ): Promise<RawSubmission[]> {
   const graphqlUrl = 'https://leetcode.com/graphql';
   const query = `
@@ -22,10 +70,9 @@ export async function fetchAllSubmissions(
   let offset = 0;
   let allNewSubmissions: RawSubmission[] = [];
   let hasNext = true;
-  let page = 1;
+  let newAcceptedFetched = 0;
 
   console.log(`📡 Fetching submissions after ID ${lastSubmissionId}...`);
-  updateUICallback('📡 Fetching new submissions...');
 
   while (hasNext) {
     try {
@@ -41,32 +88,31 @@ export async function fetchAllSubmissions(
 
       if (!pageData) {
         console.error('⚠️ Unexpected response:', json);
-        updateUICallback('⚠️ Unexpected response format. Check console.');
         break;
       }
 
-      // Filter submissions that are newer than the last fetched submission ID
       const recentSubmissions = pageData.submissions.filter(
         s => parseInt(s.id, 10) > parseInt(lastSubmissionId, 10)
       );
 
       allNewSubmissions.push(...recentSubmissions);
+      
+      const acceptedThisPage = recentSubmissions.filter(s => s.status === 10).length;
+      newAcceptedFetched += acceptedThisPage;
+      
+      // Report running total of *new* accepted and *new* total submissions
+      onProgress({ accepted: newAcceptedFetched, total: allNewSubmissions.length });
 
-      // Stop if we found submissions older than or equal to our last ID
-      // or if there are no more pages
       if (recentSubmissions.length < pageData.submissions.length || !pageData.hasNext) {
         hasNext = false;
       } else {
         offset += limit;
       }
 
-      updateUICallback(`📥 Fetched ${allNewSubmissions.length} new submissions... (Page ${page})`);
-      page++;
-      await new Promise(r => setTimeout(r, 200));
+      await new Promise(r => setTimeout(r, 200)); // Avoid rate-limiting
     } catch (err) {
       console.error('❌ Error during fetch:', err);
-      updateUICallback('❌ Error during fetch. Check console for details.');
-      throw err;
+      throw err; // Re-throw to be caught by the main initializer
     }
   }
 
@@ -106,7 +152,7 @@ export async function fetchProblemMetadata(slug: string): Promise<ProblemMetadat
     return {
       slug: question.titleSlug,
       difficulty: question.difficulty,
-      topics: question.topicTags.map((tag: { slug: string }) => tag.slug),
+      topics: question.topicTags.map((tag: { slug: 'string' }) => tag.slug),
     };
   } catch (err) {
     console.error(`❌ Error fetching metadata for ${slug}:`, err);

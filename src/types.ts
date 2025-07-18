@@ -181,3 +181,25 @@ export interface TooltipData {
   breakdown: { [key: string]: number };
   acceptanceRate?: number;
 }
+
+// The shape of the API response for the user submission stats
+export interface UserSubmissionsGraphQLResponse {
+  data: {
+    matchedUser: {
+      submitStatsGlobal: {
+        acSubmissionNum: {
+          difficulty: 'All' | 'Easy' | 'Medium' | 'Hard';
+          submissions: number;
+        }[];
+      };
+    };
+  };
+}
+
+// A type for the loader controls to pass around
+export interface ILoader {
+    show: () => void;
+    update: (totalFetched: number, acceptedFetched: number, totalAccepted: number) => void;
+    complete: (finalMessage?: string) => void;
+    error: (errorMessage: string) => void;
+}
