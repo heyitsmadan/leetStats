@@ -59,7 +59,7 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
     }
   }
 
-  // 1. First Blood - First problem solved (MOVED TO TOP)
+  // 1. First Blood - First problem solved
   const sortedSubmissions = [...submissions].sort((a, b) => a.date.getTime() - b.date.getTime());
   const firstAccepted = sortedSubmissions.find(s => s.status === 10);
   
@@ -72,36 +72,35 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
       problemSlug: firstAccepted.titleSlug,
       icon: '🩸',
       stat: 1,
-      personalNote: `...and so the suffering began`
+      personalNote: `...oh, my sweet summer child`
     });
   }
 
-// 2. Nemesis - Eventually solved with most failed submissions
-let maxFailedSubmissions = 0;
-let nemesisProblem: any = null;
-
-for (const [slug, stats] of problemStats) {
-  const failedSubmissions = stats.submissions - stats.accepted;
-  if (stats.accepted > 0 && failedSubmissions > maxFailedSubmissions) {
-    maxFailedSubmissions = failedSubmissions;
-    nemesisProblem = { slug, stats, failedSubmissions };
+  // 2. Easy Trap - Easy with most failed attempts
+  let maxFailedEasy = 0;
+  let trapProblem: any = null;
+  
+  for (const [slug, stats] of problemStats) {
+    const failed = stats.submissions - stats.accepted;
+    if (stats.difficulty === 'Easy' && failed > maxFailedEasy) {
+      maxFailedEasy = failed;
+      trapProblem = { slug, stats };
+    }
   }
-}
-
-if (nemesisProblem) {
-  const problemData = submissions.find(s => s.titleSlug === nemesisProblem.slug);
-  trophies.push({
-    id: 'nemesis',
-    title: 'Nemesis',
-    subtitle: `Conquered after ${nemesisProblem.failedSubmissions} failed attempts`,
-    problemTitle: problemData?.title || nemesisProblem.slug,
-    problemSlug: nemesisProblem.slug,
-    icon: '⚔️',
-    stat: nemesisProblem.failedSubmissions,
-    personalNote: `..that was personal`
-  });
-}
-
+  
+  if (trapProblem && maxFailedEasy > 0) {
+    const problemData = submissions.find(s => s.titleSlug === trapProblem.slug);
+    trophies.push({
+      id: 'easy_trap',
+      title: 'Easy Trap',
+      subtitle: `${maxFailedEasy} failed attempts on an "Easy" problem`,
+      problemTitle: problemData?.title || trapProblem.slug,
+      problemSlug: trapProblem.slug,
+      icon: '🪤',
+      stat: maxFailedEasy,
+      personalNote: `...we won't tell anybody`
+    });
+  }
 
   // 3. White Whale - Most submissions, never solved
   let maxSubmissionsUnsolved = 0;
@@ -128,58 +127,33 @@ if (nemesisProblem) {
     });
   }
 
-  // 4. Easy Trap - Easy with most failed attempts
-  let maxFailedEasy = 0;
-  let trapProblem: any = null;
-  
+  // 4. Nemesis - Eventually solved with most failed submissions
+  let maxFailedSubmissions = 0;
+  let nemesisProblem: any = null;
+
   for (const [slug, stats] of problemStats) {
-    const failed = stats.submissions - stats.accepted;
-    if (stats.difficulty === 'Easy' && failed > maxFailedEasy) {
-      maxFailedEasy = failed;
-      trapProblem = { slug, stats };
+    const failedSubmissions = stats.submissions - stats.accepted;
+    if (stats.accepted > 0 && failedSubmissions > maxFailedSubmissions) {
+      maxFailedSubmissions = failedSubmissions;
+      nemesisProblem = { slug, stats, failedSubmissions };
     }
   }
-  
-  if (trapProblem && maxFailedEasy > 0) {
-    const problemData = submissions.find(s => s.titleSlug === trapProblem.slug);
+
+  if (nemesisProblem) {
+    const problemData = submissions.find(s => s.titleSlug === nemesisProblem.slug);
     trophies.push({
-      id: 'easy_trap',
-      title: 'Easy Trap',
-      subtitle: `${maxFailedEasy} failed attempts on an "Easy" problem`,
-      problemTitle: problemData?.title || trapProblem.slug,
-      problemSlug: trapProblem.slug,
-      icon: '🪤',
-      stat: maxFailedEasy,
-      personalNote: `...we won't tell anybody`
+      id: 'nemesis',
+      title: 'Nemesis',
+      subtitle: `Conquered after ${nemesisProblem.failedSubmissions} failed attempts`,
+      problemTitle: problemData?.title || nemesisProblem.slug,
+      problemSlug: nemesisProblem.slug,
+      icon: '⚔️',
+      stat: nemesisProblem.failedSubmissions,
+      personalNote: `...there were tears`
     });
   }
 
-  // 5. Everest - Hard problem with most failed attempts (UPDATED CALCULATION)
-  let maxFailedHard = 0;
-  let everestProblem: any = null;
-  
-  for (const [slug, stats] of problemStats) {
-    const failed = stats.submissions - stats.accepted;
-    if (stats.difficulty === 'Hard' && failed > maxFailedHard) {
-      maxFailedHard = stats.submissions;
-      everestProblem = { slug, stats, failed };
-    }
-  }
-  
-  // if (everestProblem && maxFailedHard > 0) {
-  //   const problemData = submissions.find(s => s.titleSlug === everestProblem.slug);
-  //   trophies.push({
-  //     id: 'everest',
-  //     title: 'Everest',
-  //     subtitle: `${everestProblem.failed} failed attempts on a Hard problem`,
-  //     problemTitle: problemData?.title || everestProblem.slug,
-  //     problemSlug: everestProblem.slug,
-  //     icon: '🏔️',
-  //     stat: everestProblem.failed
-  //   });
-  // }
-
-  // 6. The Phoenix - Biggest time gap between first submission and acceptance
+  // 5. The Phoenix - Biggest time gap between first submission and acceptance
   let maxTimeGap = 0;
   let phoenixProblem: any = null;
   
@@ -206,7 +180,7 @@ if (nemesisProblem) {
         problemSlug: phoenixProblem.slug,
         icon: '🔥',
         stat: days,
-      personalNote: `...well, that took a while`
+        personalNote: `...well, that took a while`
       });
     }
   }
