@@ -13,8 +13,11 @@ export function getLegacyStats(processedData: ProcessedData): LegacyStats | null
   return { trophies, milestones, records };
 }
 
-// Remove the filterSubmissionsByTimeRange function completely
-// Remove any references to filters in the helper functions
+// Helper function for pluralization
+function pluralize(count: number, singular: string, plural?: string): string {
+  const pluralForm = plural || singular + 's';
+  return `${count} ${count === 1 ? singular : pluralForm}`;
+}
 
 
 function calculateTrophies(processedData: ProcessedData, submissions: any[]): TrophyData[] {
@@ -93,10 +96,10 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
     trophies.push({
       id: 'easy_trap',
       title: 'Easy Trap',
-      subtitle: `${maxFailedEasy} failed attempts on an "Easy" problem`,
+      subtitle: `${pluralize(maxFailedEasy, 'failed attempt')} on an "Easy" problem`,
       problemTitle: problemData?.title || trapProblem.slug,
       problemSlug: trapProblem.slug,
-      icon: '🪤',
+      icon: '�',
       stat: maxFailedEasy,
       personalNote: `...we won't tell anybody`
     });
@@ -118,7 +121,7 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
     trophies.push({
       id: 'white_whale',
       title: 'White Whale',
-      subtitle: `${maxSubmissionsUnsolved} attempts and counting`,
+      subtitle: `${pluralize(maxSubmissionsUnsolved, 'attempt')} and counting`,
       problemTitle: problemData?.title || whaleSlug,
       problemSlug: whaleSlug,
       icon: '🐋',
@@ -144,7 +147,7 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
     trophies.push({
       id: 'nemesis',
       title: 'Nemesis',
-      subtitle: `Conquered after ${nemesisProblem.failedSubmissions} failed attempts`,
+      subtitle: `Conquered after ${pluralize(nemesisProblem.failedSubmissions, 'failed attempt')}`,
       problemTitle: problemData?.title || nemesisProblem.slug,
       problemSlug: nemesisProblem.slug,
       icon: '⚔️',
@@ -175,7 +178,7 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
       trophies.push({
         id: 'phoenix',
         title: 'The Phoenix',
-        subtitle: `Rose from the ashes after ${days} days`,
+        subtitle: `Rose from the ashes after ${pluralize(days, 'day')}`,
         problemTitle: problemData?.title || phoenixProblem.slug,
         problemSlug: phoenixProblem.slug,
         icon: '🔥',
@@ -306,7 +309,7 @@ function calculateRecords(processedData: ProcessedData, submissions: any[]): Rec
   const streakData = calculateLongestStreak(submissions);
   records.push({
     name: 'Longest Submission Streak',
-    mainStat: `${streakData.length} days`,
+    mainStat: pluralize(streakData.length, 'day'),
     dateStat: `ending on ${formatDate(streakData.endDate)}`
   });
   
@@ -336,7 +339,7 @@ function calculateRecords(processedData: ProcessedData, submissions: any[]): Rec
   
   records.push({
     name: 'Busiest Day',
-    mainStat: `${maxDaySubmissions} submissions`,
+    mainStat: pluralize(maxDaySubmissions, 'submission'),
     dateStat: `on ${formatDate(new Date(busiestDay))}`
   });
   
@@ -346,17 +349,17 @@ function calculateRecords(processedData: ProcessedData, submissions: any[]): Rec
   records.push(
     { 
       name: 'Best Day', 
-      mainStat: `${bestPeriods.bestDay.count} problems solved`,
+      mainStat: `${pluralize(bestPeriods.bestDay.count, 'problem')} solved`,
       dateStat: `on ${formatDate(bestPeriods.bestDay.date)}`
     },
     { 
       name: 'Best Month', 
-      mainStat: `${bestPeriods.bestMonth.count} problems solved`,
+      mainStat: `${pluralize(bestPeriods.bestMonth.count, 'problem')} solved`,
       dateStat: `in ${formatMonthYear(bestPeriods.bestMonth.date)}`
     },
     { 
       name: 'Best Year', 
-      mainStat: `${bestPeriods.bestYear.count} problems solved`,
+      mainStat: `${pluralize(bestPeriods.bestYear.count, 'problem')} solved`,
       dateStat: `in ${bestPeriods.bestYear.date.getFullYear()}`
     }
   );
@@ -502,7 +505,7 @@ function calculateBestPeriods(sortedSubmissions: any[]) {
 // Helper function to format duration
 function formatDuration(days: number): string {
   if (days < 30) {
-    return `${days} days`;
+    return pluralize(days, 'day');
   }
   
   const years = Math.floor(days / 365);
@@ -512,15 +515,15 @@ function formatDuration(days: number): string {
   
   let result = '';
   if (years > 0) {
-    result += `${years} year${years > 1 ? 's' : ''}`;
+    result += pluralize(years, 'year');
   }
   if (months > 0) {
     if (result) result += ' ';
-    result += `${months} month${months > 1 ? 's' : ''}`;
+    result += pluralize(months, 'month');
   }
   if (remainingDays > 0 && years === 0) {
     if (result) result += ' ';
-    result += `${remainingDays} day${remainingDays > 1 ? 's' : ''}`;
+    result += pluralize(remainingDays, 'day');
   }
   
   return result;
