@@ -99,7 +99,7 @@ function calculateTrophies(processedData: ProcessedData, submissions: any[]): Tr
       subtitle: `${pluralize(maxFailedEasy, 'failed attempt')} on an "Easy" problem`,
       problemTitle: problemData?.title || trapProblem.slug,
       problemSlug: trapProblem.slug,
-      icon: '�',
+      icon: '🪤',
       stat: maxFailedEasy,
       personalNote: `...we won't tell anybody`
     });
