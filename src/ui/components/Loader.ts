@@ -10,6 +10,14 @@ export class FetchLoader {
     }
 
     /**
+     * Helper function for pluralization.
+     */
+    private pluralize(count: number, singular: string, plural?: string): string {
+        const pluralForm = plural || singular + 's';
+        return `${count} ${count === 1 ? singular : pluralForm}`;
+    }
+
+    /**
      * Creates the loader's DOM elements and applies LeetCode-like styles.
      */
     private create() {
@@ -89,7 +97,7 @@ export class FetchLoader {
         if (!this.progressTextElement || !this.progressBarFillElement) return;
 
         // Set the text based on the total number of submissions fetched
-        this.progressTextElement.textContent = `Fetched ${totalFetched} submissions...`;
+        this.progressTextElement.textContent = `Fetched ${this.pluralize(totalFetched, 'submission')}...`;
 
         // Calculate and set the progress bar width based on accepted submissions
         const progress = totalAccepted > 0 ? Math.min((acceptedFetched / totalAccepted) * 100, 99) : 0;
