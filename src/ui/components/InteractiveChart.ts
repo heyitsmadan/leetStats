@@ -29,7 +29,6 @@ export function renderOrUpdateInteractiveChart(
   }
 
   // Create the HTML structure
-  // ## CHANGE: Reordered toggles and updated default active states.
   container.innerHTML = `
     <div class="interactive-chart-container">
       <!-- Global Toggles -->
@@ -79,28 +78,13 @@ export function renderOrUpdateInteractiveChart(
     .interactive-chart-container {
       font-family: inherit;
     }
-
     .chart-tooltip {
-      position: absolute;
-      top: 0;
-      left: 0;
-      background: #282828;
-      border: 2px solid #393939;
-      border-radius: 8px;
-      padding: 12px;
-      font-size: 13px;
-      color: #f9ffff;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-      z-index: 1000;
-      width: max-content;
-      max-width: 300px;
-      /* Animation properties */
-      opacity: 0;
-      pointer-events: none; /* Important for smooth interaction */
+      position: absolute; top: 0; left: 0; background: #282828; border: 2px solid #393939;
+      border-radius: 8px; padding: 12px; font-size: 13px; color: #f9ffff;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); z-index: 1000; width: max-content;
+      max-width: 300px; opacity: 0; pointer-events: none;
       transition: opacity 0.2s ease, transform 0.15s ease-out;
     }
-
-    /* ... (the rest of your CSS styles for the tooltip and navigator are fine) ... */
     .tooltip-header { font-weight: 500; margin-bottom: 8px; color: #f9ffff; }
     .tooltip-subheader { margin-bottom: 12px; font-size: 12px; color: #bdbeb3; }
     .tooltip-subheader-value { font-weight: 500; color: #f9ffff; margin-left: 6px; }
@@ -118,9 +102,7 @@ export function renderOrUpdateInteractiveChart(
   `;
   document.head.appendChild(style);
 
-  // Initialize state
-  // ## FIX: Explicitly set default filters to match the default UI state.
-  // This ensures the chart's initial data load is synced with the active buttons.
+  // Initialize state and helpers
   let currentFilters: InteractiveChartFilters = { 
     ...initialFilters,
     primaryView: 'Problems Solved',
@@ -128,14 +110,17 @@ export function renderOrUpdateInteractiveChart(
   };
   let mainChart: Chart | null = null;
   let brushData: BrushChartData | null = null;
-  let currentChartData: InteractiveChartData | null = null; // <-- ADD THIS LINE
+  let currentChartData: InteractiveChartData | null = null;
+  
+  // --- NEW: ResizeObserver and debouncing variables ---
+  let resizeObserver: ResizeObserver | null = null;
+  let resizeTimeout: number;
 
   // Initialize charts after DOM is ready
-  setTimeout(() => {
-    initializeMainChart();
-    initializeBrushChart();
-    setupEventListeners();
-  }, 100);
+  initializeMainChart();
+  setupEventListeners();
+  // --- NEW: Set up the observer to handle brush chart rendering ---
+  setupResizeObserver();
 
   function initializeMainChart() {
     const canvas = container.querySelector('#main-chart') as HTMLCanvasElement;
@@ -150,42 +135,25 @@ export function renderOrUpdateInteractiveChart(
       type: 'bar',
       data: {
         labels: chartData.labels,
-        datasets: chartData.datasets.map(dataset => ({
-          ...dataset,
-          maxBarThickness: 20,
-        }))
+        datasets: chartData.datasets.map(dataset => ({ ...dataset, maxBarThickness: 20 }))
       },
       options: {
-        responsive: true,
-        maintainAspectRatio: false,
+        responsive: true, maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: true },
         plugins: {
           legend: { 
-              display: showLegend,
-              labels: {
-                boxWidth: 12,
-                padding: 15,
-                font: { size: 12 },
-                color: '#bdbeb3',
-              } 
+            display: showLegend,
+            labels: { boxWidth: 12, padding: 15, font: { size: 12 }, color: '#bdbeb3' } 
           },
           tooltip: { enabled: false, external: handleTooltip }
         },
         scales: {
           x: {
-            stacked: true,
-            grid: { display: false },
-            ticks: { 
-              color: '#bdbeb3',
-              maxTicksLimit: 12,
-              maxRotation: 45,
-              minRotation: 0
-            }
+            stacked: true, grid: { display: false },
+            ticks: { color: '#bdbeb3', maxTicksLimit: 12, maxRotation: 45, minRotation: 0 }
           },
           y: {
-            stacked: true,
-            beginAtZero: true,
-            grid: { display: false },
+            stacked: true, beginAtZero: true, grid: { display: false },
             ticks: { color: '#bdbeb3', precision: 0 }
           }
         },
@@ -195,6 +163,27 @@ export function renderOrUpdateInteractiveChart(
     });
   }
 
+  // --- NEW: Function to set up the ResizeObserver ---
+  function setupResizeObserver() {
+    const chartContainer = container.querySelector('.main-chart-container');
+    if (!chartContainer) return;
+
+    resizeObserver = new ResizeObserver(entries => {
+        if (entries && entries.length > 0) {
+            // Debounce the resize handler to avoid excessive re-renders
+            clearTimeout(resizeTimeout);
+            resizeTimeout = window.setTimeout(() => {
+                // Check if width is valid before initializing
+                if (entries[0].contentRect.width > 0) {
+                    initializeBrushChart();
+                }
+            }, 150); // 150ms debounce delay
+        }
+    });
+
+    resizeObserver.observe(chartContainer);
+  }
+
   function initializeBrushChart() {
     brushData = getBrushChartData(processedData);
     if (!brushData || !mainChart) return;
@@ -202,57 +191,31 @@ export function renderOrUpdateInteractiveChart(
     const svg = d3.select(container.querySelector('#brush-chart'));
     const margin = { top: 10, right: 20, bottom: 25, left: 20 };
     
-    const mainChartCanvas = container.querySelector('#main-chart') as HTMLElement;
-    const containerWidth = mainChartCanvas.offsetWidth;
+    // --- CHANGE: Get width from the container we are observing ---
+    const chartContainerEl = container.querySelector('.main-chart-container') as HTMLElement;
+    if (!chartContainerEl) return;
+    const containerWidth = chartContainerEl.offsetWidth;
 
-    if (containerWidth <= 0) {
-        console.warn('Container width not ready, retrying...');
-        setTimeout(initializeBrushChart, 100);
-        return;
-    }
+    // --- REMOVED: The polling logic is no longer needed ---
+    // if (containerWidth <= 0) { ... }
+
     const width = containerWidth - margin.left - margin.right;
     const height = 80 - margin.top - margin.bottom;
 
     svg.selectAll("*").remove();
     svg.attr("width", containerWidth).attr("height", 80);
 
-    const g = svg.append("g")
-      .attr("transform", `translate(${margin.left},${margin.top})`);
-
+    const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
     const defs = g.append("defs");
     
-    defs.append("clipPath")
-      .attr("id", "navigator-clip")
-      .append("rect")
-      .attr("width", width)
-      .attr("height", height);
-    
-    const selectedClip = defs.append("clipPath")
-      .attr("id", "selected-area-clip")
-      .append("rect")
-      .attr("x", 0).attr("y", 0)
-      .attr("width", width).attr("height", height);
+    defs.append("clipPath").attr("id", "navigator-clip").append("rect").attr("width", width).attr("height", height);
+    const selectedClip = defs.append("clipPath").attr("id", "selected-area-clip").append("rect").attr("x", 0).attr("y", 0).attr("width", width).attr("height", height);
+    const dimmedClip = defs.append("clipPath").attr("id", "dimmed-area-clip");
+    dimmedClip.append("rect").attr("class", "dim-left-rect").attr("x", 0).attr("y", 0).attr("width", 0).attr("height", height);
+    dimmedClip.append("rect").attr("class", "dim-right-rect").attr("x", width).attr("y", 0).attr("width", 0).attr("height", height);
 
-    const dimmedClip = defs.append("clipPath")
-      .attr("id", "dimmed-area-clip");
-    
-    dimmedClip.append("rect")
-      .attr("class", "dim-left-rect")
-      .attr("x", 0).attr("y", 0)
-      .attr("width", 0).attr("height", height);
-    
-    dimmedClip.append("rect")
-      .attr("class", "dim-right-rect")
-      .attr("x", width).attr("y", 0)
-      .attr("width", 0).attr("height", height);
-
-    const xScale = d3.scaleTime()
-      .domain(d3.extent(brushData.labels, d => new Date(d)) as [Date, Date])
-      .range([0, width]);
-
-    const yScale = d3.scaleLinear()
-      .domain([0, d3.max(brushData.data) as number])
-      .range([height, 0]);
+    const xScale = d3.scaleTime().domain(d3.extent(brushData.labels, d => new Date(d)) as [Date, Date]).range([0, width]);
+    const yScale = d3.scaleLinear().domain([0, d3.max(brushData.data) as number]).range([height, 0]);
 
     const area = d3.area<any>()
       .x((d, i) => xScale(new Date(brushData!.labels[i])))
@@ -260,39 +223,17 @@ export function renderOrUpdateInteractiveChart(
       .y1((d, i) => yScale(brushData!.data[i]))
       .curve(d3.curveBasis);
 
-    const chartArea = g.append("g")
-      .attr("clip-path", "url(#navigator-clip)");
+    const chartArea = g.append("g").attr("clip-path", "url(#navigator-clip)");
 
-    chartArea.append("path")
-      .datum(brushData.data)
-      .attr("class", "navigator-area-selected")
-      .attr("d", area)
-      .attr("clip-path", "url(#selected-area-clip)")
-      .style("fill", "#5db666").style("fill-opacity", 0.25)
-      .style("stroke", "#5db666").style("stroke-width", 1.5).style("stroke-opacity", 0.8);
+    chartArea.append("path").datum(brushData.data).attr("class", "navigator-area-selected").attr("d", area).attr("clip-path", "url(#selected-area-clip)").style("fill", "#5db666").style("fill-opacity", 0.25).style("stroke", "#5db666").style("stroke-width", 1.5).style("stroke-opacity", 0.8);
+    chartArea.append("path").datum(brushData.data).attr("class", "navigator-area-dimmed").attr("d", area).attr("clip-path", "url(#dimmed-area-clip)").style("fill", "#5db666").style("fill-opacity", 0.1).style("stroke", "#5db666").style("stroke-width", 1.5).style("stroke-opacity", 0.3);
 
-    chartArea.append("path")
-      .datum(brushData.data)
-      .attr("class", "navigator-area-dimmed")
-      .attr("d", area)
-      .attr("clip-path", "url(#dimmed-area-clip)")
-      .style("fill", "#5db666").style("fill-opacity", 0.1)
-      .style("stroke", "#5db666").style("stroke-width", 1.5).style("stroke-opacity", 0.3);
-
-    const brush = d3.brushX()
-      .extent([[0, 0], [width, height]])
-      .handleSize(8)
-      .on("brush end", handleBrush);
-
+    const brush = d3.brushX().extent([[0, 0], [width, height]]).handleSize(8).on("brush end", handleBrush);
     const brushG = g.append("g").attr("class", "brush");
     brush(brushG);
 
-    // ## CHANGE: Set initial brush to last 12 months (or since first submission)
-    // This logic replaces the previous `setTimeout` that selected the full range.
     setTimeout(() => {
         const [minDate, maxDate] = xScale.domain();
-
-        // Guard against empty data
         if (!minDate || !maxDate) {
             brushG.call(brush.move, [0, width]);
             selectedClip.attr("x", 0).attr("width", width);
@@ -300,36 +241,16 @@ export function renderOrUpdateInteractiveChart(
             dimmedClip.select(".dim-right-rect").attr("width", 0);
             return;
         }
-
-        // Calculate the start date for the initial selection
         const twelveMonthsAgo = new Date(maxDate);
         twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-        
-        // The start date is the later of "12 months ago" or the "first submission date"
         const initialStartDate = new Date(Math.max(twelveMonthsAgo.getTime(), minDate.getTime()));
         const initialEndDate = maxDate;
-
-        // Convert dates to pixel values for the brush
         const initialX0 = xScale(initialStartDate);
         const initialX1 = xScale(initialEndDate);
-
-        // Programmatically move the brush to the initial selection
         brushG.call(brush.move, [initialX0, initialX1]);
-
-        // Manually update clips because the brush handler will ignore this programmatic move
-        selectedClip
-          .attr("x", initialX0)
-          .attr("width", initialX1 - initialX0);
-        
-        dimmedClip.select(".dim-left-rect")
-          .attr("x", 0)
-          .attr("width", initialX0);
-            
-        dimmedClip.select(".dim-right-rect")
-          .attr("x", initialX1)
-          .attr("width", width - initialX1);
-
-        // Manually update the main chart for the initial view to match the brush
+        selectedClip.attr("x", initialX0).attr("width", initialX1 - initialX0);
+        dimmedClip.select(".dim-left-rect").attr("x", 0).attr("width", initialX0);
+        dimmedClip.select(".dim-right-rect").attr("x", initialX1).attr("width", width - initialX1);
         currentFilters.brushWindow = [initialStartDate, initialEndDate];
         updateMainChart();
     }, 0);
@@ -339,39 +260,23 @@ export function renderOrUpdateInteractiveChart(
       .tickFormat((domainValue, index) => {
         const date = domainValue as Date;
         const daysDiff = (xScale.domain()[1].getTime() - xScale.domain()[0].getTime()) / (1000 * 60 * 60 * 24);
-        
         if (daysDiff <= 90) return d3.timeFormat("%d-%m")(date);
         else if (daysDiff <= 1095) return d3.timeFormat("%b %y")(date);
         else return d3.timeFormat("%Y")(date);
       });
 
-    g.append("g")
-      .attr("class", "axis")
-      .attr("transform", `translate(0,${height})`)
-      .call(xAxis);
+    g.append("g").attr("class", "axis").attr("transform", `translate(0,${height})`).call(xAxis);
 
     function handleBrush(event: any) {
-      if (!event.sourceEvent) return; // Important: Prevents infinite loops on programmatic brushing
+      if (!event.sourceEvent) return;
       const selection = event.selection;
       if (!selection || !brushData) return;
-
       const [x0, x1] = selection;
-      
-      selectedClip
-        .attr("x", x0)
-        .attr("width", x1 - x0);
-      
-      dimmedClip.select(".dim-left-rect")
-        .attr("x", 0)
-        .attr("width", x0);
-          
-      dimmedClip.select(".dim-right-rect")
-        .attr("x", x1)
-        .attr("width", width - x1);
-
+      selectedClip.attr("x", x0).attr("width", x1 - x0);
+      dimmedClip.select(".dim-left-rect").attr("x", 0).attr("width", x0);
+      dimmedClip.select(".dim-right-rect").attr("x", x1).attr("width", width - x1);
       const startDate = xScale.invert(x0);
       const endDate = xScale.invert(x1);
-
       currentFilters.brushWindow = [startDate, endDate];
       updateMainChart();
     }
@@ -379,7 +284,7 @@ export function renderOrUpdateInteractiveChart(
 
   function updateMainChart() {
     if (!mainChart) return;
-    currentChartData = getInteractiveChartStats(processedData, currentFilters); // <-- Store chart data
+    currentChartData = getInteractiveChartStats(processedData, currentFilters);
     if (!currentChartData) {
         mainChart.data.labels = [];
         mainChart.data.datasets = [];
@@ -421,7 +326,6 @@ export function renderOrUpdateInteractiveChart(
     });
   }
 
-  // Replace the entire handleTooltip function with this new version
   function handleTooltip(context: any) {
     const tooltipEl = container.querySelector('#chart-tooltip') as HTMLElement;
     if (!tooltipEl) return;
@@ -439,35 +343,20 @@ export function renderOrUpdateInteractiveChart(
     if (dataIndex === undefined || !label || !currentChartData) return;
 
     const tooltipData = getTooltipData(processedData, label, currentFilters, currentChartData.aggregationLevel);
-    
     if (!tooltipData) return;
-
-    // --- NEW: Date Formatting Logic ---
-    let tooltipHeaderDate = tooltipData.date; // Default to the original label
-
+    
+    let tooltipHeaderDate = tooltipData.date;
     if (currentChartData.aggregationLevel === 'Daily') {
         const [day, month, year] = tooltipData.date.split('-').map(Number);
-        
         const getOrdinalSuffix = (d: number) => {
             if (d > 3 && d < 21) return 'th';
-            switch (d % 10) {
-                case 1:  return "st";
-                case 2:  return "nd";
-                case 3:  return "rd";
-                default: return "th";
-            }
+            switch (d % 10) { case 1: return "st"; case 2: return "nd"; case 3: return "rd"; default: return "th"; }
         };
-
-        const monthNames = ["January", "February", "March", "April", "May", "June",
-                            "July", "August", "September", "October", "November", "December"];
-        
+        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
         tooltipHeaderDate = `${day}${getOrdinalSuffix(day)} ${monthNames[month - 1]} ${year}`;
     }
 
-    // --- HTML Building (uses the new formatted date) ---
     let innerHtml = `<div class="tooltip-header">${tooltipHeaderDate}</div>`;
-    // ... rest of the function is unchanged (it will now use the formatted date)
-
     if (currentFilters.primaryView === 'Problems Solved') {
       innerHtml += `<div class="tooltip-subheader">Problems Solved: <span class="tooltip-subheader-value">${tooltipData.problemsSolved}</span></div>`;
     } else {
@@ -495,33 +384,22 @@ export function renderOrUpdateInteractiveChart(
     }
     tooltipEl.innerHTML = innerHtml;
     
-    // --- Positioning ---
     const position = context.chart.canvas.getBoundingClientRect();
     const tooltipWidth = tooltipEl.offsetWidth;
     const chartWidth = position.width;
-
-    // Get the actual bar element from the tooltip context
     const activeElement = context.tooltip.dataPoints[0]?.element;
 
     if (!activeElement) {
-        // Hide tooltip if no bar is active
         tooltipEl.style.opacity = '0';
         return;
     }
 
     const barHalfWidth = activeElement.width / 2;
-    // The bar's right edge, relative to the chart canvas
     const barRightEdgeX = activeElement.x + barHalfWidth;
-    // The bar's left edge, relative to the chart canvas
     const barLeftEdgeX = activeElement.x - barHalfWidth;
-    const desiredOffset = 10; // The 10px offset you want
-
-    // Default position: place tooltip 10px to the right of the bar
+    const desiredOffset = 10;
     let newLeft = barRightEdgeX + desiredOffset;
-
-    // Check if the default position would go off-screen
     if (newLeft + tooltipWidth > chartWidth) {
-        // Flipped position: place tooltip 10px to the left of the bar
         newLeft = barLeftEdgeX - tooltipWidth - desiredOffset;
     }
 
@@ -533,7 +411,7 @@ export function renderOrUpdateInteractiveChart(
   return {
     updateData: (newData: ProcessedData) => {
       Object.assign(processedData, newData);
-      initializeBrushChart();
+      // The observer will handle re-initializing the brush chart
       updateMainChart();
     },
     updateFilters: (newFilters: Partial<InteractiveChartFilters>) => {
@@ -541,6 +419,11 @@ export function renderOrUpdateInteractiveChart(
       updateMainChart();
     },
     destroy: () => {
+      // --- CHANGE: Disconnect the observer on cleanup ---
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+      clearTimeout(resizeTimeout); // Clear any pending timeout
       if (mainChart) {
         mainChart.destroy();
         mainChart = null;
