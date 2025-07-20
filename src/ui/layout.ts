@@ -251,38 +251,41 @@ function renderLegacySection(processedData: ProcessedData) {
           <div class="absolute left-3 top-0 bottom-0 w-0.5 bg-fill-3 dark:bg-dark-fill-3"></div>
           <div class="space-y-4">
             
-${legacyStats.milestones.map((milestone: any) => {
-  const milestoneColor = getMilestoneColor(milestone.type);
-  return `
-    <div class="relative flex items-center">
-      <!-- Timeline dot with dynamic color -->
-      <div class="absolute left-3 w-6 h-6 transform -translate-x-1/2 rounded-full border-4 border-layer-1 dark:border-dark-layer-1 flex items-center justify-center">
-  <div class="w-2 h-2 rounded-full" style="background-color: ${milestoneColor}"></div>
-</div>
+${legacyStats.milestones.map((milestone: any, index: number) => {
+    const milestoneColor = getMilestoneColor(milestone.type);
+    
+    // Each item is a simple relative container.
+    // The spacing is now determined by the natural height of the content.
+    return `
+      <div class="relative">
 
-      <!-- Content -->
-      <div class="ml-10">
-        <div class="${styles.milestoneEvent}" style="color: #f9ffff">
-          ${milestone.milestone}${getOrdinalSuffix(milestone.milestone)} ${formatMilestoneType(milestone.type)}
+        <!-- Timeline Dot: Made smaller with w-2.5 and h-2.5. -->
+        <div class="absolute left-3 top-2 w-2.5 h-2.5 transform -translate-x-1/2 rounded-full" style="background-color: ${milestoneColor}"></div>
+        
+        <!-- Content -->
+        <!-- "ml-10" (margin-left) gives the content space so it doesn't overlap the timeline line and dot. -->
+        <div class="ml-10">
+          <div class="${styles.milestoneEvent}" style="color: ${milestoneColor}">
+            ${milestone.milestone}${getOrdinalSuffix(milestone.milestone)} ${formatMilestoneType(milestone.type)}
+          </div>
+          <div class="${styles.milestoneDate}">
+            ${milestone.date.toLocaleDateString('en-GB')}
+          </div>
+          ${milestone.type === 'submissions' ? `
+            <a href="https://leetcode.com/submissions/detail/${milestone.submissionId || milestone.id}/" 
+               class="inline-flex items-center gap-1 ${styles.milestoneProblem}" target="_blank" rel="noopener noreferrer">
+              Submission #${milestone.submissionId || milestone.id}
+            </a>
+          ` : milestone.problemTitle ? `
+            <a href="https://leetcode.com/problems/${milestone.problemSlug}/" 
+               class="inline-flex items-center gap-1 ${styles.milestoneProblem}" target="_blank" rel="noopener noreferrer">
+              ${milestone.problemTitle}
+            </a>
+          ` : ''}
         </div>
-        <div class="${styles.milestoneDate}">
-          ${milestone.date.toLocaleDateString('en-GB')}
-        </div>
-        ${milestone.type === 'submissions' ? `
-          <a href="https://leetcode.com/submissions/detail/${milestone.submissionId || milestone.id}/" 
-   class="inline-flex items-center gap-1 ${styles.milestoneProblem}" target="_blank" rel="noopener noreferrer">
-  Submission #${milestone.submissionId || milestone.id}
-</a>
-        ` : milestone.problemTitle ? `
-          <a href="https://leetcode.com/problems/${milestone.problemSlug}/" 
-   class="inline-flex items-center gap-1 ${styles.milestoneProblem} target="_blank" rel="noopener noreferrer">
-  ${milestone.problemTitle}
-</a>
-        ` : ''}
       </div>
-    </div>
-  `;
-}).join('')}
+    `;
+  }).join('')}
           </div>
         </div>
 </div>
@@ -1069,7 +1072,7 @@ function getMilestoneColor(type: string): string {
     'medium': '#f4ba40', 
     'hard': '#e24a41',
     'problems_solved': '#5db666',
-    'submissions': '#f9ffff'
+    'submissions': '#D5AAFF'
   };
   return colorMap[type] || '#f9ffff'; // Default to problem color
 }
