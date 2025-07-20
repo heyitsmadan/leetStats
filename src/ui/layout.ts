@@ -190,8 +190,8 @@ export function renderPageLayout(processedData: ProcessedData) {
  * A master function to render or update all charts at once.
  */
 function renderAllCharts(processedData: ProcessedData) {
-  setInitialCumulativeView(processedData);
-   renderInteractiveChart(processedData); // Add this line BEFORE 
+    currentFilters.cumulativeView = getSmartCumulativeView(currentFilters.timeRange, processedData);
+    renderInteractiveChart(processedData); // Add this line BEFORE 
     renderLegacySection(processedData); // Add this line
     renderCodingClock(processedData);
     renderCumulativeChart(processedData);
@@ -486,36 +486,9 @@ function setupFilterListeners(processedData: ProcessedData) {
             
             // *** CHANGE: Replace previous logic with this new block ***
             // --- Point 5: Set Default Cumulative View based on Time Range ---
-            let defaultView: CumulativeView;
-            if (value === 'Last 30 Days' || value === 'Last 90 Days') {
-                defaultView = 'Daily';
-            } else if (value === 'Last 365 Days') {
-                defaultView = 'Monthly';
-            } else { // 'All Time'
-                if (processedData.submissions.length > 0) {
-                    const firstSub = processedData.submissions.reduce((earliest, current) => 
-                        current.date < earliest.date ? current : earliest
-                    );
-                    const lastSub = processedData.submissions.reduce((latest, current) => 
-                        current.date > latest.date ? current : latest
-                    );
-                    const dayDifference = (lastSub.date.getTime() - firstSub.date.getTime()) / (1000 * 3600 * 24);
-
-                    if (dayDifference > 365 * 2) { // Over 2 years
-                        defaultView = 'Yearly';
-                    } else if (dayDifference > 90) { // Over 3 months
-                        defaultView = 'Monthly';
-                    } else {
-                        defaultView = 'Daily';
-                    }
-                } else {
-                    defaultView = 'Monthly'; // Default if no submissions
-                }
-            }
-            
-            // Set the new default view and update the UI
-            currentFilters.cumulativeView = defaultView;
-            updateCumulativeViewToggle(defaultView);
+            const smartView = getSmartCumulativeView(value, processedData);
+            currentFilters.cumulativeView = smartView;
+            updateCumulativeViewToggle(smartView);
 
             // Update the dropdown button text
             const btnText = timeRangeBtn.querySelector('span');
@@ -1118,33 +1091,35 @@ function updateCumulativeViewToggle(activeView: CumulativeView) {
 // In layout.ts, add this new function somewhere before setupFilterListeners
 
 /**
- * Calculates the best initial cumulative view based on the total time span of submissions.
- * This should be called once on initial load.
+ * Calculates the best cumulative view (Daily, Monthly, Yearly) based on the selected time range and data span.
  */
-function setInitialCumulativeView(processedData: ProcessedData) {
-    // Default to 'Daily' if there are no submissions
-    let initialView: CumulativeView = 'Daily';
+function getSmartCumulativeView(timeRange: TimeRange, processedData: ProcessedData): CumulativeView {
+    if (timeRange === 'Last 30 Days' || timeRange === 'Last 90 Days') {
+        return 'Daily';
+    }
+    if (timeRange === 'Last 365 Days') {
+        return 'Monthly';
+    }
 
+    // This handles the 'All Time' case, which is the default on load.
+    // We determine the view based on the total span of submissions.
     if (processedData.submissions.length > 1) {
-        // Sort to be safe, though data should already be sorted
-        const sortedSubs = processedData.submissions.sort((a, b) => a.date.getTime() - b.date.getTime());
-        const firstSubDate = sortedSubs[0].date;
-        const lastSubDate = sortedSubs[sortedSubs.length - 1].date;
-        
-        // Calculate the difference in days
-        const dayDifference = (lastSubDate.getTime() - firstSubDate.getTime()) / (1000 * 3600 * 24);
+        const firstSub = processedData.submissions.reduce((earliest, current) =>
+            current.date < earliest.date ? current : earliest
+        );
+        const lastSub = processedData.submissions.reduce((latest, current) =>
+            current.date > latest.date ? current : latest
+        );
+        const dayDifference = (lastSub.date.getTime() - firstSub.date.getTime()) / (1000 * 3600 * 24);
 
-        if (dayDifference > 365 * 5) { // More than 2 years of history
-            initialView = 'Yearly';
-        } else if (dayDifference > 90) { // More than 3 months of history
-            initialView = 'Monthly';
-        } else { // Less than 3 months
-            initialView = 'Daily';
+        if (dayDifference > 365 * 4) { // Over 2 years of history
+            return 'Yearly';
+        }
+        if (dayDifference > 90) { // Over 3 months of history
+            return 'Monthly';
         }
     }
-    
-    // Set the calculated view as the current filter
-    currentFilters.cumulativeView = initialView;
-    // Update the toggle buttons to reflect this initial state
-    updateCumulativeViewToggle(initialView);
+
+    // Default to 'Daily' for short histories or if there's no data.
+    return 'Daily';
 }
