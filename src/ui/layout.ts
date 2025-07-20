@@ -260,11 +260,8 @@ ${legacyStats.milestones.map((milestone: any, index: number) => {
     return `
       <div class="relative">
 
-        <!-- Timeline Dot: Made smaller with w-2.5 and h-2.5. -->
-        <div class="absolute left-3 top-2 w-2.5 h-2.5 transform -translate-x-1/2 rounded-full" style="background-color: ${milestoneColor}"></div>
+        <div class="absolute left-2 top-2 w-2.5 h-2.5 rounded-full" style="background-color: ${milestoneColor}"></div>
         
-        <!-- Content -->
-        <!-- "ml-10" (margin-left) gives the content space so it doesn't overlap the timeline line and dot. -->
         <div class="ml-10">
           <div class="${styles.milestoneEvent}" style="color: ${milestoneColor}">
             ${milestone.milestone}${getOrdinalSuffix(milestone.milestone)} ${formatMilestoneType(milestone.type)}
