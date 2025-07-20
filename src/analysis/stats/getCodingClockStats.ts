@@ -1,5 +1,5 @@
 import type { ProcessedData, Difficulty, TimeRange, ClockView } from '../../types';
-
+import { colors } from '../../ui/theme/colors';
 // Constants for time calculations
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 const STATUS_ACCEPTED = 10;
@@ -76,12 +76,12 @@ export function getCodingClockStats(
       {
         label: 'Accepted',
         data: buckets.map(b => b.accepted),
-        backgroundColor: '#5db666',
+        backgroundColor: colors.status.accepted,
       },
       {
         label: 'Failed',
         data: buckets.map(b => b.failed),
-        backgroundColor: '#393939',
+        backgroundColor: colors.background.empty,
       }
     ],
     tooltipsData: buckets.map((b, index) => ({

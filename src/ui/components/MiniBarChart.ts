@@ -1,4 +1,5 @@
 import { Chart, ChartConfiguration, registerables } from 'chart.js';
+import { colors } from '../theme/colors';
 
 Chart.register(...registerables);
 
@@ -23,14 +24,14 @@ export function renderOrUpdateMiniBarChart(
       datasets: [{
         data: [data.easy, data.medium, data.hard],
         backgroundColor: [
-          'rgb(88, 184, 185)',  // Green for Easy
-          'rgb(251, 191, 36)', // Yellow for Medium
-          'rgb(239, 68, 68)'   // Red for Hard
+          colors.problems.easy,
+          colors.problems.medium,
+          colors.problems.hard
         ],
         borderColor: [
-          'rgb(88, 184, 185)',
-          'rgb(251, 191, 36)',
-          'rgb(239, 68, 68)'
+          colors.problems.easy,
+          colors.problems.medium,
+          colors.problems.hard
         ],
         borderWidth: 1
       }]

@@ -1,5 +1,6 @@
 import Chart from 'chart.js/auto';
 import type { ChartData, ChartOptions, TooltipModel } from 'chart.js';
+import { colors } from '../theme/colors'; // Import the centralized colors
 
 export type DoughnutChartInstance = Chart;
 
@@ -16,19 +17,19 @@ function getOrCreateTooltip(chart: Chart): HTMLElement {
             parent.appendChild(tooltipEl);
         }
 
-        // Inject styles
+        // Inject styles using colors from the theme file
         const style = document.createElement('style');
         style.textContent = `
             .chart-tooltip {
                 position: absolute;
                 top: 0;
                 left: 0;
-                background: #282828;
-                border: 2px solid #393939;
+                background: ${colors.background.section};
+                border: 2px solid ${colors.background.empty};
                 border-radius: 8px;
                 padding: 12px;
                 font-size: 13px;
-                color: #f9ffff;
+                color: ${colors.text.primary};
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
                 z-index: 1000;
                 width: max-content;
@@ -37,14 +38,14 @@ function getOrCreateTooltip(chart: Chart): HTMLElement {
                 pointer-events: none;
                 transition: opacity 0.2s ease, transform 0.15s ease-out;
             }
-            .tooltip-header { font-weight: 500; margin-bottom: 8px; color: #f9ffff; display: flex; align-items: center; gap: 8px; }
-            .tooltip-subheader { margin-bottom: 12px; font-size: 12px; color: #bdbeb3; }
-            .tooltip-subheader-value { font-weight: 500; color: #f9ffff; margin-left: 6px; }
-            .tooltip-divider { border-top: 1px solid #353535; margin: 10px 0; }
+            .tooltip-header { font-weight: 500; margin-bottom: 8px; color: ${colors.text.primary}; display: flex; align-items: center; gap: 8px; }
+            .tooltip-subheader { margin-bottom: 12px; font-size: 12px; color: ${colors.text.subtle}; }
+            .tooltip-subheader-value { font-weight: 500; color: ${colors.text.primary}; margin-left: 6px; }
+            .tooltip-divider { border-top: 1px solid ${colors.background.secondarySection}; margin: 10px 0; }
             .tooltip-breakdown-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
             .tooltip-breakdown-item { display: flex; align-items: center; justify-content: space-between; font-size: 12px; gap: 16px}
-            .tooltip-breakdown-label { display: flex; align-items: center; gap: 8px; color: #bdbeb3; }
-            .tooltip-breakdown-value { font-weight: 500; color: #f9ffff; }
+            .tooltip-breakdown-label { display: flex; align-items: center; gap: 8px; color: ${colors.text.subtle}; }
+            .tooltip-breakdown-value { font-weight: 500; color: ${colors.text.primary}; }
             .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
         `;
         document.head.appendChild(style);
@@ -72,10 +73,10 @@ export function renderOrUpdateDoughnutChart(
         datasets: [{
             data: reversedData,
             backgroundColor: reversedColors,
-            borderColor: '#373737',
+            borderColor: '#373737', // This color is not in colors.ts
             borderWidth: 2,
             hoverBackgroundColor: reversedColors,
-            hoverBorderColor: '#373737',
+            hoverBorderColor: '#373737', // This color is not in colors.ts
             hoverBorderWidth: 2,
         }],
     };
@@ -95,9 +96,8 @@ export function renderOrUpdateDoughnutChart(
 
         const tooltipData = reversedTooltipsData[dataIndex];
         const label = reversedLabels[dataIndex];
-        const color = reversedColors[dataIndex]; // Get color for the dot
+        const color = reversedColors[dataIndex];
 
-        // FIX: Add colored status dot to the header
         let innerHtml = `<div class="tooltip-header"><span class="status-dot" style="background-color: ${color};"></span><span>${label}</span></div>`;
         innerHtml += `<div class="tooltip-subheader">Count: <span class="tooltip-subheader-value">${tooltipData.count} (${tooltipData.percent})</span></div>`;
 
@@ -105,25 +105,25 @@ export function renderOrUpdateDoughnutChart(
             innerHtml += `<div class="tooltip-divider"></div>`;
             innerHtml += `<ul class="tooltip-breakdown-list">`;
             const breakdown = tooltipData.breakdown;
-            const difficultyColors: { [key: string]: string } = { 'Easy': '#58b8b9', 'Medium': '#f4ba40', 'Hard': '#e24a41' };
             
-            innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${difficultyColors['Easy']};"></span> Easy</span><span class="tooltip-breakdown-value">${breakdown.E || 0}</span></li>`;
-            innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${difficultyColors['Medium']};"></span> Medium</span><span class="tooltip-breakdown-value">${breakdown.M || 0}</span></li>`;
-            innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${difficultyColors['Hard']};"></span> Hard</span><span class="tooltip-breakdown-value">${breakdown.H || 0}</span></li>`;
+            // Using colors from the theme file for the breakdown
+            innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.easy};"></span> Easy</span><span class="tooltip-breakdown-value">${breakdown.E || 0}</span></li>`;
+            innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.medium};"></span> Medium</span><span class="tooltip-breakdown-value">${breakdown.M || 0}</span></li>`;
+            innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.hard};"></span> Hard</span><span class="tooltip-breakdown-value">${breakdown.H || 0}</span></li>`;
             innerHtml += `</ul>`;
         }
 
         tooltipEl.innerHTML = innerHtml;
 
-        const container = context.chart.canvas.parentNode as HTMLElement;
+        const chartContainer = context.chart.canvas.parentNode as HTMLElement;
         let newLeft = tooltipModel.caretX + 10;
         let newTop = tooltipModel.caretY;
 
-        if (newLeft + tooltipEl.offsetWidth > container.offsetWidth) {
+        if (newLeft + tooltipEl.offsetWidth > chartContainer.offsetWidth) {
             newLeft = tooltipModel.caretX - tooltipEl.offsetWidth - 10;
         }
-        if (newTop + tooltipEl.offsetHeight > container.offsetHeight) {
-            newTop = container.offsetHeight - tooltipEl.offsetHeight;
+        if (newTop + tooltipEl.offsetHeight > chartContainer.offsetHeight) {
+            newTop = chartContainer.offsetHeight - tooltipEl.offsetHeight;
         }
         if (newLeft < 0) newLeft = 0;
         if (newTop < 0) newTop = 0;
@@ -143,15 +143,15 @@ export function renderOrUpdateDoughnutChart(
         elements: {
             arc: {
                 borderWidth: 2,
-                hoverBorderWidth: 4, // Make hover more prominent
-                hoverBorderColor: '#555',
+                hoverBorderWidth: 4,
+                hoverBorderColor: '#555', // This color is not in colors.ts
             }
         },
         plugins: {
             legend: {
                 position: 'right',
                 labels: {
-                    color: 'rgba(255, 255, 255, 0.9)',
+                    color: 'rgba(255, 255, 255, 0.9)', // This color is not in colors.ts
                     boxWidth: 15,
                     padding: 15,
                 }

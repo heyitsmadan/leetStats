@@ -1,3 +1,5 @@
+import { colors } from '../../ui/theme/colors';
+
 // Updated createChartData function
 function createChartData(
   timeGroups: { [key: string]: any[] },
@@ -72,8 +74,8 @@ function createChartData(
       datasets.push({
         label: difficulty,
         data,
-        backgroundColor: DIFFICULTY_COLORS[difficulty as keyof typeof DIFFICULTY_COLORS],
-        borderColor: DIFFICULTY_COLORS[difficulty as keyof typeof DIFFICULTY_COLORS],
+        backgroundColor: colors.problems[difficulty.toLowerCase() as keyof typeof colors.problems],
+        borderColor: colors.problems[difficulty.toLowerCase() as keyof typeof colors.problems],
         stack: 'main',
         maxBarThickness: 30,
       });
@@ -116,16 +118,16 @@ function createChartData(
       {
         label: 'Accepted',
         data: acceptedData,
-        backgroundColor: STATUS_COLORS.Accepted,
-        borderColor: STATUS_COLORS.Accepted,
+        backgroundColor: colors.status.accepted,
+        borderColor: colors.status.accepted,
         stack: 'main',
         maxBarThickness: 30,
       },
       {
         label: 'Failed',
         data: failedData,
-        backgroundColor: filters.primaryView === 'Problems Solved' ? '#d1e7dd' : STATUS_COLORS.Failed,
-        borderColor: filters.primaryView === 'Problems Solved' ? '#d1e7dd' : STATUS_COLORS.Failed,
+        backgroundColor: filters.primaryView === 'Problems Solved' ? colors.status.accepted : colors.background.empty,
+        borderColor: filters.primaryView === 'Problems Solved' ? colors.status.accepted : colors.background.empty,
         stack: 'main',
         maxBarThickness: 30,
       }
@@ -310,8 +312,6 @@ function fillMissingIntervals(
 
 // === MAIN EXPORTED FUNCTIONS ===
 
-const DIFFICULTY_COLORS = { 'Easy': '#58b8b9', 'Medium': '#f4ba40', 'Hard': '#e24a41' };
-const STATUS_COLORS = { 'Accepted': '#5db666', 'Failed': '#393939' };
 const LANGUAGE_COLORS = [
   '#C5A3DC', // soft lavender
   '#A7C7E7', // baby blue

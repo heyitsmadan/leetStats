@@ -1,8 +1,10 @@
 import Chart from 'chart.js/auto';
 import type { ChartData, ChartOptions, TooltipModel, BarElement } from 'chart.js';
+import { colors } from '../theme/colors'; // Import the centralized colors
 
 export type CodingClockChartInstance = Chart;
 
+// This color is not in the theme file, so it remains unchanged.
 const GLOW_COLOR = 'rgba(255, 255, 0, 0.7)';
 const GLOW_BLUR = 15;
 
@@ -18,18 +20,19 @@ function getOrCreateTooltip(chart: Chart): HTMLElement {
             parent.appendChild(tooltipEl);
         }
 
+        // Inject styles using colors from the theme file
         const style = document.createElement('style');
         style.textContent = `
             .chart-tooltip {
                 position: absolute;
                 top: 0;
                 left: 0;
-                background: #282828;
-                border: 2px solid #393939;
+                background: ${colors.background.section};
+                border: 2px solid ${colors.background.empty};
                 border-radius: 8px;
                 padding: 12px;
                 font-size: 13px;
-                color: #f9ffff;
+                color: ${colors.text.primary};
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
                 z-index: 1000;
                 width: max-content;
@@ -38,11 +41,11 @@ function getOrCreateTooltip(chart: Chart): HTMLElement {
                 pointer-events: none;
                 transition: opacity 0.2s ease, transform 0.15s ease-out;
             }
-            .tooltip-header { font-weight: 500; margin-bottom: 8px; color: #f9ffff; }
+            .tooltip-header { font-weight: 500; margin-bottom: 8px; color: ${colors.text.primary}; }
             .tooltip-breakdown-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
             .tooltip-breakdown-item { display: flex; align-items: center; justify-content: space-between; font-size: 12px; gap: 16px}
-            .tooltip-breakdown-label { color: #bdbeb3; }
-            .tooltip-breakdown-value { font-weight: 500; color: #f9ffff; }
+            .tooltip-breakdown-label { color: ${colors.text.subtle}; }
+            .tooltip-breakdown-value { font-weight: 500; color: ${colors.text.primary}; }
         `;
         document.head.appendChild(style);
     }
@@ -89,20 +92,20 @@ export function renderOrUpdateStackedBarChart(
         const activeElement = context.tooltip.dataPoints[0]?.element as BarElement & { width: number, x: number };
         if (!activeElement) return;
 
-        const container = context.chart.canvas.parentNode as HTMLElement;
+        const chartContainer = context.chart.canvas.parentNode as HTMLElement;
         const barRightEdgeX = activeElement.x + (activeElement.width / 2);
         const barLeftEdgeX = activeElement.x - (activeElement.width / 2);
         const desiredOffset = 10;
         
         let newLeft = barRightEdgeX + desiredOffset;
-        if (newLeft + tooltipEl.offsetWidth > container.offsetWidth) {
+        if (newLeft + tooltipEl.offsetWidth > chartContainer.offsetWidth) {
             newLeft = barLeftEdgeX - tooltipEl.offsetWidth - desiredOffset;
         }
 
         let newTop = tooltipModel.caretY - tooltipEl.offsetHeight / 2;
         if (newTop < 0) newTop = 0;
-        if (newTop + tooltipEl.offsetHeight > container.offsetHeight) {
-            newTop = container.offsetHeight - tooltipEl.offsetHeight;
+        if (newTop + tooltipEl.offsetHeight > chartContainer.offsetHeight) {
+            newTop = chartContainer.offsetHeight - tooltipEl.offsetHeight;
         }
 
         tooltipEl.style.opacity = '1';
@@ -113,7 +116,6 @@ export function renderOrUpdateStackedBarChart(
     const options: ChartOptions<'bar'> = {
         responsive: true,
         maintainAspectRatio: false,
-        // FIX: Make tooltip easier to trigger on small bars
         interaction: {
             mode: 'index',
             intersect: false,
@@ -128,12 +130,12 @@ export function renderOrUpdateStackedBarChart(
         scales: {
             x: {
                 stacked: true,
-                ticks: { color: '#bdbeb3' },
+                ticks: { color: colors.text.subtle },
                 grid: { display: false }
             },
             y: {
                 stacked: true,
-                ticks: { color: '#bdbeb3' },
+                ticks: { color: colors.text.subtle },
                 grid: { display: false }
             },
         },

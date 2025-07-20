@@ -1,3 +1,4 @@
+import { colors } from '../ui/theme/colors';
 import type { ProcessedData, Difficulty, TimeRange, ClockView, CumulativeView } from '../types';
 import { getCodingClockStats } from '../analysis/stats/getCodingClockStats';
 import { getCumulativeStats } from '../analysis/stats/getCumulativeStats';
@@ -1068,13 +1069,13 @@ function formatMilestoneType(type: string): string {
 // Helper function to get milestone colors
 function getMilestoneColor(type: string): string {
   const colorMap: { [key: string]: string } = {
-    'easy': '#58b8b9',
-    'medium': '#f4ba40', 
-    'hard': '#e24a41',
-    'problems_solved': '#5db666',
-    'submissions': '#D5AAFF'
+    'easy': colors.problems.easy,
+    'medium': colors.problems.medium, 
+    'hard': colors.problems.hard,
+    'problems_solved': colors.status.accepted,
+    'submissions': '#64b5f6' // This color is not in colors.ts, so it remains unchanged.
   };
-  return colorMap[type] || '#f9ffff'; // Default to problem color
+  return colorMap[type] || colors.text.primary; // Default to problem color
 }
 
 function updateCumulativeViewToggle(activeView: CumulativeView) {

@@ -1,5 +1,6 @@
 import { Chart, ChartConfiguration, TooltipModel, ChartOptions } from 'chart.js';
 import type { CumulativeChartStats, Difficulty, CumulativeView, TimeRange } from '../../types';
+import { colors } from '../theme/colors'; // Import the centralized colors
 
 export type CumulativeLineChartInstance = Chart<'line', number[], string>;
 
@@ -14,7 +15,7 @@ function getOrdinalSuffix(day: number): string {
     }
 }
 
-// Helper to create the custom HTML tooltip element (Unchanged)
+// Helper to create the custom HTML tooltip element
 function getOrCreateTooltip(chart: Chart): HTMLElement {
     let tooltipEl = chart.canvas.parentNode?.querySelector('div.chart-tooltip') as HTMLElement;
 
@@ -27,24 +28,25 @@ function getOrCreateTooltip(chart: Chart): HTMLElement {
             parent.appendChild(tooltipEl);
         }
 
+        // Use colors from the theme file to style the tooltip
         const style = document.createElement('style');
         style.textContent = `
             .chart-tooltip {
-                position: absolute; top: 0; left: 0; background: #282828; border: 2px solid #393939;
-                border-radius: 8px; padding: 12px; font-size: 13px; color: #f9ffff;
+                position: absolute; top: 0; left: 0; background: ${colors.background.section}; border: 2px solid ${colors.background.empty};
+                border-radius: 8px; padding: 12px; font-size: 13px; color: ${colors.text.primary};
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); z-index: 1000; width: max-content;
                 max-width: 300px; opacity: 0; pointer-events: none;
                 transition: opacity 0.2s ease, transform 0.15s ease-out;
             }
-            .tooltip-header { font-weight: 500; margin-bottom: 8px; color: #f9ffff; }
-            .tooltip-subheader { margin-bottom: 4px; font-size: 12px; color: #bdbeb3; }
+            .tooltip-header { font-weight: 500; margin-bottom: 8px; color: ${colors.text.primary}; }
+            .tooltip-subheader { margin-bottom: 4px; font-size: 12px; color: ${colors.text.subtle}; }
             .tooltip-subheader:last-of-type { margin-bottom: 12px; }
-            .tooltip-subheader-value { font-weight: 500; color: #f9ffff; margin-left: 6px; }
-            .tooltip-divider { border-top: 1px solid #353535; margin: 10px 0; }
+            .tooltip-subheader-value { font-weight: 500; color: ${colors.text.primary}; margin-left: 6px; }
+            .tooltip-divider { border-top: 1px solid ${colors.background.secondarySection}; margin: 10px 0; }
             .tooltip-breakdown-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
             .tooltip-breakdown-item { display: flex; align-items: center; justify-content: space-between; font-size: 12px; gap: 16px}
-            .tooltip-breakdown-label { display: flex; align-items: center; gap: 8px; color: #bdbeb3; }
-            .tooltip-breakdown-value { font-weight: 500; color: #f9ffff; }
+            .tooltip-breakdown-label { display: flex; align-items: center; gap: 8px; color: ${colors.text.subtle}; }
+            .tooltip-breakdown-value { font-weight: 500; color: ${colors.text.primary}; }
             .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
         `;
         document.head.appendChild(style);
@@ -82,11 +84,10 @@ export function renderOrUpdateCumulativeLineChart(
         const dataIndex = tooltipModel.dataPoints[0]?.dataIndex;
         if (dataIndex === undefined) return;
 
-        const rawLabel = tooltipModel.title?.[0] || ''; // This is the ISO date string
+        const rawLabel = tooltipModel.title?.[0] || '';
         const datasets = context.chart.config.data.datasets;
         const date = new Date(rawLabel);
 
-        // Format tooltip header based on the cumulative view (This logic is correct and remains)
         let formattedDate: string;
         if (filters.cumulativeView === 'Yearly') {
             formattedDate = date.toLocaleDateString(undefined, { year: 'numeric' });
@@ -108,20 +109,18 @@ export function renderOrUpdateCumulativeLineChart(
         });
         const totalProblems = easy + medium + hard;
 
-        // Build tooltip HTML
+        // Build tooltip HTML using colors from the theme file
         let innerHtml = `<div class="tooltip-header">${formattedDate}</div>`;
         innerHtml += `<div class="tooltip-subheader">Total Problems Solved: <span class="tooltip-subheader-value">${totalProblems}</span></div>`;
         innerHtml += `<div class="tooltip-subheader">Total Submissions: <span class="tooltip-subheader-value">${totalSubmissions}</span></div>`;
         innerHtml += `<div class="tooltip-divider"></div>`;
         innerHtml += `<ul class="tooltip-breakdown-list">`;
-        const colors: { [key: string]: string } = { 'Easy': '#58b8b9', 'Medium': '#f4ba40', 'Hard': '#e24a41' };
-        if (filters.difficulty === 'All' || filters.difficulty === 'Easy') innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors['Easy']};"></span> Easy</span><span class="tooltip-breakdown-value">${easy}</span></li>`;
-        if (filters.difficulty === 'All' || filters.difficulty === 'Medium') innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors['Medium']};"></span> Medium</span><span class="tooltip-breakdown-value">${medium}</span></li>`;
-        if (filters.difficulty === 'All' || filters.difficulty === 'Hard') innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors['Hard']};"></span> Hard</span><span class="tooltip-breakdown-value">${hard}</span></li>`;
+        if (filters.difficulty === 'All' || filters.difficulty === 'Easy') innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.easy};"></span> Easy</span><span class="tooltip-breakdown-value">${easy}</span></li>`;
+        if (filters.difficulty === 'All' || filters.difficulty === 'Medium') innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.medium};"></span> Medium</span><span class="tooltip-breakdown-value">${medium}</span></li>`;
+        if (filters.difficulty === 'All' || filters.difficulty === 'Hard') innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.hard};"></span> Hard</span><span class="tooltip-breakdown-value">${hard}</span></li>`;
         innerHtml += `</ul>`;
         tooltipEl.innerHTML = innerHtml;
 
-        // Position tooltip
         const parentContainer = context.chart.canvas.parentNode as HTMLElement;
         let newLeft = tooltipModel.caretX + 15;
         let newTop = tooltipModel.caretY;
@@ -140,25 +139,21 @@ export function renderOrUpdateCumulativeLineChart(
             x: { 
                 grid: { display: false }, 
                 ticks: { 
-                    color: '#bdbeb3',
+                    color: colors.text.subtle, // Using color from theme
                     maxTicksLimit: 6,
-                    // *** FIX: Format x-axis labels based on the TimeRange filter ***
                     callback: function(value, index, ticks) {
                         const label = this.getLabelForValue(value as number);
                         const date = new Date(label);
                         const range = filters.timeRange;
                         
-                        // For short time ranges, show Month and Day
                         if (range === 'Last 30 Days' || range === 'Last 90 Days') {
-                            return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }); // "Sep 17"
+                            return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
                         }
 
-                        // For a year-long range, show Month and Year
                         if (range === 'Last 365 Days') {
-                             return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' }); // "Sep 2024"
+                             return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
                         }
                         
-                        // For 'All Time', the format depends on the total span
                         if (range === 'All Time') {
                             const labels = this.chart.data.labels as string[];
                             if (labels && labels.length > 1) {
@@ -166,21 +161,21 @@ export function renderOrUpdateCumulativeLineChart(
                                 const lastDate = new Date(labels[labels.length - 1]);
                                 const yearDifference = lastDate.getFullYear() - firstDate.getFullYear();
 
-                                // If data spans 2 or more years, just show the year
                                 if (yearDifference >= 2) {
-                                    return date.toLocaleDateString(undefined, { year: 'numeric' }); // "2024"
+                                    return date.toLocaleDateString(undefined, { year: 'numeric' });
                                 }
                             }
-                            // Default for 'All Time' if span is less than 2 years is Month and Year
-                            return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' }); // "Sep 2024"
+                            return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
                         }
-
-                        // A fallback format
                         return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
                     }
                 } 
             },
-            y: { beginAtZero: true, grid: { display: false }, ticks: { color: '#bdbeb3' } },
+            y: { 
+                beginAtZero: true, 
+                grid: { display: false }, 
+                ticks: { color: colors.text.subtle } // Using color from theme
+            },
         },
         plugins: {
             legend: { display: false },

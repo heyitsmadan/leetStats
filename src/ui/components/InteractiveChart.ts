@@ -8,6 +8,7 @@ import type {
   ProcessedData
 } from '../../types';
 import { getInteractiveChartStats, getBrushChartData, getTooltipData } from '../../analysis/stats/getInteractiveChartStats';
+import { colors } from '../theme/colors';
 
 Chart.register(...registerables);
 
@@ -72,33 +73,33 @@ export function renderOrUpdateInteractiveChart(
     </div>
   `;
 
-  // Add styles
+  // Add styles using colors from the theme file
   const style = document.createElement('style');
   style.textContent = `
     .interactive-chart-container {
       font-family: inherit;
     }
     .chart-tooltip {
-      position: absolute; top: 0; left: 0; background: #282828; border: 2px solid #393939;
-      border-radius: 8px; padding: 12px; font-size: 13px; color: #f9ffff;
+      position: absolute; top: 0; left: 0; background: ${colors.background.section}; border: 2px solid ${colors.background.empty};
+      border-radius: 8px; padding: 12px; font-size: 13px; color: ${colors.text.primary};
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); z-index: 1000; width: max-content;
       max-width: 300px; opacity: 0; pointer-events: none;
       transition: opacity 0.2s ease, transform 0.15s ease-out;
     }
-    .tooltip-header { font-weight: 500; margin-bottom: 8px; color: #f9ffff; }
-    .tooltip-subheader { margin-bottom: 12px; font-size: 12px; color: #bdbeb3; }
-    .tooltip-subheader-value { font-weight: 500; color: #f9ffff; margin-left: 6px; }
-    .tooltip-divider { border-top: 1px solid #353535; margin: 10px 0; }
+    .tooltip-header { font-weight: 500; margin-bottom: 8px; color: ${colors.text.primary}; }
+    .tooltip-subheader { margin-bottom: 12px; font-size: 12px; color: ${colors.text.subtle}; }
+    .tooltip-subheader-value { font-weight: 500; color: ${colors.text.primary}; margin-left: 6px; }
+    .tooltip-divider { border-top: 1px solid ${colors.background.secondarySection}; margin: 10px 0; }
     .tooltip-breakdown-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
     .tooltip-breakdown-item { display: flex; align-items: center; justify-content: space-between; font-size: 12px; gap: 16px}
-    .tooltip-breakdown-label { display: flex; align-items: center; gap: 8px; color: #bdbeb3; }
-    .tooltip-breakdown-value { font-weight: 500; color: #f9ffff; }
+    .tooltip-breakdown-label { display: flex; align-items: center; gap: 8px; color: ${colors.text.subtle}; }
+    .tooltip-breakdown-value { font-weight: 500; color: ${colors.text.primary}; }
     .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
-    .navigator-container .axis .domain, .navigator-container .axis .tick line { stroke: #bdbeb3; stroke-opacity: 0.5; }
-    .navigator-container .axis .tick text { fill: #bdbeb3; font-size: 11px; font-family: inherit; }
-    .navigator-area { fill: #5db666; fill-opacity: 0.25; stroke: #5db666; stroke-width: 1.5; stroke-opacity: 0.8; }
-    .brush .selection { fill: rgba(249, 255, 255, 0.0); stroke: #bdbeb3; stroke-width: 1px; shape-rendering: crispEdges; }
-    .brush .handle { fill: #353535; stroke: #bdbeb3; stroke-width: 1px; rx: 3; ry: 3; }
+    .navigator-container .axis .domain, .navigator-container .axis .tick line { stroke: ${colors.text.subtle}; stroke-opacity: 0.5; }
+    .navigator-container .axis .tick text { fill: ${colors.text.subtle}; font-size: 11px; font-family: inherit; }
+    .navigator-area { fill: ${colors.status.accepted}; fill-opacity: 0.25; stroke: ${colors.status.accepted}; stroke-width: 1.5; stroke-opacity: 0.8; }
+    .brush .selection { fill: rgba(249, 255, 255, 0.0); stroke: ${colors.text.subtle}; stroke-width: 1px; shape-rendering: crispEdges; }
+    .brush .handle { fill: ${colors.background.secondarySection}; stroke: ${colors.text.subtle}; stroke-width: 1px; rx: 3; ry: 3; }
   `;
   document.head.appendChild(style);
 
@@ -112,14 +113,11 @@ export function renderOrUpdateInteractiveChart(
   let brushData: BrushChartData | null = null;
   let currentChartData: InteractiveChartData | null = null;
   
-  // --- NEW: ResizeObserver and debouncing variables ---
   let resizeObserver: ResizeObserver | null = null;
   let resizeTimeout: number;
 
-  // Initialize charts after DOM is ready
   initializeMainChart();
   setupEventListeners();
-  // --- NEW: Set up the observer to handle brush chart rendering ---
   setupResizeObserver();
 
   function initializeMainChart() {
@@ -143,18 +141,18 @@ export function renderOrUpdateInteractiveChart(
         plugins: {
           legend: { 
             display: showLegend,
-            labels: { boxWidth: 12, padding: 15, font: { size: 12 }, color: '#bdbeb3' } 
+            labels: { boxWidth: 12, padding: 15, font: { size: 12 }, color: colors.text.subtle } 
           },
           tooltip: { enabled: false, external: handleTooltip }
         },
         scales: {
           x: {
             stacked: true, grid: { display: false },
-            ticks: { color: '#bdbeb3', maxTicksLimit: 12, maxRotation: 45, minRotation: 0 }
+            ticks: { color: colors.text.subtle, maxTicksLimit: 12, maxRotation: 45, minRotation: 0 }
           },
           y: {
             stacked: true, beginAtZero: true, grid: { display: false },
-            ticks: { color: '#bdbeb3', precision: 0 }
+            ticks: { color: colors.text.subtle, precision: 0 }
           }
         },
         elements: { bar: { borderRadius: 4, borderSkipped: 'bottom' } },
@@ -163,21 +161,18 @@ export function renderOrUpdateInteractiveChart(
     });
   }
 
-  // --- NEW: Function to set up the ResizeObserver ---
   function setupResizeObserver() {
     const chartContainer = container.querySelector('.main-chart-container');
     if (!chartContainer) return;
 
     resizeObserver = new ResizeObserver(entries => {
         if (entries && entries.length > 0) {
-            // Debounce the resize handler to avoid excessive re-renders
             clearTimeout(resizeTimeout);
             resizeTimeout = window.setTimeout(() => {
-                // Check if width is valid before initializing
                 if (entries[0].contentRect.width > 0) {
                     initializeBrushChart();
                 }
-            }, 150); // 150ms debounce delay
+            }, 150);
         }
     });
 
@@ -191,13 +186,9 @@ export function renderOrUpdateInteractiveChart(
     const svg = d3.select(container.querySelector('#brush-chart'));
     const margin = { top: 10, right: 20, bottom: 25, left: 20 };
     
-    // --- CHANGE: Get width from the container we are observing ---
     const chartContainerEl = container.querySelector('.main-chart-container') as HTMLElement;
     if (!chartContainerEl) return;
     const containerWidth = chartContainerEl.offsetWidth;
-
-    // --- REMOVED: The polling logic is no longer needed ---
-    // if (containerWidth <= 0) { ... }
 
     const width = containerWidth - margin.left - margin.right;
     const height = 80 - margin.top - margin.bottom;
@@ -225,8 +216,8 @@ export function renderOrUpdateInteractiveChart(
 
     const chartArea = g.append("g").attr("clip-path", "url(#navigator-clip)");
 
-    chartArea.append("path").datum(brushData.data).attr("class", "navigator-area-selected").attr("d", area).attr("clip-path", "url(#selected-area-clip)").style("fill", "#5db666").style("fill-opacity", 0.25).style("stroke", "#5db666").style("stroke-width", 1.5).style("stroke-opacity", 0.8);
-    chartArea.append("path").datum(brushData.data).attr("class", "navigator-area-dimmed").attr("d", area).attr("clip-path", "url(#dimmed-area-clip)").style("fill", "#5db666").style("fill-opacity", 0.1).style("stroke", "#5db666").style("stroke-width", 1.5).style("stroke-opacity", 0.3);
+    chartArea.append("path").datum(brushData.data).attr("class", "navigator-area-selected").attr("d", area).attr("clip-path", "url(#selected-area-clip)").style("fill", colors.status.accepted).style("fill-opacity", 0.25).style("stroke", colors.status.accepted).style("stroke-width", 1.5).style("stroke-opacity", 0.8);
+    chartArea.append("path").datum(brushData.data).attr("class", "navigator-area-dimmed").attr("d", area).attr("clip-path", "url(#dimmed-area-clip)").style("fill", colors.status.accepted).style("fill-opacity", 0.1).style("stroke", colors.status.accepted).style("stroke-width", 1.5).style("stroke-opacity", 0.3);
 
     const brush = d3.brushX().extent([[0, 0], [width, height]]).handleSize(8).on("brush end", handleBrush);
     const brushG = g.append("g").attr("class", "brush");
@@ -366,16 +357,16 @@ export function renderOrUpdateInteractiveChart(
     if (hasBreakdown) {
       innerHtml += `<div class="tooltip-divider"></div><ul class="tooltip-breakdown-list">`;
       if (currentFilters.secondaryView === 'Difficulty') {
-        const colors: { [key: string]: string } = { 'Easy': '#58b8b9', 'Medium': '#f4ba40', 'Hard': '#e24a41' };
         Object.entries(tooltipData.breakdown).forEach(([key, value]) => {
-          innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors[key]};"></span> ${key}</span><span class="tooltip-breakdown-value">${value}</span></li>`;
+          const difficultyKey = key.toLowerCase() as keyof typeof colors.problems;
+          innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems[difficultyKey]};"></span> ${key}</span><span class="tooltip-breakdown-value">${value}</span></li>`;
         });
       } else if (currentFilters.secondaryView === 'Language') {
         Object.entries(tooltipData.breakdown).sort((a, b) => b[1] - a[1]).forEach(([key, value]) => {
           innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label">${key}</span><span class="tooltip-breakdown-value">${value}</span></li>`;
         });
       } else if (currentFilters.secondaryView === 'Status' && currentFilters.primaryView === 'Submissions') {
-        innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: #5db666;"></span> Accepted</span><span class="tooltip-breakdown-value">${tooltipData.breakdown['Accepted'] || 0}</span></li>`;
+        innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.status.accepted};"></span> Accepted</span><span class="tooltip-breakdown-value">${tooltipData.breakdown['Accepted'] || 0}</span></li>`;
         if (tooltipData.acceptanceRate !== undefined) {
           innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label">Acceptance Rate</span><span class="tooltip-breakdown-value">${tooltipData.acceptanceRate.toFixed(1)}%</span></li>`;
         }
@@ -411,7 +402,6 @@ export function renderOrUpdateInteractiveChart(
   return {
     updateData: (newData: ProcessedData) => {
       Object.assign(processedData, newData);
-      // The observer will handle re-initializing the brush chart
       updateMainChart();
     },
     updateFilters: (newFilters: Partial<InteractiveChartFilters>) => {
@@ -419,11 +409,10 @@ export function renderOrUpdateInteractiveChart(
       updateMainChart();
     },
     destroy: () => {
-      // --- CHANGE: Disconnect the observer on cleanup ---
       if (resizeObserver) {
         resizeObserver.disconnect();
       }
-      clearTimeout(resizeTimeout); // Clear any pending timeout
+      clearTimeout(resizeTimeout);
       if (mainChart) {
         mainChart.destroy();
         mainChart = null;

@@ -1,8 +1,10 @@
 import Chart from 'chart.js/auto';
 import type { ChartData, ChartOptions, TooltipModel, BarElement } from 'chart.js';
+import { colors } from '../theme/colors'; // Import the centralized colors
 
 export type HorizontalBarChartInstance = Chart;
 
+// This color is not in the theme file, so it remains unchanged.
 const GLOW_COLOR = 'rgba(255, 255, 0, 0.7)';
 const GLOW_BLUR = 15;
 
@@ -18,18 +20,19 @@ function getOrCreateTooltip(chart: Chart): HTMLElement {
             parent.appendChild(tooltipEl);
         }
 
+        // Inject styles using colors from the theme file
         const style = document.createElement('style');
         style.textContent = `
             .chart-tooltip {
                 position: absolute;
                 top: 0;
                 left: 0;
-                background: #282828;
-                border: 2px solid #393939;
+                background: ${colors.background.section};
+                border: 2px solid ${colors.background.empty};
                 border-radius: 8px;
                 padding: 12px;
                 font-size: 13px;
-                color: #f9ffff;
+                color: ${colors.text.primary};
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
                 z-index: 1000;
                 width: max-content;
@@ -38,14 +41,14 @@ function getOrCreateTooltip(chart: Chart): HTMLElement {
                 pointer-events: none;
                 transition: opacity 0.2s ease, transform 0.15s ease-out;
             }
-            .tooltip-header { font-weight: 500; margin-bottom: 8px; color: #f9ffff; }
-            .tooltip-subheader { margin-bottom: 12px; font-size: 12px; color: #bdbeb3; }
-            .tooltip-subheader-value { font-weight: 500; color: #f9ffff; margin-left: 6px; }
-            .tooltip-divider { border-top: 1px solid #353535; margin: 10px 0; }
+            .tooltip-header { font-weight: 500; margin-bottom: 8px; color: ${colors.text.primary}; }
+            .tooltip-subheader { margin-bottom: 12px; font-size: 12px; color: ${colors.text.subtle}; }
+            .tooltip-subheader-value { font-weight: 500; color: ${colors.text.primary}; margin-left: 6px; }
+            .tooltip-divider { border-top: 1px solid ${colors.background.secondarySection}; margin: 10px 0; }
             .tooltip-breakdown-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
             .tooltip-breakdown-item { display: flex; align-items: center; justify-content: space-between; font-size: 12px; gap: 16px}
-            .tooltip-breakdown-label { display: flex; align-items: center; gap: 8px; color: #bdbeb3; }
-            .tooltip-breakdown-value { font-weight: 500; color: #f9ffff; }
+            .tooltip-breakdown-label { display: flex; align-items: center; gap: 8px; color: ${colors.text.subtle}; }
+            .tooltip-breakdown-value { font-weight: 500; color: ${colors.text.primary}; }
             .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
         `;
         document.head.appendChild(style);
@@ -90,10 +93,10 @@ export function renderOrUpdateHorizontalBarChart(
         if (filters.difficulty === 'All' && breakdown) {
             innerHtml += `<div class="tooltip-divider"></div>`;
             innerHtml += `<ul class="tooltip-breakdown-list">`;
-            const colors: { [key: string]: string } = { 'E': '#58b8b9', 'M': '#f4ba40', 'H': '#e24a41' };
-            innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors['E']};"></span> Easy</span><span class="tooltip-breakdown-value">${breakdown.E || 0}</span></li>`;
-            innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors['M']};"></span> Medium</span><span class="tooltip-breakdown-value">${breakdown.M || 0}</span></li>`;
-            innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors['H']};"></span> Hard</span><span class="tooltip-breakdown-value">${breakdown.H || 0}</span></li>`;
+            // Using colors from the theme file for the breakdown
+            innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.easy};"></span> Easy</span><span class="tooltip-breakdown-value">${breakdown.E || 0}</span></li>`;
+            innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.medium};"></span> Medium</span><span class="tooltip-breakdown-value">${breakdown.M || 0}</span></li>`;
+            innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.hard};"></span> Hard</span><span class="tooltip-breakdown-value">${breakdown.H || 0}</span></li>`;
             innerHtml += `</ul>`;
         }
 
@@ -108,39 +111,23 @@ export function renderOrUpdateHorizontalBarChart(
         const activeElement = context.tooltip.dataPoints[0]?.element as BarElement;
         if (!activeElement) return;
 
-        // --- MODIFICATION START ---
-        // Calculate the total value for the hovered bar to find its end position.
         const totalValue = context.chart.data.datasets.reduce((sum, dataset) => {
             const value = dataset.data[dataIndex];
-            // Ensure value is a number before adding.
             return sum + (Number(value) || 0);
         }, 0);
 
-        // Get the pixel coordinate for the end of the entire stacked bar.
         const barEndPixelPosition = context.chart.scales.x.getPixelForValue(totalValue);
-
         const chartContainer = context.chart.canvas.parentNode as HTMLElement;
-        const desiredOffset = 15; // Space between bar and tooltip
-
-        // Position the tooltip to the right of the entire bar.
+        const desiredOffset = 15;
         const newLeft = barEndPixelPosition + desiredOffset;
-
-        // Vertically center the tooltip on the bar's y position.
         let newTop = activeElement.y - tooltipEl.offsetHeight / 2;
 
-        // Adjust vertical position to stay within the container's bounds.
-        if (newTop < 0) {
-            newTop = 0;
-        }
+        if (newTop < 0) newTop = 0;
         if (newTop + tooltipEl.offsetHeight > chartContainer.offsetHeight) {
             newTop = chartContainer.offsetHeight - tooltipEl.offsetHeight;
         }
-        // --- MODIFICATION END ---
 
         tooltipEl.style.opacity = '1';
-        // --- FIX ---
-        // Set pointer-events to 'none' to prevent the tooltip from capturing mouse events,
-        // which was causing the flickering issue.
         tooltipEl.style.pointerEvents = 'none';
         tooltipEl.style.transform = `translate(${newLeft}px, ${newTop}px)`;
     };
@@ -164,12 +151,12 @@ export function renderOrUpdateHorizontalBarChart(
         scales: {
             x: {
                 stacked: true,
-                ticks: { color: 'rgba(255, 255, 255, 0.7)' },
+                ticks: { color: 'rgba(255, 255, 255, 0.7)' }, // This color is not in colors.ts
                 grid: { display: false }
             },
             y: {
                 stacked: true,
-                ticks: { color: 'rgba(255, 255, 255, 0.7)' },
+                ticks: { color: 'rgba(255, 255, 255, 0.7)' }, // This color is not in colors.ts
                 grid: { display: false }
             },
         },

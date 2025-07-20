@@ -1,4 +1,5 @@
 // src/ui/components/Loader.ts
+import { colors } from '../theme/colors';
 
 export class FetchLoader {
     private loaderElement: HTMLElement | null = null;
@@ -29,8 +30,8 @@ export class FetchLoader {
             bottom: '20px',
             left: '20px',
             width: '280px',
-            backgroundColor: '#282828',
-            color: '#f9ffff',
+            backgroundColor: colors.background.section,
+            color: colors.text.primary,
             borderRadius: '8px',
             zIndex: '10000',
             padding: '12px 16px',
@@ -39,7 +40,7 @@ export class FetchLoader {
             boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
             transform: 'translateY(200%)', // Start off-screen
             transition: 'transform 0.4s ease-in-out',
-            border: '1px solid #353535',
+            border: `1px solid ${colors.background.secondarySection}`,
         });
 
         this.progressTextElement = document.createElement('div');
@@ -47,14 +48,14 @@ export class FetchLoader {
         this.progressTextElement.textContent = 'Fetching submissions...';
         Object.assign(this.progressTextElement.style, {
             marginBottom: '8px',
-            color: '#bdbeb3', // subtle text
+            color: colors.text.subtle,
         });
 
         const progressBarWrapper = document.createElement('div');
         Object.assign(progressBarWrapper.style, {
             height: '6px',
             width: '100%',
-            backgroundColor: '#393939', // empty
+            backgroundColor: colors.background.empty,
             borderRadius: '3px',
             overflow: 'hidden',
         });
@@ -64,7 +65,7 @@ export class FetchLoader {
         Object.assign(this.progressBarFillElement.style, {
             height: '100%',
             width: '0%',
-            backgroundColor: '#5db666', // accepted
+            backgroundColor: colors.status.accepted,
             borderRadius: '3px',
             transition: 'width 0.3s ease',
         });
@@ -128,7 +129,7 @@ export class FetchLoader {
         if (!this.progressTextElement || !this.progressBarFillElement || !this.loaderElement) return;
         
         this.progressTextElement.textContent = errorMessage;
-        this.progressBarFillElement.style.backgroundColor = '#e24a41'; // hard/error color
+        this.progressBarFillElement.style.backgroundColor = colors.problems.hard;
         this.progressBarFillElement.style.width = '100%';
 
         setTimeout(() => {

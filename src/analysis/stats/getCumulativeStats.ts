@@ -3,6 +3,7 @@
 import type { ProcessedData, Difficulty, TimeRange, CumulativeView, CumulativeChartStats } from '../../types';
 import { Chart, TimeScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler } from 'chart.js';
 import 'chartjs-adapter-date-fns';
+import { colors } from '../../ui/theme/colors';
 
 Chart.register(TimeScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
 
@@ -156,20 +157,20 @@ export function getCumulativeStats(
         {
             label: 'Total Submissions',
             data: totalSubmissionsData,
-            borderColor: '#393939', // *** FIX: Reverted to original color ***
+            borderColor: colors.background.empty, // *** FIX: Reverted to original color ***
             fill: false,
             tension: 0.4,
         }
     ];
 
     if (difficulty === 'All' || difficulty === 'Easy') {
-        datasets.push({ label: 'Easy Solved', data: easyData, borderColor: '#58b8b9', fill: false, tension: 0.4 });
+        datasets.push({ label: 'Easy Solved', data: easyData, borderColor: colors.problems.easy, fill: false, tension: 0.4 });
     }
     if (difficulty === 'All' || difficulty === 'Medium') {
-        datasets.push({ label: 'Medium Solved', data: mediumData, borderColor: '#f4ba40', fill: false, tension: 0.4 });
+        datasets.push({ label: 'Medium Solved', data: mediumData, borderColor: colors.problems.medium, fill: false, tension: 0.4 });
     }
     if (difficulty === 'All' || difficulty === 'Hard') {
-        datasets.push({ label: 'Hard Solved', data: hardData, borderColor: '#e24a41', fill: false, tension: 0.4 });
+        datasets.push({ label: 'Hard Solved', data: hardData, borderColor: colors.problems.hard, fill: false, tension: 0.4 });
     }
 
     return { labels, datasets };

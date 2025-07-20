@@ -1,11 +1,22 @@
 import Chart from 'chart.js/auto';
 import 'chartjs-adapter-date-fns';
 import type { SkillMatrixData, SkillMatrixOptions, TimeSeriesPoint, TimeRange } from '../../types';
+import { colors } from '../theme/colors';
 
 export interface SkillMatrixHeatmapInstance {
     update: (data: SkillMatrixData, options: SkillMatrixOptions) => void;
     destroy: () => void;
 }
+
+// Helper function to convert hex color to an RGB object
+function parseRgb(rgbString: string): { r: number; g: number; b: number } {
+  const match = rgbString.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+  if (!match) throw new Error('Invalid rgb format');
+
+  const [, r, g, b] = match;
+  return { r: Number(r), g: Number(g), b: Number(b) };
+}
+
 
 // Helper function to determine the best default chart view based on time span
 function getOptimalChartView(
@@ -13,7 +24,7 @@ function getOptimalChartView(
     timeRange: TimeRange
 ): 'Daily' | 'Monthly' | 'Yearly' {
     if (!points || points.length < 2) {
-        return 'Daily'; // Default for very little data
+        return 'Daily';
     }
 
     const firstDate = new Date(points[0].date);
@@ -25,7 +36,6 @@ function getOptimalChartView(
         case 'Last 90 Days':
             return 'Daily';
         case 'Last 365 Days':
-            // If the user was active for less than 3 months in the last year, daily is better
             return spanInDays < 90 ? 'Daily' : 'Monthly';
         case 'All Time':
             if (spanInDays > 365 * 4) return 'Yearly';
@@ -36,14 +46,6 @@ function getOptimalChartView(
     }
 }
 
-/**
- * [CORRECTED] Aggregates daily time series data into monthly or yearly buckets
- * using the user's local timezone for grouping.
- *
- * @param points - The array of daily time series data points.
- * @param view - The target aggregation level: 'Monthly' or 'Yearly'.
- * @returns A new array of aggregated time series points.
- */
 function aggregateTimeSeriesData(
     points: TimeSeriesPoint[],
     view: 'Daily' | 'Monthly' | 'Yearly'
@@ -55,16 +57,12 @@ function aggregateTimeSeriesData(
     const grouped = new Map<string, TimeSeriesPoint[]>();
 
     points.forEach(point => {
-        const date = new Date(point.date); // This is a local date object
+        const date = new Date(point.date);
         let key: string;
 
-        // --- CHANGE: Use local timezone methods instead of UTC ---
-        // This ensures aggregation aligns with the user's calendar.
         if (view === 'Monthly') {
-            // Key: "YYYY-MM" e.g., "2023-04"
             key = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`;
         } else { // Yearly
-            // Key: "YYYY" e.g., "2023"
             key = date.getFullYear().toString();
         }
 
@@ -76,19 +74,14 @@ function aggregateTimeSeriesData(
 
     const aggregated: TimeSeriesPoint[] = [];
 
-    // For each period (month or year), find the last data point to represent
-    // the cumulative value at the end of that period.
     for (const [period, periodPoints] of grouped.entries()) {
-        // Sort to find the latest point in the period
         const sortedPoints = periodPoints.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
         const lastPoint = sortedPoints[sortedPoints.length - 1];
 
         let periodDateStr: string;
         if (view === 'Monthly') {
-            // Use the first day of the month for the plot point.
             periodDateStr = `${period}-01`;
         } else { // Yearly
-            // Use the first day of the year for the plot point.
             periodDateStr = `${period}-01-01`;
         }
 
@@ -101,7 +94,6 @@ function aggregateTimeSeriesData(
         });
     }
 
-    // Ensure the final aggregated data is sorted chronologically.
     return aggregated.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 }
 
@@ -118,8 +110,6 @@ export function renderOrUpdateSkillMatrixHeatmap(
         return existingInstance;
     }
 
-    console.log('[Heatmap] Initializing component...');
-
     let expandedRows = new Set<string>();
     let charts = new Map<string, Chart>();
     let chartOptions = new Map<string, {
@@ -129,7 +119,6 @@ export function renderOrUpdateSkillMatrixHeatmap(
     }>();
 
     function renderInitialTable() {
-        console.time('[Heatmap] renderInitialTable');
         const metrics = ['problemsSolved', 'avgTries', 'firstAceRate'] as const;
         const metricLabels = {
             problemsSolved: 'Problems Solved',
@@ -172,7 +161,6 @@ export function renderOrUpdateSkillMatrixHeatmap(
             </div>
         `;
         addEventListeners();
-        console.timeEnd('[Heatmap] renderInitialTable');
     }
 
     function addEventListeners() {
@@ -186,13 +174,9 @@ export function renderOrUpdateSkillMatrixHeatmap(
 
     function toggleRow(topic: string, button: HTMLButtonElement) {
         const topicRow = container.querySelector(`tr[data-topic-row="${topic}"]`);
-        if (!topicRow) {
-            console.error(`[Heatmap] Could not find topic row for "${topic}"`);
-            return;
-        }
+        if (!topicRow) return;
 
         if (expandedRows.has(topic)) {
-            // Collapse logic
             expandedRows.delete(topic);
             const chartRow = topicRow.nextElementSibling;
             if (chartRow && chartRow.classList.contains('expanded-row')) {
@@ -205,9 +189,7 @@ export function renderOrUpdateSkillMatrixHeatmap(
                     expandableContent.style.opacity = '0';
                     
                     expandableContent.addEventListener('transitionend', () => {
-                        if (chartRow.parentNode) {
-                            chartRow.remove();
-                        }
+                        if (chartRow.parentNode) chartRow.remove();
                     }, { once: true });
                 }
             }
@@ -219,7 +201,6 @@ export function renderOrUpdateSkillMatrixHeatmap(
             }
             button.querySelector('span')!.textContent = '+';
         } else {
-            // Expand logic
             expandedRows.add(topic);
             
             if (!chartOptions.has(topic)) {
@@ -230,7 +211,7 @@ export function renderOrUpdateSkillMatrixHeatmap(
             const currentChartOptions = chartOptions.get(topic)!;
             
             const newRow = document.createElement('tr');
-            newRow.className = 'expanded-row';
+newRow.className = 'expanded-row';
             newRow.innerHTML = getChartRowHtml(topic, currentChartOptions.view);
             
             topicRow.insertAdjacentElement('afterend', newRow);
@@ -300,7 +281,6 @@ export function renderOrUpdateSkillMatrixHeatmap(
                                 </div>
                             </div>
                             <div class="flex gap-2 flex-wrap">
-                                <!-- Time View Toggle -->
                                 <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
                                     <button class="chart-view-btn whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs" data-view="Daily" data-topic="${topic}" data-state="${defaultView === 'Daily' ? 'active' : 'inactive'}">
                                         Daily
@@ -312,7 +292,6 @@ export function renderOrUpdateSkillMatrixHeatmap(
                                         Yearly
                                     </button>
                                 </div>
-                                <!-- Difficulty Split Toggle -->
                                 <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
                                     <button class="difficulty-toggle whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs" data-topic="${topic}" data-state="active">
                                         Aggregate
@@ -333,31 +312,20 @@ export function renderOrUpdateSkillMatrixHeatmap(
             <style>
                 .expandable-content { max-height: 0; overflow: hidden; transition: max-height 0.4s ease, opacity 0.4s ease; }
                 .chart-tooltip {
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    background: #282828;
-                    border: 2px solid #393939;
-                    border-radius: 8px;
-                    padding: 12px;
-                    font-size: 13px;
-                    color: #f9ffff;
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-                    z-index: 1000;
-                    width: max-content;
-                    max-width: 300px;
-                    opacity: 0;
-                    pointer-events: none;
+                    position: absolute; top: 0; left: 0; background: ${colors.background.section}; border: 2px solid ${colors.background.empty};
+                    border-radius: 8px; padding: 12px; font-size: 13px; color: ${colors.text.primary};
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); z-index: 1000; width: max-content;
+                    max-width: 300px; opacity: 0; pointer-events: none;
                     transition: opacity 0.2s ease, transform 0.15s ease-out;
                 }
-                .tooltip-header { font-weight: 500; margin-bottom: 8px; color: #f9ffff; }
-                .tooltip-subheader { margin-bottom: 12px; font-size: 12px; color: #bdbeb3; }
-                .tooltip-subheader-value { font-weight: 500; color: #f9ffff; margin-left: 6px; }
-                .tooltip-divider { border-top: 1px solid #353535; margin: 10px 0; }
+                .tooltip-header { font-weight: 500; margin-bottom: 8px; color: ${colors.text.primary}; }
+                .tooltip-subheader { margin-bottom: 12px; font-size: 12px; color: ${colors.text.subtle}; }
+                .tooltip-subheader-value { font-weight: 500; color: ${colors.text.primary}; margin-left: 6px; }
+                .tooltip-divider { border-top: 1px solid ${colors.background.secondarySection}; margin: 10px 0; }
                 .tooltip-breakdown-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
                 .tooltip-breakdown-item { display: flex; align-items: center; justify-content: space-between; font-size: 12px; gap: 16px; }
-                .tooltip-breakdown-label { display: flex; align-items: center; gap: 8px; color: #bdbeb3; }
-                .tooltip-breakdown-value { font-weight: 500; color: #f9ffff; }
+                .tooltip-breakdown-label { display: flex; align-items: center; gap: 8px; color: ${colors.text.subtle}; }
+                .tooltip-breakdown-value { font-weight: 500; color: ${colors.text.primary}; }
                 .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
             </style>
         `;
@@ -367,7 +335,6 @@ export function renderOrUpdateSkillMatrixHeatmap(
         const metricSelector = row.querySelector('.metric-selector');
         const metricOptions = row.querySelector('.metric-options');
         
-        // Dropdown toggle
         metricSelector?.addEventListener('click', (e) => {
             e.preventDefault();
             const isHidden = metricOptions?.classList.contains('hidden');
@@ -460,7 +427,7 @@ export function renderOrUpdateSkillMatrixHeatmap(
 
         if (!metricData || metricData.length === 0) {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = 'rgb(107, 114, 128)';
+            ctx.fillStyle = 'rgb(107, 114, 128)'; // This color is not in colors.ts
             ctx.textAlign = 'center';
             ctx.font = '14px sans-serif';
             ctx.fillText('No data available', canvas.width / 2, canvas.height / 2);
@@ -468,7 +435,6 @@ export function renderOrUpdateSkillMatrixHeatmap(
         }
 
         const aggregatedData = aggregateTimeSeriesData(metricData, localOpts.view);
-        const colors = { easy: '#58b8b9', medium: '#f4ba40', hard: '#e24a41', aggregate: '#5db666' };
         const datasets: any[] = [];
 
         if (localOpts.split) {
@@ -476,14 +442,14 @@ export function renderOrUpdateSkillMatrixHeatmap(
                 datasets.push({
                     label: diff.charAt(0).toUpperCase() + diff.slice(1),
                     data: aggregatedData.map(p => ({ x: p.date, y: p[diff] })),
-                    borderColor: colors[diff],
+                    borderColor: colors.problems[diff],
                 });
             });
         } else {
             datasets.push({
                 label: 'Overall',
                 data: aggregatedData.map(p => ({ x: p.date, y: p.value })),
-                borderColor: colors.aggregate,
+                borderColor: colors.status.accepted,
             });
         }
         
@@ -523,13 +489,13 @@ export function renderOrUpdateSkillMatrixHeatmap(
                             tooltipFormat: timeScaleConfig[localOpts.view].tooltipFormat
                         },
                         grid: { display: false },
-                        ticks: { color: '#bdbeb3' }
+                        ticks: { color: colors.text.subtle }
                     },
                     y: {
                         beginAtZero: localOpts.metric !== 'avgTries',
                         min: localOpts.metric === 'avgTries' ? 1 : undefined,
                         grid: { display: false },
-                        ticks: { color: '#bdbeb3' }
+                        ticks: { color: colors.text.subtle }
                     }
                 },
                 plugins: {
@@ -556,12 +522,10 @@ export function renderOrUpdateSkillMatrixHeatmap(
                                 return;
                             };
 
-                            // --- [CORRECTED] Date formatting for tooltips ---
                             let formattedDate: string;
                             const pointDate = new Date(dataPoint.date);
                             
                             if (localOpts.view === 'Yearly') {
-                                // For a yearly key like "2023-01-01", we just want "2023"
                                 formattedDate = pointDate.getUTCFullYear().toString();
                             } else if (localOpts.view === 'Monthly') {
                                 // For a monthly key like "2023-04-01", we want "April 2023"
@@ -595,8 +559,9 @@ export function renderOrUpdateSkillMatrixHeatmap(
                                 innerHtml += `<div class="tooltip-divider"></div><ul class="tooltip-breakdown-list">`;
                                 (['Easy', 'Medium', 'Hard'] as const).forEach(diff => {
                                     const value = dataPoint[diff.toLowerCase() as 'easy' | 'medium' | 'hard'];
+                                    const diffKey = diff.toLowerCase() as keyof typeof colors.problems;
                                     if (value !== undefined && value !== null && value > 0) {
-                                        innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors[diff.toLowerCase() as 'easy' | 'medium' | 'hard']};"></span>${diff}</span><span class="tooltip-breakdown-value">${formatValue(value, localOpts.metric)}</span></li>`;
+                                        innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems[diffKey]};"></span>${diff}</span><span class="tooltip-breakdown-value">${formatValue(value, localOpts.metric)}</span></li>`;
                                     }
                                 });
                                 innerHtml += `</ul>`;
@@ -631,9 +596,11 @@ export function renderOrUpdateSkillMatrixHeatmap(
     }
 
     function getHeatmapColor(value: number, metric: 'problemsSolved' | 'avgTries' | 'firstAceRate'): string {
-        const bestColor = { r: 93, g: 182, b: 102 };
-        const middleColor = { r: 244, g: 186, b: 64 };
-        const worstColor = { r: 230, g: 107, b: 98 };
+        const bestColor = parseRgb(colors.status.accepted);
+        const middleColor = parseRgb(colors.problems.medium);
+        const worstColor = parseRgb(colors.status.wrongAnswer);
+
+        if (!bestColor || !middleColor || !worstColor) return 'transparent';
         
         let percent = 0;
 
@@ -685,7 +652,6 @@ export function renderOrUpdateSkillMatrixHeatmap(
 
     const instance: SkillMatrixHeatmapInstance = {
         update: (newData, newOptions) => {
-            console.log('[Heatmap] Full update triggered.');
             Object.assign(data, newData);
             Object.assign(options, newOptions);
             charts.forEach(chart => chart.destroy());
@@ -695,7 +661,6 @@ export function renderOrUpdateSkillMatrixHeatmap(
             renderInitialTable();
         },
         destroy: () => {
-            console.log('[Heatmap] Destroying component.');
             charts.forEach(chart => chart.destroy());
             charts.clear();
             expandedRows.clear();

@@ -1,4 +1,5 @@
 import type { ProcessedData, Difficulty, TimeRange } from '../../types';
+import { colors } from '../../ui/theme/colors';
 
 const STATUS_ACCEPTED = 10;
 const GLOW_THRESHOLD = 10; // Min submissions for a language to be considered for the "best" glow
@@ -92,12 +93,12 @@ export function getLanguageStats(
       {
         label: 'Accepted',
         data: sortedLangs.map(entry => entry[1].accepted),
-        backgroundColor: '#5db666',
+        backgroundColor: colors.status.accepted,
       },
       {
         label: 'Failed',
         data: sortedLangs.map(entry => entry[1].failed),
-        backgroundColor: '#393939',
+        backgroundColor: colors.background.empty,
       }
     ],
     tooltipsData: sortedLangs.map(entry => ({

@@ -1,16 +1,17 @@
 import type { ProcessedData, Difficulty, TimeRange } from '../../types';
+import { colors } from '../../ui/theme/colors'; // Import the centralized colors
 
-// Constants for mapping status codes to human-readable labels and colors.
-const STATUS_MAP: { [key: number]: { label: string; color: string } } = {
-  10: { label: 'Accepted', color: '#5db666' },
-  11: { label: 'Wrong Answer', color: '#e66b62' },
-  12: { label: 'Memory Limit Exceeded', color: '#58b8b9' },
-  14: { label: 'Time Limit Exceeded', color: '#f4ba40' },
-  20: { label: 'Compile Error', color: '#a056d5' },
+// Map status codes to their labels and a key for the color object
+const STATUS_MAP: { [key: number]: { label: string; colorKey: keyof typeof colors.status } } = {
+  10: { label: 'Accepted', colorKey: 'accepted' },
+  11: { label: 'Wrong Answer', colorKey: 'wrongAnswer' },
+  12: { label: 'Memory Limit Exceeded', colorKey: 'memoryLimitExceeded' },
+  14: { label: 'Time Limit Exceeded', colorKey: 'timeLimitExceeded' },
+  20: { label: 'Compile Error', colorKey: 'compileError' },
 };
 
-// Default for any other status code (13, 15, etc.).
-const RUNTIME_ERROR_DEFAULT = { label: 'Runtime Error', color: '#f28500' };
+// Default for any other status code (13, 15, etc.)
+const RUNTIME_ERROR_DEFAULT = { label: 'Runtime Error', colorKey: 'runtimeError' as keyof typeof colors.status };
 
 
 /**
@@ -61,14 +62,14 @@ export function getSubmissionSignatureStats(
   }
 
   // --- 2. Aggregate data by submission status ---
-  const signatureMap = new Map<string, { count: number; easy: number; medium: number; hard: number }>();
+  const signatureMap = new Map<string, { count: number; easy: number; medium: number; hard: number; colorKey: keyof typeof colors.status }>();
 
   for (const sub of filteredSubmissions) {
     const statusInfo = STATUS_MAP[sub.status] || RUNTIME_ERROR_DEFAULT;
     const key = statusInfo.label;
 
     if (!signatureMap.has(key)) {
-      signatureMap.set(key, { count: 0, easy: 0, medium: 0, hard: 0 });
+      signatureMap.set(key, { count: 0, easy: 0, medium: 0, hard: 0, colorKey: statusInfo.colorKey });
     }
     const bucket = signatureMap.get(key)!;
     bucket.count++;
@@ -82,17 +83,16 @@ export function getSubmissionSignatureStats(
   // --- 3. Format data for Chart.js ---
   const labels: string[] = [];
   const data: number[] = [];
-  const colors: string[] = [];
+  const backgroundColors: string[] = [];
   const tooltipsData: any[] = [];
   
   const sortedSignature = Array.from(signatureMap.entries()).sort((a, b) => b[1].count - a[1].count);
 
   for (const [label, values] of sortedSignature) {
-    const statusInfo = Object.values(STATUS_MAP).find(s => s.label === label) || RUNTIME_ERROR_DEFAULT;
-    
     labels.push(label);
     data.push(values.count);
-    colors.push(statusInfo.color);
+    // Use the colorKey to look up the color from the central theme file
+    backgroundColors.push(colors.status[values.colorKey]);
     tooltipsData.push({
       count: values.count,
       percent: ((values.count / totalSubmissions) * 100).toFixed(1) + '%',
@@ -104,8 +104,8 @@ export function getSubmissionSignatureStats(
     labels,
     datasets: [{
       data: data,
-      backgroundColor: colors,
-      borderColor: '#373737',
+      backgroundColor: backgroundColors,
+      borderColor: colors.background.secondarySection, // Using color from theme
       borderWidth: 2,
     }],
     tooltipsData,
