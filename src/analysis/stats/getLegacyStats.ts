@@ -446,56 +446,67 @@ function calculateLongestBreak(submissions: any[]): { days: number; startDate: D
 }
 
 // Updated best periods calculation (removed week)
-function calculateBestPeriods(sortedSubmissions: any[]) {
-  const countProblemsInPeriod = (startDate: Date, endDate: Date): number => {
-    const solvedProblems = new Set<string>();
-    for (const sub of sortedSubmissions) {
-      if (sub.date >= startDate && sub.date <= endDate && sub.status === 10) {
-        solvedProblems.add(sub.titleSlug);
-      }
-    }
-    return solvedProblems.size;
-  };
+function calculateBestPeriods(submissions: any[]) {
+  const acceptedSubs = submissions.filter(sub => sub.status === 10);
   
-  const now = new Date();
-  const oneDay = 24 * 60 * 60 * 1000;
-  const oneMonth = 30 * oneDay;
-  const oneYear = 365 * oneDay;
-  
-  // Calculate best day
+  // Create period maps
+  const dayMap = new Map<string, Set<string>>();
+  const monthMap = new Map<string, Set<string>>();
+  const yearMap = new Map<string, Set<string>>();
+
+  acceptedSubs.forEach(sub => {
+    const date = sub.date;
+    const dayKey = date.toISOString().split('T')[0];
+    const monthKey = `${date.getFullYear()}-${date.getMonth() + 1}`;
+    const yearKey = `${date.getFullYear()}`;
+
+    // Update day map
+    if (!dayMap.has(dayKey)) dayMap.set(dayKey, new Set());
+    dayMap.get(dayKey)!.add(sub.titleSlug);
+
+    // Update month map
+    if (!monthMap.has(monthKey)) monthMap.set(monthKey, new Set());
+    monthMap.get(monthKey)!.add(sub.titleSlug);
+
+    // Update year map
+    if (!yearMap.has(yearKey)) yearMap.set(yearKey, new Set());
+    yearMap.get(yearKey)!.add(sub.titleSlug);
+  });
+
+  // Find best day
   let bestDay = { count: 0, date: new Date() };
-  for (let i = 0; i < 365; i++) {
-    const day = new Date(now.getTime() - i * oneDay);
-    const dayStart = new Date(day.getFullYear(), day.getMonth(), day.getDate());
-    const dayEnd = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 23, 59, 59);
-    const count = countProblemsInPeriod(dayStart, dayEnd);
-    if (count > bestDay.count) {
-      bestDay = { count, date: dayStart };
+  dayMap.forEach((set, dayKey) => {
+    if (set.size > bestDay.count) {
+      bestDay = {
+        count: set.size,
+        date: new Date(dayKey)
+      };
     }
-  }
-  
-  // Calculate best month
+  });
+
+  // Find best month
   let bestMonth = { count: 0, date: new Date() };
-  for (let i = 0; i < 365; i++) {
-    const start = new Date(now.getTime() - i * oneDay);
-    const end = new Date(start.getTime() + oneMonth - 1);
-    const count = countProblemsInPeriod(start, end);
-    if (count > bestMonth.count) {
-      bestMonth = { count, date: start };
+  monthMap.forEach((set, monthKey) => {
+    if (set.size > bestMonth.count) {
+      const [year, month] = monthKey.split('-').map(Number);
+      bestMonth = {
+        count: set.size,
+        date: new Date(year, month - 1, 1)
+      };
     }
-  }
-  
-  // Calculate best year
+  });
+
+  // Find best year
   let bestYear = { count: 0, date: new Date() };
-  for (let i = 0; i < 365; i++) {
-    const start = new Date(now.getTime() - i * oneDay);
-    const end = new Date(start.getTime() + oneYear - 1);
-    const count = countProblemsInPeriod(start, end);
-    if (count > bestYear.count) {
-      bestYear = { count, date: start };
+  yearMap.forEach((set, yearKey) => {
+    if (set.size > bestYear.count) {
+      bestYear = {
+        count: set.size,
+        date: new Date(parseInt(yearKey), 0, 1)
+      };
     }
-  }
-  
+  });
+
   return { bestDay, bestMonth, bestYear };
 }
 
