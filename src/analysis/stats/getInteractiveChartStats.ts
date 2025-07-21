@@ -1,6 +1,6 @@
 import { colors } from '../../ui/theme/colors';
 
-// Updated createChartData function
+// Updated createChartData function with performance and logic fixes
 function createChartData(
   timeGroups: { [key: string]: any[] },
   filters: InteractiveChartFilters,
@@ -45,130 +45,176 @@ function createChartData(
   const datasets: any[] = [];
   
   if (filters.secondaryView === 'Difficulty') {
-    ['Easy', 'Medium', 'Hard'].forEach(difficulty => {
-      const dataMap: { [key: string]: number } = {};
-      
-      // Initialize all intervals with 0
-      allIntervals.forEach(interval => {
-        dataMap[interval] = 0;
-      });
-      
-      // Populate with actual data
-      Object.keys(timeGroups).forEach(date => {
-        const submissions = timeGroups[date] || [];
-        if (filters.primaryView === 'Submissions') {
-          dataMap[date] = submissions.filter(sub => sub.metadata?.difficulty === difficulty).length;
-        } else {
-          const solvedProblems = new Set();
-          submissions.forEach(sub => {
-            if (sub.status === 10 && sub.metadata?.difficulty === difficulty) {
-              solvedProblems.add(sub.titleSlug);
-            }
-          });
-          dataMap[date] = solvedProblems.size;
-        }
-      });
-      
-      const data = allIntervals.map(interval => dataMap[interval] || 0);
-      
-      datasets.push({
-        label: difficulty,
-        data,
-        backgroundColor: colors.problems[difficulty.toLowerCase() as keyof typeof colors.problems],
-        borderColor: colors.problems[difficulty.toLowerCase() as keyof typeof colors.problems],
-        stack: 'main',
-        maxBarThickness: 30,
-      });
-    });
-  } else if (filters.secondaryView === 'Status') {
-    // Accepted data
-    const acceptedDataMap: { [key: string]: number } = {};
-    Object.keys(timeGroups).forEach(date => {
-      const submissions = timeGroups[date] || [];
-      
-      if (filters.primaryView === 'Submissions') {
-        acceptedDataMap[date] = submissions.filter(sub => sub.status === 10).length;
-      } else {
-        const solvedProblems = new Set<string>();
-        submissions.forEach(sub => {
-          if (sub.status === 10) {
-            solvedProblems.add(sub.titleSlug);
-          }
+    const difficulties = ['Easy', 'Medium', 'Hard'];
+    const dataMaps: { [difficulty: string]: { [key: string]: number } } = {};
+    difficulties.forEach(d => dataMaps[d] = {});
+
+    // Initialize all intervals with 0 for each difficulty
+    allIntervals.forEach(interval => {
+        difficulties.forEach(difficulty => {
+            dataMaps[difficulty][interval] = 0;
         });
-        acceptedDataMap[date] = solvedProblems.size;
-      }
     });
-    
-    // Failed data
+
+    // Single loop through timeGroups to populate dataMaps efficiently
+    Object.entries(timeGroups).forEach(([date, submissions]) => {
+        if (filters.primaryView === 'Submissions') {
+            const counts: { [key: string]: number } = { 'Easy': 0, 'Medium': 0, 'Hard': 0 };
+            submissions.forEach(sub => {
+                const difficulty = sub.metadata?.difficulty;
+                if (difficulty && counts.hasOwnProperty(difficulty)) {
+                    counts[difficulty]++;
+                }
+            });
+            difficulties.forEach(difficulty => {
+                if (dataMaps[difficulty]) dataMaps[difficulty][date] = counts[difficulty];
+            });
+        } else { // Problems Solved
+            const solvedProblems: { [difficulty: string]: Set<string> } = {
+                'Easy': new Set(),
+                'Medium': new Set(),
+                'Hard': new Set()
+            };
+            submissions.forEach(sub => {
+                if (sub.status === 10) {
+                    const difficulty = sub.metadata?.difficulty;
+                    if (difficulty && solvedProblems.hasOwnProperty(difficulty)) {
+                        solvedProblems[difficulty].add(sub.titleSlug);
+                    }
+                }
+            });
+            difficulties.forEach(difficulty => {
+                if (dataMaps[difficulty]) dataMaps[difficulty][date] = solvedProblems[difficulty].size;
+            });
+        }
+    });
+
+    // Create datasets from the populated maps
+    difficulties.forEach(difficulty => {
+        const data = allIntervals.map(interval => dataMaps[difficulty][interval] || 0);
+        datasets.push({
+            label: difficulty,
+            data,
+            backgroundColor: colors.problems[difficulty.toLowerCase() as keyof typeof colors.problems],
+            borderColor: colors.problems[difficulty.toLowerCase() as keyof typeof colors.problems],
+            stack: 'main',
+            maxBarThickness: 30,
+        });
+    });
+
+  } else if (filters.secondaryView === 'Status') {
+    const acceptedDataMap: { [key: string]: number } = {};
     const failedDataMap: { [key: string]: number } = {};
-    Object.keys(timeGroups).forEach(date => {
-      const submissions = timeGroups[date] || [];
-      
-      if (filters.primaryView === 'Submissions') {
-        failedDataMap[date] = submissions.filter(sub => sub.status !== 10).length;
-      } else {
-        failedDataMap[date] = 0; // For problems solved mode, failed should be 0
-      }
+
+    // Initialize all intervals with 0
+    allIntervals.forEach(interval => {
+        acceptedDataMap[interval] = 0;
+        if (filters.primaryView === 'Submissions') {
+            failedDataMap[interval] = 0;
+        }
     });
-    
-    const acceptedData = fillMissingIntervals(acceptedDataMap, allIntervals);
-    const failedData = fillMissingIntervals(failedDataMap, allIntervals);
-    
-    datasets.push(
-      {
+
+    // Single loop through timeGroups to populate maps
+    Object.entries(timeGroups).forEach(([date, submissions]) => {
+        if (filters.primaryView === 'Submissions') {
+            let acceptedCount = 0;
+            let failedCount = 0;
+            submissions.forEach(sub => {
+                if (sub.status === 10) acceptedCount++;
+                else failedCount++;
+            });
+            acceptedDataMap[date] = acceptedCount;
+            failedDataMap[date] = failedCount;
+        } else { // Problems Solved
+            const solvedProblems = new Set<string>();
+            submissions.forEach(sub => {
+                if (sub.status === 10) {
+                    solvedProblems.add(sub.titleSlug);
+                }
+            });
+            acceptedDataMap[date] = solvedProblems.size;
+        }
+    });
+
+    // Create 'Accepted' dataset
+    const acceptedData = allIntervals.map(interval => acceptedDataMap[interval] || 0);
+    datasets.push({
         label: 'Accepted',
         data: acceptedData,
         backgroundColor: colors.status.accepted,
         borderColor: colors.status.accepted,
         stack: 'main',
         maxBarThickness: 30,
-      },
-      {
-        label: 'Failed',
-        data: failedData,
-        backgroundColor: filters.primaryView === 'Problems Solved' ? colors.status.accepted : colors.background.empty,
-        borderColor: filters.primaryView === 'Problems Solved' ? colors.status.accepted : colors.background.empty,
-        stack: 'main',
-        maxBarThickness: 30,
-      }
-    );
+    });
+
+    // FIX: Only add 'Failed' data for 'Submissions' view, not for 'Problems Solved'
+    if (filters.primaryView === 'Submissions') {
+        const failedData = allIntervals.map(interval => failedDataMap[interval] || 0);
+        datasets.push({
+            label: 'Failed',
+            data: failedData,
+            backgroundColor: colors.background.empty,
+            borderColor: colors.background.empty,
+            stack: 'main',
+            maxBarThickness: 30,
+        });
+    }
   } else if (filters.secondaryView === 'Language') {
-    // Collect all languages from all time groups
+    // Collect all unique languages from the data
     const allLanguages = new Set<string>();
     Object.values(timeGroups).forEach(submissions => {
       submissions.forEach(sub => allLanguages.add(sub.lang));
     });
-    
-    // Create data for each language
-    Array.from(allLanguages).forEach((lang, index) => {
-      const dataMap: { [key: string]: number } = {};
-      
-      Object.keys(timeGroups).forEach(date => {
-        const submissions = timeGroups[date] || [];
+    const languages = Array.from(allLanguages);
+    const dataMaps: { [lang: string]: { [key: string]: number } } = {};
+    languages.forEach(lang => dataMaps[lang] = {});
+
+    // Initialize all intervals with 0 for each language
+    allIntervals.forEach(interval => {
+        languages.forEach(lang => {
+            dataMaps[lang][interval] = 0;
+        });
+    });
+
+    // Single loop through timeGroups to populate maps efficiently
+    Object.entries(timeGroups).forEach(([date, submissions]) => {
+        const langData: { [lang: string]: number | Set<string> } = {};
+        languages.forEach(lang => {
+            langData[lang] = filters.primaryView === 'Submissions' ? 0 : new Set<string>();
+        });
         
-        if (filters.primaryView === 'Submissions') {
-          dataMap[date] = submissions.filter(sub => sub.lang === lang).length;
-        } else {
-          const solvedProblems = new Set<string>();
-          submissions.forEach(sub => {
-            if (sub.status === 10 && sub.lang === lang) {
-              solvedProblems.add(sub.titleSlug);
+        submissions.forEach(sub => {
+            if (langData.hasOwnProperty(sub.lang)) {
+                if (filters.primaryView === 'Submissions') {
+                    (langData[sub.lang] as number)++;
+                } else { // Problems Solved
+                    if (sub.status === 10) {
+                        (langData[sub.lang] as Set<string>).add(sub.titleSlug);
+                    }
+                }
             }
-          });
-          dataMap[date] = solvedProblems.size;
-        }
-      });
-      
-      const data = fillMissingIntervals(dataMap, allIntervals);
-      
-      datasets.push({
-        label: lang,
-        data,
-        backgroundColor: LANGUAGE_COLORS[index % LANGUAGE_COLORS.length],
-        borderColor: LANGUAGE_COLORS[index % LANGUAGE_COLORS.length],
-        stack: 'main',
-        maxBarThickness: 30,
-      });
+        });
+
+        languages.forEach(lang => {
+            if (filters.primaryView === 'Submissions') {
+                dataMaps[lang][date] = langData[lang] as number;
+            } else {
+                dataMaps[lang][date] = (langData[lang] as Set<string>).size;
+            }
+        });
+    });
+    
+    // Create datasets from the populated maps
+    languages.forEach((lang, index) => {
+        const data = allIntervals.map(interval => dataMaps[lang][interval] || 0);
+        datasets.push({
+            label: lang,
+            data,
+            backgroundColor: LANGUAGE_COLORS[index % LANGUAGE_COLORS.length],
+            borderColor: LANGUAGE_COLORS[index % LANGUAGE_COLORS.length],
+            stack: 'main',
+            maxBarThickness: 30,
+        });
     });
   }
   
