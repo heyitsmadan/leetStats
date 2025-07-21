@@ -911,6 +911,9 @@ function setupTabLogic(
   const ACTIVE_CLASSES = 'text-label-1 dark:text-dark-label-1 bg-fill-3 dark:bg-dark-fill-3'.split(' ');
   let isStatsActive = false;
   let lastActiveTab: Element | null = null;
+  
+  // Create MutationObserver to monitor content changes
+  let contentObserver: MutationObserver | null = null;
 
   // Initialize: Find which tab is currently active
   const initActiveTab = () => {
@@ -934,6 +937,39 @@ function setupTabLogic(
         (child as HTMLElement).style.display = 'none';
       }
     });
+  };
+
+  // Start observing content changes
+  const startContentObservation = () => {
+    if (contentObserver) contentObserver.disconnect();
+    
+    contentObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            const element = node as HTMLElement;
+            // Hide any new non-stats content
+            if (element !== tabBar && element !== statsPane && isStatsActive) {
+              element.style.display = 'none';
+              console.log('Automatically hid new content element:', element);
+            }
+          }
+        });
+      });
+    });
+
+    contentObserver.observe(contentSection, {
+      childList: true,
+      subtree: false
+    });
+  };
+
+  // Stop observing content changes
+  const stopContentObservation = () => {
+    if (contentObserver) {
+      contentObserver.disconnect();
+      contentObserver = null;
+    }
   };
 
   // Initial hide of non-stats content if needed
@@ -969,7 +1005,16 @@ function setupTabLogic(
     `);
     rightElements.forEach(el => (el as HTMLElement).style.display = 'none');
     
+    // Start observing for new content
+    startContentObservation();
     
+    // First-time chart rendering
+    if (!window.statsRendered) {
+      requestAnimationFrame(() => {
+        renderAllCharts(processedData);
+        window.statsRendered = true;
+      });
+    }
   });
 
   // LeetCode tab click handler
@@ -989,6 +1034,9 @@ function setupTabLogic(
       
       // Hide stats content
       statsPane.style.display = 'none';
+      
+      // Stop observing content changes
+      stopContentObservation();
       
       // Restore right-aligned elements
       const rightElements = tabBar.querySelectorAll(`
@@ -1013,6 +1061,9 @@ function setupTabLogic(
   
   // Initialize tab bar as visible
   (tabBar as HTMLElement).style.display = 'flex';
+  
+  // Start observing immediately to catch initial changes
+  startContentObservation();
 }
 
 /** Creates stats tab element */
