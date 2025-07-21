@@ -73,10 +73,10 @@ export function renderOrUpdateDoughnutChart(
         datasets: [{
             data: reversedData,
             backgroundColor: reversedColors,
-            borderColor: '#373737', // This color is not in colors.ts
+            borderColor: colors.background.section, // This color is not in colors.ts
             borderWidth: 2,
             hoverBackgroundColor: reversedColors,
-            hoverBorderColor: '#373737', // This color is not in colors.ts
+            hoverBorderColor: colors.background.section, // This color is not in colors.ts
             hoverBorderWidth: 2,
         }],
     };
@@ -151,7 +151,7 @@ export function renderOrUpdateDoughnutChart(
             legend: {
                 position: 'right',
                 labels: {
-                    color: 'rgba(255, 255, 255, 0.9)', // This color is not in colors.ts
+                    color: colors.text.subtle, // This color is not in colors.ts
                     boxWidth: 15,
                     padding: 15,
                 }

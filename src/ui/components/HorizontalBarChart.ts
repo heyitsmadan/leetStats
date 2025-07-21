@@ -151,12 +151,12 @@ export function renderOrUpdateHorizontalBarChart(
         scales: {
             x: {
                 stacked: true,
-                ticks: { color: 'rgba(255, 255, 255, 0.7)' }, // This color is not in colors.ts
+                ticks: { color: colors.text.subtle }, // This color is not in colors.ts
                 grid: { display: false }
             },
             y: {
                 stacked: true,
-                ticks: { color: 'rgba(255, 255, 255, 0.7)' }, // This color is not in colors.ts
+                ticks: { color: colors.text.subtle }, // This color is not in colors.ts
                 grid: { display: false }
             },
         },

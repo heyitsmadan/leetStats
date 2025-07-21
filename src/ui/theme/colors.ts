@@ -20,8 +20,8 @@ export const colors = {
   status: {
     accepted: 'rgb(44, 187, 93)',
     wrongAnswer: 'rgb(248, 97, 92)',
-    memoryLimitExceeded: '#58b8b9',
-    timeLimitExceeded: '#f4ba40',
+    memoryLimitExceeded: 'rgb(28, 186, 186)',
+    timeLimitExceeded: 'rgb(255, 183, 0)',
     compileError: '#a056d5',
     runtimeError: '#f28500',
   },

@@ -49,7 +49,7 @@ trophyPersonalNote: "text-xs italic text-gray-500 dark:text-dark-label-2", // Mu
   // === Records Section Styles (to be used with new design below) ===
   recordLabel: "text-base font-medium text-gray-300",
   recordValue: "text-base font-semibold text-gray-100", // For the main number/stat
-  recordContext: "text-sm text-gray-400", // For the date/context text
+  recordContext: "text-sm text-gray-400 dark:text-dark-label-2", // For the date/context text
 
   // === Skill Matrix ===
   skillMatrixColumnHeader: "text-xs font-semibold uppercase tracking-wider text-gray-400",
@@ -327,25 +327,29 @@ ${legacyStats.milestones.map((milestone: any, index: number) => {
   <div class="${styles.subSectionHeader}">Records</div>
   <div class="mt-4 space-y-2">
     ${legacyStats.records.map((record: any) => `
-      <div class="flex justify-between items-center p-2 rounded-md">
-        <span class="${styles.milestoneEvent}">${record.name}</span>
-        <div class="text-right flex items-center">
-          ${record.value !== undefined ? `
-            <span class="text-sm font-medium text-label-1 dark:text-dark-label-1">${record.value}</span>
-            ${record.subStats ? `
-              <div class="ml-2 w-12 h-6">
-                <canvas id="mini-chart-${record.name.replace(/\s+/g, '-').toLowerCase()}" width="48" height="24"></canvas>
-              </div>
-            ` : ''}
-          ` : `
-            <div class="flex flex-col items-end">
-              <span class="${styles.milestoneEvent}">${record.mainStat}</span>
-              <span class="${styles.milestoneDate}">${record.dateStat}</span>
+  <div class="flex justify-between items-start p-2 rounded-md">
+    <span class="${styles.recordLabel}">${record.name}</span>
+    
+    <div class="flex flex-col items-end">
+      
+      ${record.mainStat ? `
+        <span class="${styles.recordValue}">${record.mainStat}</span>
+      ` : `
+        <div class="flex items-center">
+          <span class="${styles.recordValue}">${record.value}</span>
+          ${record.subStats ? `
+            <div class="ml-2 w-12 h-6">
+              <canvas id="mini-chart-${record.name.replace(/\s+/g, '-').toLowerCase()}" width="48" height="24"></canvas>
             </div>
-          `}
+          ` : ''}
         </div>
-      </div>
-    `).join('')}
+      `}
+      
+      <span class="${styles.recordContext}">${record.dateStat || '&nbsp;'}</span>
+      
+    </div>
+  </div>
+`).join('')}
   </div>
 </div>
   </div>

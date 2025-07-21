@@ -300,7 +300,7 @@ function calculateRecords(processedData: ProcessedData, submissions: any[]): Rec
   }
   
   records.push({
-    name: 'Problems Solved First Try',
+    name: 'One Shot Solves',
     value: firstTryEasy + firstTryMedium + firstTryHard,
     subStats: { easy: firstTryEasy, medium: firstTryMedium, hard: firstTryHard }
   });
@@ -308,7 +308,7 @@ function calculateRecords(processedData: ProcessedData, submissions: any[]): Rec
   // 2. Longest submission streak with ending date
   const streakData = calculateLongestStreak(submissions);
   records.push({
-    name: 'Longest Submission Streak',
+    name: 'Longest Streak',
     mainStat: pluralize(streakData.length, 'day'),
     dateStat: `ending on ${formatDate(streakData.endDate)}`
   });
