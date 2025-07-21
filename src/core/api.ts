@@ -7,6 +7,51 @@ import type {
 } from '../types';
 
 /**
+ * Defines the structure of the user status response from LeetCode's API.
+ */
+export interface UserStatus {
+  isSignedIn: boolean;
+  username: string;
+  isPremium?: boolean;
+}
+
+/**
+ * Fetches the login status and username of the current user.
+ * @returns A promise that resolves to the user's status.
+ */
+export async function fetchUserStatus(): Promise<UserStatus> {
+  const graphqlUrl = 'https://leetcode.com/graphql';
+  const query = `
+    query {
+      userStatus {
+        isSignedIn
+        username
+      }
+    }`;
+
+  try {
+    const res = await fetch(graphqlUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query }),
+      credentials: 'include',
+    });
+
+    const json = await res.json();
+    // If userStatus is null (can happen if cookies are invalid/expired), treat as logged out.
+    if (!json.data.userStatus) {
+      return { isSignedIn: false, username: '' };
+    }
+    return json.data.userStatus;
+  } catch (err) {
+    console.error('❌ Error fetching user status:', err);
+    // Return a fallback value indicating the user is not signed in.
+    return { isSignedIn: false, username: '' };
+  }
+}
+
+
+/**
  * Fetches the total number of accepted submissions for a user using the specified GraphQL query.
  * @param username The LeetCode username.
  * @returns The total number of accepted submissions.

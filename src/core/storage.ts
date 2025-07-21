@@ -1,13 +1,24 @@
 // src/api/storage.ts
 import type { RawSubmission, CachedSubmissions, ProblemMetadata, CachedMetadata } from '../types';
 
+// A key to store all user-specific data under one object in chrome.storage.local
+const USER_DATA_KEY = 'leetStatsUserData';
+
+// Defines the structure for storing data for multiple users.
+interface UserStorage {
+  [username: string]: CachedSubmissions;
+}
+
 /**
- * Saves the complete list of submissions and the latest submission ID to storage.
+ * Saves the complete list of submissions for a specific user.
+ * @param username The user for whom to save the data.
+ * @param submissions The list of submissions to save.
  */
-export async function saveSubmissionsToStorage(submissions: RawSubmission[]): Promise<void> {
+export async function saveSubmissionsToStorage(username: string, submissions: RawSubmission[]): Promise<void> {
+  if (!username) return; // Don't save if username is not provided
   if (submissions.length === 0) return;
 
-  // Find the highest submission ID (assuming IDs are numeric)
+  // Find the highest submission ID (assuming IDs are numeric and can be large)
   const latestSubmissionId = Math.max(...submissions.map(s => parseInt(s.id, 10))).toString();
 
   const dataToSave: CachedSubmissions = {
@@ -15,23 +26,34 @@ export async function saveSubmissionsToStorage(submissions: RawSubmission[]): Pr
     latestFetchedSubmissionId: latestSubmissionId,
   };
 
-  await chrome.storage.local.set(dataToSave);
+  // Retrieve the existing data object, update it, and save it back.
+  const data = await chrome.storage.local.get(USER_DATA_KEY);
+  const allUserData: UserStorage = data[USER_DATA_KEY] || {};
+  allUserData[username] = dataToSave;
+
+  await chrome.storage.local.set({ [USER_DATA_KEY]: allUserData });
 }
 
 /**
- * Loads submissions and the last fetched submission ID from storage.
+ * Loads submissions for a specific user from storage.
+ * @param username The user for whom to load data.
  */
-export async function loadSubmissionsFromStorage(): Promise<CachedSubmissions> {
-  const data = await chrome.storage.local.get(['submissions', 'latestFetchedSubmissionId']);
+export async function loadSubmissionsFromStorage(username: string): Promise<CachedSubmissions> {
+  if (!username) return { submissions: [], latestFetchedSubmissionId: '0' };
+
+  const data = await chrome.storage.local.get(USER_DATA_KEY);
+  const allUserData: UserStorage = data[USER_DATA_KEY] || {};
   
-  return {
-    submissions: data.submissions || [],
-    latestFetchedSubmissionId: data.latestFetchedSubmissionId || '0',
+  // Return the specific user's data, or a default empty object if not found.
+  return allUserData[username] || {
+    submissions: [],
+    latestFetchedSubmissionId: '0',
   };
 }
 
 /**
  * Loads the entire problem metadata cache from storage.
+ * Metadata is global and not user-specific, so this remains unchanged.
  */
 export async function loadProblemMetadataFromStorage(): Promise<CachedMetadata> {
   const data = await chrome.storage.local.get(['problemMetadata']);
@@ -40,7 +62,6 @@ export async function loadProblemMetadataFromStorage(): Promise<CachedMetadata> 
 
 /**
  * Saves the entire problem metadata cache back to storage.
- * This is more efficient than reading and writing for every single problem.
  */
 export async function saveProblemMetadataToStorage(metadata: CachedMetadata): Promise<void> {
   await chrome.storage.local.set({ problemMetadata: metadata });
@@ -51,4 +72,5 @@ export async function saveProblemMetadataToStorage(metadata: CachedMetadata): Pr
  */
 export async function clearStorage(): Promise<void> {
   await chrome.storage.local.clear();
+  console.log('🧹 LeetStats storage cleared.');
 }

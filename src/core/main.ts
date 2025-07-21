@@ -1,6 +1,7 @@
 // src/core/main.ts
-import type { RawSubmission, CachedMetadata, ProblemMetadata, ILoader } from '../types';
+import type { RawSubmission, CachedMetadata, ILoader } from '../types';
 import {
+  fetchUserStatus,
   fetchTotalAcceptedSubmissions,
   fetchAllSubmissions,
   fetchProblemMetadata,
@@ -18,31 +19,52 @@ import { renderPageLayout } from '../ui/layout';
  * The main orchestrator function for the extension.
  */
 export async function initialize(loader: ILoader): Promise<void> {
+  // 1. Check if we are on a user profile page.
+  const usernameMatch = window.location.pathname.match(/\/u\/([a-zA-Z0-9_-]+)/);
+  if (!usernameMatch) {
+    // Not a profile page, so we do nothing.
+    return;
+  }
+  const profileUsername = usernameMatch[1];
+
+  // 2. Fetch the current user's login status from LeetCode.
+  const userStatus = await fetchUserStatus();
+
+  // 3. Conditional Logic: Decide whether to run the extension.
+  if (!userStatus.isSignedIn) {
+    // User is not logged in. Show a message in the loader and stop.
+    loader.show();
+    loader.error("Please log in to see stats.");
+    return;
+  }
+
+  if (userStatus.username !== profileUsername) {
+    // User is logged in, but this is not their profile page. Do nothing.
+    console.log("LeetStats: Viewing another user's profile. No stats will be shown.");
+    return;
+  }
+
+  // If we reach here, the user is logged in and on their own profile page.
+  const loggedInUsername = userStatus.username;
+
   try {
     loader.show();
 
-    // 1. Get username and total accepted submissions for the progress bar
-    const usernameMatch = window.location.pathname.match(/\/u\/([a-zA-Z0-9_-]+)/);
-    if (!usernameMatch) {
-        throw new Error("Could not extract username from URL.");
-    }
-    const username = usernameMatch[1];
-    const totalAccepted = await fetchTotalAcceptedSubmissions(username);
+    // 4. Get total accepted submissions for the progress bar.
+    const totalAccepted = await fetchTotalAcceptedSubmissions(loggedInUsername);
     
-    // 2. Load cached data
-    const cachedSubmissionsData = await loadSubmissionsFromStorage();
+    // 5. Load cached data for the logged-in user.
+    const cachedSubmissionsData = await loadSubmissionsFromStorage(loggedInUsername);
     const cachedMetadata = await loadProblemMetadataFromStorage();
     
     const acceptedInCache = cachedSubmissionsData.submissions.filter(s => s.status === 10).length;
     const totalInCache = cachedSubmissionsData.submissions.length;
     
-    // Immediately update loader with count from cache
+    // Immediately update loader with count from cache.
     loader.update(totalInCache, acceptedInCache, totalAccepted);
 
-    // 3. Fetch new submissions with progress tracking
+    // 6. Fetch new submissions with progress tracking.
     const onProgress = (progress: { accepted: number; total: number }) => {
-        // progress.accepted is the running total of *newly* fetched accepted subs.
-        // progress.total is the running total of *all* newly fetched subs.
         loader.update(
             totalInCache + progress.total, 
             acceptedInCache + progress.accepted, 
@@ -55,23 +77,23 @@ export async function initialize(loader: ILoader): Promise<void> {
       onProgress
     );
 
-    const allSubmissions = [...cachedSubmissionsData.submissions, ...newSubmissions];
-
-    // 4. Save updated submissions if there are any
     if (newSubmissions.length > 0) {
-      await saveSubmissionsToStorage(allSubmissions);
+      const allSubmissions = [...cachedSubmissionsData.submissions, ...newSubmissions];
+      // 7. Save updated submissions for the specific user.
+      await saveSubmissionsToStorage(loggedInUsername, allSubmissions);
+
+      // 8. Fetch and process data only if there are new submissions.
+      const metadataResult = await fetchAndSaveMissingMetadata(allSubmissions, cachedMetadata);
+      const processedData = processData(allSubmissions, metadataResult.updatedMetadata);
+      renderPageLayout(processedData);
+    } else if (cachedSubmissionsData.submissions.length > 0) {
+      // If no new submissions, just render the data from the cache.
+      const processedData = processData(cachedSubmissionsData.submissions, cachedMetadata);
+      renderPageLayout(processedData);
     }
 
-    // 5. Fetch missing problem metadata
-    const metadataResult = await fetchAndSaveMissingMetadata(allSubmissions, cachedMetadata);
 
-    // 6. Process the complete raw data into usable maps
-    const processedData = processData(allSubmissions, metadataResult.updatedMetadata);
-
-    // 7. Pass the processed data to the UI layer to render everything
-    renderPageLayout(processedData);
-
-    loader.complete(); // Complete without a final message
+    loader.complete();
 
   } catch (err) {
     console.error("❌ Failed to initialize LeetCode stats:", err);
@@ -81,6 +103,9 @@ export async function initialize(loader: ILoader): Promise<void> {
   }
 }
 
+/**
+ * Fetches and saves metadata for any problems that are not already in the cache.
+ */
 async function fetchAndSaveMissingMetadata(
   submissions: RawSubmission[], 
   cachedMetadata: CachedMetadata
