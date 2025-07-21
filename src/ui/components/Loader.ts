@@ -5,6 +5,7 @@ export class FetchLoader {
     private loaderElement: HTMLElement | null = null;
     private progressTextElement: HTMLElement | null = null;
     private progressBarFillElement: HTMLElement | null = null;
+    private progressBarWrapper: HTMLElement | null = null;
 
     constructor() {
         this.create();
@@ -51,8 +52,8 @@ export class FetchLoader {
             color: colors.text.subtle,
         });
 
-        const progressBarWrapper = document.createElement('div');
-        Object.assign(progressBarWrapper.style, {
+        this.progressBarWrapper = document.createElement('div');
+        Object.assign(this.progressBarWrapper.style, {
             height: '6px',
             width: '100%',
             backgroundColor: colors.background.empty,
@@ -70,9 +71,9 @@ export class FetchLoader {
             transition: 'width 0.3s ease',
         });
 
-        progressBarWrapper.appendChild(this.progressBarFillElement);
+        this.progressBarWrapper.appendChild(this.progressBarFillElement);
         this.loaderElement.appendChild(this.progressTextElement);
-        this.loaderElement.appendChild(progressBarWrapper);
+        this.loaderElement.appendChild(this.progressBarWrapper);
     }
 
     /**
@@ -80,6 +81,15 @@ export class FetchLoader {
      */
     public show() {
         if (!this.loaderElement) return;
+
+        // Ensure the progress bar is visible when the loader is shown.
+        if (this.progressBarWrapper) {
+            this.progressBarWrapper.style.display = 'block';
+        }
+        if (this.progressTextElement) {
+            this.progressTextElement.style.marginBottom = '8px';
+        }
+
         document.body.appendChild(this.loaderElement);
         requestAnimationFrame(() => {
             if (this.loaderElement) {
@@ -97,10 +107,8 @@ export class FetchLoader {
     public update(totalFetched: number, acceptedFetched: number, totalAccepted: number) {
         if (!this.progressTextElement || !this.progressBarFillElement) return;
 
-        // Set the text based on the total number of submissions fetched
         this.progressTextElement.textContent = `Fetched ${this.pluralize(totalFetched, 'submission')}...`;
 
-        // Calculate and set the progress bar width based on accepted submissions
         const progress = totalAccepted > 0 ? Math.min((acceptedFetched / totalAccepted) * 100, 99) : 0;
         this.progressBarFillElement.style.width = `${progress}%`;
     }
@@ -122,21 +130,25 @@ export class FetchLoader {
     }
 
     /**
-     * Displays an error state and then hides the loader.
+     * Displays an error message and then hides the loader, without the progress bar.
      * @param errorMessage The error message to show.
      */
     public error(errorMessage: string) {
-        if (!this.progressTextElement || !this.progressBarFillElement || !this.loaderElement) return;
+        if (!this.progressTextElement || !this.progressBarWrapper || !this.loaderElement) return;
         
         this.progressTextElement.textContent = errorMessage;
-        this.progressBarFillElement.style.backgroundColor = colors.problems.hard;
-        this.progressBarFillElement.style.width = '100%';
+        
+        // Hide the progress bar wrapper entirely.
+        this.progressBarWrapper.style.display = 'none';
+        
+        // Remove the bottom margin from the text to vertically center it.
+        this.progressTextElement.style.marginBottom = '0';
 
         setTimeout(() => {
              if (this.loaderElement) {
                 this.loaderElement.style.transform = 'translateY(200%)';
                 setTimeout(() => this.loaderElement?.remove(), 500);
             }
-        }, 3000);
+        }, 3000); // Keep the message visible for 3 seconds.
     }
 }
