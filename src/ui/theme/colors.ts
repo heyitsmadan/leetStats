@@ -2,8 +2,8 @@ export const colors = {
   background: {
     page: 'rgb(26, 26, 26)',
     section: 'rgb(40, 40, 40)',
-    secondarySection: 'rgba(255, 255, 255, 0.06)',
-    empty: 'rgba(255, 255, 255, 0.06)',
+    secondarySection: '#353535',
+    empty: '#393939',
   },
 
   text: {
