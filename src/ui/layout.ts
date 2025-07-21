@@ -468,127 +468,131 @@ function renderSkillMatrix(processedData: ProcessedData) {
 
 
 function setupFilterListeners(processedData: ProcessedData) {
-  // Time Range Dropdown Logic
-    const timeRangeBtn = document.getElementById('time-range-dropdown-btn') as HTMLButtonElement;
-    const timeRangeOptions = document.getElementById('time-range-dropdown-options') as HTMLDivElement;
-    const timeRangeOptionElements = timeRangeOptions?.querySelectorAll('[data-value]');
+    // --- Generic Dropdown Handler ---
+    const setupDropdown = (
+        btnId: string,
+        optionsId: string,
+        filterKey: keyof typeof currentFilters | keyof typeof skillMatrixOptions,
+        isSkillMatrix: boolean = false
+    ) => {
+        const dropdownBtn = document.getElementById(btnId) as HTMLButtonElement;
+        const dropdownOptions = document.getElementById(optionsId) as HTMLDivElement;
+        const optionElements = dropdownOptions?.querySelectorAll('[data-value]');
 
-    timeRangeBtn?.addEventListener('click', () => {
-        const isOpen = timeRangeOptions.classList.contains('hidden');
-        if (isOpen) {
-            timeRangeOptions.classList.remove('hidden');
-            timeRangeBtn.setAttribute('aria-expanded', 'true');
-        } else {
-            timeRangeOptions.classList.add('hidden');
-            timeRangeBtn.setAttribute('aria-expanded', 'false');
-        }
-    });
+        if (!dropdownBtn || !dropdownOptions || !optionElements) return;
 
-    timeRangeOptionElements?.forEach(option => {
-        option.addEventListener('click', () => {
-            const value = option.getAttribute('data-value') as TimeRange;
-            currentFilters.timeRange = value;
-            
-            // *** CHANGE: Replace previous logic with this new block ***
-            // --- Point 5: Set Default Cumulative View based on Time Range ---
-            const smartView = getSmartCumulativeView(value, processedData);
-            currentFilters.cumulativeView = smartView;
-            updateCumulativeViewToggle(smartView);
-
-            // Update the dropdown button text
-            const btnText = timeRangeBtn.querySelector('span');
-            if(btnText) btnText.textContent = value;
-
-            // Re-render all charts with the new filters
-            renderFilteredCharts(processedData);
-            timeRangeOptions.classList.add('hidden'); // Hide dropdown
-        });
-    });
-
-    // Difficulty Dropdown Logic
-    const difficultyBtn = document.getElementById('difficulty-dropdown-btn') as HTMLButtonElement;
-    const difficultyOptions = document.getElementById('difficulty-dropdown-options') as HTMLDivElement;
-    const difficultyOptionElements = difficultyOptions?.querySelectorAll('[data-value]');
-
-    difficultyBtn?.addEventListener('click', () => {
-        const isOpen = difficultyOptions.classList.contains('hidden');
-        if (isOpen) {
-            difficultyOptions.classList.remove('hidden');
-            difficultyBtn.setAttribute('aria-expanded', 'true');
-        } else {
-            difficultyOptions.classList.add('hidden');
-            difficultyBtn.setAttribute('aria-expanded', 'false');
-        }
-    });
-
-    difficultyOptionElements?.forEach(option => {
-        option.addEventListener('click', () => {
-            const value = option.getAttribute('data-value') as Difficulty;
-            const span = difficultyBtn.querySelector('span');
-            if (span) span.textContent = value;
-            
-            currentFilters.difficulty = value;
-            difficultyOptions.classList.add('hidden');
-            difficultyBtn.setAttribute('aria-expanded', 'false');
-            
-            // Update visual selection
-            difficultyOptionElements.forEach(opt => {
-                opt.classList.remove('bg-fill-3', 'dark:bg-dark-fill-3', 'font-medium');
+        // Toggle dropdown visibility
+        dropdownBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isHidden = dropdownOptions.classList.contains('hidden');
+            // Hide all other dropdowns first
+            document.querySelectorAll('.stats-dropdown-options').forEach(el => {
+                if (el.id !== optionsId) {
+                    el.classList.add('hidden');
+                    const associatedBtnId = el.id.replace('-options', '-btn');
+                    document.getElementById(associatedBtnId)?.setAttribute('aria-expanded', 'false');
+                }
             });
-            option.classList.add('bg-fill-3', 'dark:bg-dark-fill-3', 'font-medium');
-            
-            renderFilteredCharts(processedData);
+            // Then toggle the current one
+            dropdownOptions.classList.toggle('hidden', !isHidden);
+            dropdownBtn.setAttribute('aria-expanded', String(isHidden));
+        });
+
+        // Handle option selection
+        optionElements.forEach(option => {
+            option.addEventListener('click', () => {
+                const value = option.getAttribute('data-value') as any;
+                const btnTextSpan = dropdownBtn.querySelector('span:not(.check-icon-span)');
+
+                if (btnTextSpan) {
+                    btnTextSpan.textContent = value;
+                }
+
+                // Update the correct filter state
+                if (isSkillMatrix) {
+                    (skillMatrixOptions as any)[filterKey] = value;
+                } else {
+                    (currentFilters as any)[filterKey] = value;
+                }
+
+                // Update visual selection state for options
+                optionElements.forEach(opt => {
+                    const isSelected = opt === option;
+                    opt.classList.toggle('bg-fill-3', isSelected);
+                    opt.classList.toggle('dark:bg-dark-fill-3', isSelected);
+                    opt.classList.toggle('font-medium', isSelected);
+
+                    const checkIcon = opt.querySelector('.check-icon-span');
+                    if (checkIcon) {
+                        checkIcon.classList.toggle('visible', isSelected);
+                        checkIcon.classList.toggle('invisible', !isSelected);
+                    }
+                });
+
+                dropdownOptions.classList.add('hidden');
+                dropdownBtn.setAttribute('aria-expanded', 'false');
+
+                // Re-render the appropriate charts
+                if (isSkillMatrix) {
+                    renderSkillMatrix(processedData);
+                } else {
+                    // Special handling for time range to reset cumulative view
+                    if (filterKey === 'timeRange') {
+                        const smartView = getSmartCumulativeView(value, processedData);
+                        currentFilters.cumulativeView = smartView;
+                        updateCumulativeViewToggle(smartView);
+                    }
+                    renderFilteredCharts(processedData);
+                }
+            });
+        });
+    };
+
+    // --- Initialize All Dropdowns ---
+    setupDropdown('time-range-dropdown-btn', 'time-range-dropdown-options', 'timeRange');
+    setupDropdown('difficulty-dropdown-btn', 'difficulty-dropdown-options', 'difficulty');
+    setupDropdown('skill-matrix-time-filter-btn', 'skill-matrix-time-filter-options', 'timeRange', true);
+
+    // --- Close dropdowns when clicking outside ---
+    document.addEventListener('click', (event) => {
+        document.querySelectorAll('.stats-dropdown-options').forEach(el => {
+            const btnId = el.id.replace('-options', '-btn');
+            const btn = document.getElementById(btnId);
+            if (btn && !btn.contains(event.target as Node)) {
+                 el.classList.add('hidden');
+                 btn.setAttribute('aria-expanded', 'false');
+            }
         });
     });
 
-    // Close dropdowns when clicking outside
-    document.addEventListener('click', (event) => {
-        const target = event.target as HTMLElement;
-        if (!timeRangeBtn?.contains(target) && !timeRangeOptions?.contains(target)) {
-            timeRangeOptions?.classList.add('hidden');
-            timeRangeBtn?.setAttribute('aria-expanded', 'false');
-        }
-        if (!difficultyBtn?.contains(target) && !difficultyOptions?.contains(target)) {
-            difficultyOptions?.classList.add('hidden');
-            difficultyBtn?.setAttribute('aria-expanded', 'false');
-        }
-    });
-    // NEW: Two-button toggle logic
+
+    // --- Coding Clock Toggle Logic ---
     const dayViewBtn = document.getElementById('day-view-btn') as HTMLButtonElement;
     const hourViewBtn = document.getElementById('hour-view-btn') as HTMLButtonElement;
-    // NEW: Day View button click handler
+
     dayViewBtn.addEventListener('click', () => {
         if (currentFilters.clockView !== 'DayOfWeek') {
             currentFilters.clockView = 'DayOfWeek';
-            
-            // Update button states
             dayViewBtn.setAttribute('data-state', 'active');
             hourViewBtn.setAttribute('data-state', 'inactive');
-            
             renderCodingClock(processedData);
         }
     });
 
-    // NEW: Hour View button click handler
     hourViewBtn.addEventListener('click', () => {
         if (currentFilters.clockView !== 'HourOfDay') {
             currentFilters.clockView = 'HourOfDay';
-            
-            // Update button states
             hourViewBtn.setAttribute('data-state', 'active');
             dayViewBtn.setAttribute('data-state', 'inactive');
-            
             renderCodingClock(processedData);
         }
     });
 
-    
-    // Cumulative View Toggle Logic
+    // --- Cumulative Progress Toggle Logic ---
     const dailyViewBtn = document.getElementById('daily-view-btn') as HTMLButtonElement;
     const monthlyViewBtn = document.getElementById('monthly-view-btn') as HTMLButtonElement;
     const yearlyViewBtn = document.getElementById('yearly-view-btn') as HTMLButtonElement;
 
-    // *** CHANGE: Simplify the toggle button event listeners ***
     const handleToggleClick = (view: CumulativeView) => {
         if (currentFilters.cumulativeView !== view) {
             currentFilters.cumulativeView = view;
@@ -600,64 +604,10 @@ function setupFilterListeners(processedData: ProcessedData) {
     dailyViewBtn.addEventListener('click', () => handleToggleClick('Daily'));
     monthlyViewBtn.addEventListener('click', () => handleToggleClick('Monthly'));
     yearlyViewBtn.addEventListener('click', () => handleToggleClick('Yearly'));
-    
+
     // Set initial toggle state on load
     updateCumulativeViewToggle(currentFilters.cumulativeView);
-
-// Add skill matrix dropdown logic
-const skillMatrixBtn = document.getElementById('skill-matrix-time-filter-btn') as HTMLButtonElement;
-const skillMatrixDropdown = document.getElementById('skill-matrix-time-filter-options') as HTMLDivElement; // ✅ Renamed
-const skillMatrixOptionElements = skillMatrixDropdown?.querySelectorAll('[data-value]'); // ✅ Updated reference
-
-skillMatrixBtn?.addEventListener('click', () => {
-    const isOpen = skillMatrixDropdown.classList.contains('hidden'); // ✅ Updated reference
-    if (isOpen) {
-        skillMatrixDropdown.classList.remove('hidden'); // ✅ Updated reference
-        skillMatrixBtn.setAttribute('aria-expanded', 'true');
-    } else {
-        skillMatrixDropdown.classList.add('hidden'); // ✅ Updated reference
-        skillMatrixBtn.setAttribute('aria-expanded', 'false');
-    }
-});
-
-skillMatrixOptionElements?.forEach(option => {
-    option.addEventListener('click', () => {
-        const value = option.getAttribute('data-value') as 'Last 30 Days' | 'Last 90 Days' | 'Last 365 Days' | 'All Time';
-        const span = skillMatrixBtn.querySelector('span');
-        if (span) span.textContent = value;
-        
-        skillMatrixOptions.timeRange = value; // ✅ Now refers to the state object
-        skillMatrixDropdown.classList.add('hidden'); // ✅ Updated reference
-        skillMatrixBtn.setAttribute('aria-expanded', 'false');
-        
-        // Update visual selection
-        skillMatrixOptionElements.forEach(opt => {
-            const checkIcon = opt.querySelector('span');
-            if (checkIcon) {
-                checkIcon.classList.toggle('visible', opt === option);
-                checkIcon.classList.toggle('invisible', opt !== option);
-            }
-            opt.classList.toggle('bg-fill-3', opt === option);
-            opt.classList.toggle('dark:bg-dark-fill-3', opt === option);
-            opt.classList.toggle('font-medium', opt === option);
-        });
-        
-        renderSkillMatrix(processedData);
-    });
-});
-
-// Close skill matrix dropdown when clicking outside
-document.addEventListener('click', (event) => {
-    const target = event.target as HTMLElement;
-    if (!skillMatrixBtn?.contains(target) && !skillMatrixDropdown?.contains(target)) { // ✅ Updated reference
-        skillMatrixDropdown?.classList.add('hidden'); // ✅ Updated reference
-        skillMatrixBtn?.setAttribute('aria-expanded', 'false');
-    }
-});
-
-
-
-    }
+}
 
 function createStatsPaneWithGrid(): HTMLElement {
     const statsPane = document.createElement('div');
@@ -666,236 +616,191 @@ function createStatsPaneWithGrid(): HTMLElement {
     statsPane.className = 'w-full';
     statsPane.innerHTML = `
     <div class="space-y-4">
-    <!-- INTERACTIVE CHART SECTION - Add this BEFORE the legacy section -->
-      <div class="rounded-lg p-4">
-        <div class="${styles.sectionHeader}">History</div>
-        <div class="mt-4" id="interactive-chart-container"></div>
-      </div>
-      <div class="border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b"></div>
-       <!-- YOUR LEGACY SECTION -->
-      <div class="rounded-lg p-4">
-        <div id="legacy-section" class="min-h-96"></div>
-      </div>
-<div class="border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b"></div>
-<!-- FILTERS -->
-<!-- HEADER + FILTERS -->
-<div class="flex items-center justify-between p-4 bg-layer-1 dark:bg-dark-layer-1 rounded-lg">
-  <!-- Left Header -->
-  <h2 class="${styles.sectionHeader}">Activity</h2>
+        <!-- INTERACTIVE CHART SECTION -->
+        <div class="rounded-lg p-4">
+            <div class="${styles.sectionHeader}">History</div>
+            <div class="mt-4" id="interactive-chart-container"></div>
+        </div>
+        <div class="border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b"></div>
+        
+        <!-- LEGACY SECTION -->
+        <div class="rounded-lg p-4">
+            <div id="legacy-section" class="min-h-96"></div>
+        </div>
+        <div class="border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b"></div>
 
-  <!-- FILTERS -->
-  <div class="flex items-center space-x-4">
-    <!-- Time Range Dropdown -->
-    <div class="relative" data-headlessui-state>
-      <button id="time-range-dropdown-btn" class="flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3 w-40" type="button" aria-haspopup="listbox" aria-expanded="false" data-headlessui-state>
-        <span class="whitespace-nowrap flex-1 pr-2">All Time</span>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="pointer-events-none flex-shrink-0 w-4 h-4" aria-hidden="true">
-          <path fill-rule="evenodd" d="M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z" clip-rule="evenodd"></path>
-        </svg>
-      </button>
-      <div id="time-range-dropdown-options" class="hidden z-dropdown absolute max-h-56 overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 right-0 mt-2 shadow-level3 dark:shadow-dark-level3 w-40" role="listbox" tabindex="0" data-headlessui-state>
-        <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded bg-fill-3 dark:bg-dark-fill-3" data-value="All Time" role="option" tabindex="-1">
-          <div class="flex h-5 flex-1 items-center pr-2 font-medium">
-            <div class="whitespace-nowrap">All Time</div>
-          </div>
-        </div>
-        <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Last 30 Days" role="option" tabindex="-1">
-          <div class="flex h-5 flex-1 items-center pr-2">
-            <div class="whitespace-nowrap">Last 30 Days</div>
-          </div>
-        </div>
-        <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Last 90 Days" role="option" tabindex="-1">
-          <div class="flex h-5 flex-1 items-center pr-2">
-            <div class="whitespace-nowrap">Last 90 Days</div>
-          </div>
-        </div>
-        <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Last 365 Days" role="option" tabindex="-1">
-          <div class="flex h-5 flex-1 items-center pr-2">
-            <div class="whitespace-nowrap">Last 365 Days</div>
-          </div>
-        </div>
-      </div>
-    </div>
+        <!-- HEADER + FILTERS -->
+        <div class="flex items-center justify-between p-4 bg-layer-1 dark:bg-dark-layer-1 rounded-lg">
+            <h2 class="${styles.sectionHeader}">Activity</h2>
+            <div class="flex items-center space-x-4">
 
-    <!-- Difficulty Dropdown -->
-    <div class="relative" data-headlessui-state>
-      <button id="difficulty-dropdown-btn" class="flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3 w-24" type="button" aria-haspopup="listbox" aria-expanded="false" data-headlessui-state>
-        <span class="whitespace-nowrap flex-1 pr-2">All</span>
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="pointer-events-none flex-shrink-0 w-4 h-4" aria-hidden="true">
-          <path fill-rule="evenodd" d="M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z" clip-rule="evenodd"></path>
-        </svg>
-      </button>
-      <div id="difficulty-dropdown-options" class="hidden z-dropdown absolute max-h-56 overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 right-0 mt-2 shadow-level3 dark:shadow-dark-level3 w-24" role="listbox" tabindex="0" data-headlessui-state>
-        <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded bg-fill-3 dark:bg-dark-fill-3" data-value="All" role="option" tabindex="-1">
-          <div class="flex h-5 flex-1 items-center pr-2 font-medium">
-            <div class="whitespace-nowrap">All</div>
-          </div>
-        </div>
-        <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Easy" role="option" tabindex="-1">
-          <div class="flex h-5 flex-1 items-center pr-2">
-            <div class="whitespace-nowrap">Easy</div>
-          </div>
-        </div>
-        <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Medium" role="option" tabindex="-1">
-          <div class="flex h-5 flex-1 items-center pr-2">
-            <div class="whitespace-nowrap">Medium</div>
-          </div>
-        </div>
-        <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Hard" role="option" tabindex="-1">
-          <div class="flex h-5 flex-1 items-center pr-2">
-            <div class="whitespace-nowrap">Hard</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
+                <!-- Time Range Dropdown (Updated) -->
+                <div class="relative">
+                    <button id="time-range-dropdown-btn" class="flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3" type="button" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="whitespace-nowrap">All Time</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="pointer-events-none ml-3 w-4 h-4" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z" clip-rule="evenodd"></path>
+                        </svg>
+                    </button>
+                    <div id="time-range-dropdown-options" class="stats-dropdown-options hidden z-dropdown absolute max-h-56 w-full min-w-max overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 right-0 mt-2 shadow-level3 dark:shadow-dark-level3" style="filter: drop-shadow(rgba(0, 0, 0, 0.04) 0px 1px 3px) drop-shadow(rgba(0, 0, 0, 0.12) 0px 6px 16px);" role="listbox">
+                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded bg-fill-3 dark:bg-dark-fill-3 font-medium" data-value="All Time" role="option">
+                            <div class="flex-1 whitespace-nowrap">All Time</div>
+                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 visible">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg>
+                            </span>
+                        </div>
+                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded" data-value="Last 30 Days" role="option">
+                            <div class="flex-1 whitespace-nowrap">Last 30 Days</div>
+                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 invisible">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg>
+                            </span>
+                        </div>
+                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded" data-value="Last 90 Days" role="option">
+                            <div class="flex-1 whitespace-nowrap">Last 90 Days</div>
+                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 invisible">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg>
+                            </span>
+                        </div>
+                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded" data-value="Last 365 Days" role="option">
+                            <div class="flex-1 whitespace-nowrap">Last 365 Days</div>
+                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 invisible">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg>
+                            </span>
+                        </div>
+                    </div>
+                </div>
 
+                <!-- Difficulty Dropdown (Updated) -->
+                <div class="relative">
+                    <button id="difficulty-dropdown-btn" class="flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3" type="button" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="whitespace-nowrap">All</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="pointer-events-none ml-3 w-4 h-4" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z" clip-rule="evenodd"></path>
+                        </svg>
+                    </button>
+                    <div id="difficulty-dropdown-options" class="stats-dropdown-options hidden z-dropdown absolute max-h-56 w-full min-w-max overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 right-0 mt-2 shadow-level3 dark:shadow-dark-level3" style="filter: drop-shadow(rgba(0, 0, 0, 0.04) 0px 1px 3px) drop-shadow(rgba(0, 0, 0, 0.12) 0px 6px 16px);" role="listbox">
+                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded bg-fill-3 dark:bg-dark-fill-3 font-medium" data-value="All" role="option">
+                            <div class="flex-1 whitespace-nowrap">All</div>
+                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 visible">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg>
+                            </span>
+                        </div>
+                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded" data-value="Easy" role="option">
+                            <div class="flex-1 whitespace-nowrap">Easy</div>
+                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 invisible">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg>
+                            </span>
+                        </div>
+                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded" data-value="Medium" role="option">
+                            <div class="flex-1 whitespace-nowrap">Medium</div>
+                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 invisible">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg>
+                            </span>
+                        </div>
+                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded" data-value="Hard" role="option">
+                            <div class="flex-1 whitespace-nowrap">Hard</div>
+                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 invisible">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg>
+                            </span>
+                        </div>
+                    </div>
+                </div>
 
-      <!-- **FIX:** Changed lg:grid-cols-2 to md:grid-cols-2 for better responsiveness -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- TOP-LEFT: CODING CLOCK -->
-        <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-          <div class="flex justify-between items-center mb-4">
-            <!-- **UPDATED:** Heading color -->
-            <div class="${styles.subSectionHeader}">Coding Clock</div>
-            <!-- **UPDATED:** Button text for default day view -->
-            <!-- NEW: Two-button toggle -->
-<div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
-  <button id="day-view-btn" 
-          data-state="active"
-          class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
-    Daily
-  </button>
-  <button id="hour-view-btn" 
-          data-state="inactive"
-          class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
-    Hourly
-  </button>
-</div>
-          </div>
-          <div class="mt-4 relative h-64 w-full">
-            <canvas id="coding-clock-chart"></canvas>
-          </div>
+            </div>
+        </div>
+
+        <!-- CHARTS GRID -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- TOP-LEFT: CODING CLOCK -->
+            <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="${styles.subSectionHeader}">Coding Clock</div>
+                    <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
+                        <button id="day-view-btn" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Daily</button>
+                        <button id="hour-view-btn" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Hourly</button>
+                    </div>
+                </div>
+                <div class="mt-4 relative h-64 w-full">
+                    <canvas id="coding-clock-chart"></canvas>
+                </div>
+            </div>
+            
+            <!-- TOP-RIGHT: CUMULATIVE PROGRESS -->
+            <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="${styles.subSectionHeader}">Progress Tracker</div>
+                    <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
+                        <button id="daily-view-btn" data-view="Daily" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Daily</button>
+                        <button id="monthly-view-btn" data-view="Monthly" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Monthly</button>
+                        <button id="yearly-view-btn" data-view="Yearly" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Yearly</button>
+                    </div>
+                </div>
+                <div class="mt-4 relative h-64 w-full">
+                    <canvas id="cumulative-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- BOTTOM-LEFT: SUBMISSION SIGNATURE -->
+            <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
+                <div class="${styles.subSectionHeader}">Submission Signature</div>
+                <div class="mt-4 relative h-64 w-full">
+                    <canvas id="submission-signature-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- BOTTOM-RIGHT: LANGUAGE STATS -->
+            <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
+                <div class="${styles.subSectionHeader}">Language Stats</div>
+                <div class="mt-4 relative h-64 w-full">
+                    <canvas id="language-stats-chart"></canvas>
+                </div>
+            </div>
         </div>
         
-        <!-- TOP-RIGHT: CUMULATIVE PROGRESS -->
-<div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-  <div class="flex justify-between items-center mb-4">
-    <div class="${styles.subSectionHeader}">Progress Tracker</div>
-    <!-- NEW: Three-button toggle with same design as coding clock -->
-    <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
-      <button id="daily-view-btn" 
-              data-view="Daily"
-              data-state="inactive"
-              class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
-        Daily
-      </button>
-      <button id="monthly-view-btn" 
-              data-view="Monthly"
-              data-state="active"
-              class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
-        Monthly
-      </button>
-      <button id="yearly-view-btn" 
-              data-view="Yearly"
-              data-state="inactive"
-              class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
-        Yearly
-      </button>
-    </div>
-  </div>
-  <div class="mt-4 relative h-64 w-full">
-    <canvas id="cumulative-chart"></canvas>
-  </div>
-</div>
-
-        <!-- BOTTOM-LEFT: SUBMISSION SIGNATURE -->
+        <!-- SKILL MATRIX SECTION -->
+        <div class="border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b"></div>
         <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-            <div class="${styles.subSectionHeader}">Submission Signature</div>
-            <div class="mt-4 relative h-64 w-full">
-                <canvas id="submission-signature-chart"></canvas>
+            <div class="flex justify-between items-center mb-4">
+                <div class="${styles.sectionHeader}">Skills</div>
+                <div class="relative">
+                    <button id="skill-matrix-time-filter-btn" class="flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3" type="button" aria-haspopup="listbox" aria-expanded="false">
+                        <span class="whitespace-nowrap">All Time</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="pointer-events-none ml-3 w-4 h-4" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z" clip-rule="evenodd"></path>
+                        </svg>
+                    </button>
+                    <div id="skill-matrix-time-filter-options" class="stats-dropdown-options hidden z-dropdown absolute max-h-56 w-full min-w-max overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 right-0 mt-2 shadow-level3 dark:shadow-dark-level3" style="filter: drop-shadow(rgba(0, 0, 0, 0.04) 0px 1px 3px) drop-shadow(rgba(0, 0, 0, 0.12) 0px 6px 16px);" role="listbox">
+                         <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded bg-fill-3 dark:bg-dark-fill-3 font-medium" data-value="All Time" role="option">
+                            <div class="flex-1 whitespace-nowrap">All Time</div>
+                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 visible">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg>
+                            </span>
+                        </div>
+                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded" data-value="Last 365 Days" role="option">
+                            <div class="flex-1 whitespace-nowrap">Last 365 Days</div>
+                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 invisible">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg>
+                            </span>
+                        </div>
+                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded" data-value="Last 90 Days" role="option">
+                            <div class="flex-1 whitespace-nowrap">Last 90 Days</div>
+                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 invisible">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg>
+                            </span>
+                        </div>
+                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded" data-value="Last 30 Days" role="option">
+                            <div class="flex-1 whitespace-nowrap">Last 30 Days</div>
+                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 invisible">
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg>
+                            </span>
+                        </div>
+                    </div>
+                </div>
             </div>
+            <div class="mt-4" id="skill-matrix-container"></div>
         </div>
-
-        <!-- BOTTOM-RIGHT: LANGUAGE STATS -->
-        <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-            <div class="${styles.subSectionHeader}">Language Stats</div>
-            <div class="mt-4 relative h-64 w-full">
-                <canvas id="language-stats-chart"></canvas>
-            </div>
-        </div>
-      </div>
-      <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-      <!-- SKILL MATRIX SECTION -->
-      <div class="border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b"></div>
-<div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-  <div class="flex justify-between items-center mb-4">
-    <div class="${styles.sectionHeader}">Skills</div>
-    
-    <!-- Updated dropdown with HeadlessUI style -->
-    <div class="ml-[21px]">
-      <div class="relative" data-headlessui-state>
-        <button id="skill-matrix-time-filter-btn" class="flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3" type="button" aria-haspopup="listbox" aria-expanded="false" data-headlessui-state>
-          <span class="whitespace-nowrap">All Time</span>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="pointer-events-none ml-3 w-4 h-4" aria-hidden="true">
-            <path fill-rule="evenodd" d="M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z" clip-rule="evenodd"></path>
-          </svg>
-        </button>
-        <div id="skill-matrix-time-filter-options" class="hidden z-dropdown absolute max-h-56 overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 right-0 mt-2 shadow-level3 dark:shadow-dark-level3" style="filter: drop-shadow(rgba(0, 0, 0, 0.04) 0px 1px 3px) drop-shadow(rgba(0, 0, 0, 0.12) 0px 6px 16px);">
-          
-          <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded bg-fill-3 dark:bg-dark-fill-3" data-value="All Time">
-            <div class="flex h-5 flex-1 items-center pr-2 font-medium">
-              <div class="whitespace-nowrap">All Time</div>
-            </div>
-            <span class="text-blue dark:text-dark-blue flex items-center pr-2 visible">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4" aria-hidden="true">
-                <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path>
-              </svg>
-            </span>
-          </div>
-          
-          <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Last 365 Days">
-            <div class="flex h-5 flex-1 items-center pr-2">
-              <div class="whitespace-nowrap">Last 365 Days</div>
-            </div>
-            <span class="text-blue dark:text-dark-blue flex items-center pr-2 invisible">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4" aria-hidden="true">
-                <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path>
-              </svg>
-            </span>
-          </div>
-          
-          <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Last 90 Days">
-            <div class="flex h-5 flex-1 items-center pr-2">
-              <div class="whitespace-nowrap">Last 90 Days</div>
-            </div>
-            <span class="text-blue dark:text-dark-blue flex items-center pr-2 invisible">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4" aria-hidden="true">
-                <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path>
-              </svg>
-            </span>
-          </div>
-          
-          <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="Last 30 Days">
-            <div class="flex h-5 flex-1 items-center pr-2">
-              <div class="whitespace-nowrap">Last 30 Days</div>
-            </div>
-            <span class="text-blue dark:text-dark-blue flex items-center pr-2 invisible">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4" aria-hidden="true">
-                <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path>
-              </svg>
-            </span>
-          </div>
-          
-        </div>
-      </div>
     </div>
-  </div>
-  <div class="mt-4" id="skill-matrix-container"></div>
-</div>
-
-  `;
+`;
     return statsPane;
 }
 
