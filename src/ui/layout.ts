@@ -338,7 +338,7 @@ ${legacyStats.milestones.map((milestone: any, index: number) => {
         <div class="flex items-center">
           <span class="${styles.recordValue}">${record.value}</span>
           ${record.subStats ? `
-            <div class="ml-2 w-12 h-6">
+            <div class="ml-2 w-12 h-6" style="transform: translateY(-5px);">
               <canvas id="mini-chart-${record.name.replace(/\s+/g, '-').toLowerCase()}" width="48" height="24"></canvas>
             </div>
           ` : ''}

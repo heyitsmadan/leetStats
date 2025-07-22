@@ -256,6 +256,10 @@ function calculateMilestones(sortedSubmissions: ProcessedSubmission[]): Mileston
  * Calculates user records.
  * REFACTOR: Passes the pre-sorted submissions array to its helper functions.
  */
+/**
+ * Calculates user records.
+ * REFACTOR: Passes the pre-sorted submissions array to its helper functions.
+ */
 function calculateRecords(processedData: ProcessedData, sortedSubmissions: any[]): RecordData[] {
   const records: RecordData[] = [];
   
@@ -265,7 +269,8 @@ function calculateRecords(processedData: ProcessedData, sortedSubmissions: any[]
   let firstTryHard = 0;
   
   for (const [slug, subs] of processedData.problemMap) {
-    if (subs[0].status === 10) {
+    // Check if the first submission for this problem was an accepted one.
+    if (subs[0].status === 10) { 
       const difficulty = subs[0].metadata?.difficulty;
       if (difficulty === 'Easy') firstTryEasy++;
       else if (difficulty === 'Medium') firstTryMedium++;
@@ -273,13 +278,38 @@ function calculateRecords(processedData: ProcessedData, sortedSubmissions: any[]
     }
   }
   
+  const oneShotSolves = firstTryEasy + firstTryMedium + firstTryHard;
+
+  // --- NEW LOGIC START ---
+
+  // Calculate the total number of unique problems solved.
+  let totalUniqueSolved = 0;
+  for (const subs of processedData.problemMap.values()) {
+    // A problem is considered solved if any of its submissions were accepted.
+    if (subs.some(s => s.status === 10)) {
+      totalUniqueSolved++;
+    }
+  }
+
+  // Create the subtext. Handle division by zero.
+  let oneShotSubtext = '&nbsp;'; // Default empty space
+  if (totalUniqueSolved > 0) {
+    const percentage = Math.round((oneShotSolves / totalUniqueSolved) * 100);
+    // This text provides great context, as you suggested.
+    oneShotSubtext = `~${percentage}% of solved problems`;
+  }
+  
+  // --- NEW LOGIC END ---
+
   records.push({
     name: 'One Shot Solves',
-    value: firstTryEasy + firstTryMedium + firstTryHard,
-    subStats: { easy: firstTryEasy, medium: firstTryMedium, hard: firstTryHard }
+    value: oneShotSolves,
+    subStats: { easy: firstTryEasy, medium: firstTryMedium, hard: firstTryHard },
+    dateStat: oneShotSubtext // Add the newly created subtext here.
   });
   
   // 2. Longest submission streak (uses pre-sorted submissions).
+  // ... (rest of the function remains the same) ...
   const streakData = calculateLongestStreak(sortedSubmissions);
   records.push({
     name: 'Longest Streak',
