@@ -133,7 +133,7 @@ export function renderOrUpdateInteractiveChart(
       type: 'bar',
       data: {
         labels: chartData.labels,
-        datasets: chartData.datasets.map(dataset => ({ ...dataset, maxBarThickness: 20 }))
+        datasets: chartData.datasets.map(dataset => ({ ...dataset, maxBarThickness: 30 }))
       },
       options: {
         responsive: true, maintainAspectRatio: false,
