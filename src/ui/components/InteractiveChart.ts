@@ -205,7 +205,11 @@ export function renderOrUpdateInteractiveChart(
     dimmedClip.append("rect").attr("class", "dim-left-rect").attr("x", 0).attr("y", 0).attr("width", 0).attr("height", height);
     dimmedClip.append("rect").attr("class", "dim-right-rect").attr("x", width).attr("y", 0).attr("width", 0).attr("height", height);
 
-    const xScale = d3.scaleTime().domain(d3.extent(brushData.labels, d => new Date(d)) as [Date, Date]).range([0, width]);
+    // Instead of using formatted labels, use the actual date range
+    const xScale = d3.scaleTime()
+      .domain([brushData.fullTimeRange.start, brushData.fullTimeRange.end])
+      .range([0, width]);
+
     const yScale = d3.scaleLinear().domain([0, d3.max(brushData.data) as number]).range([height, 0]);
 
     const area = d3.area<any>()
@@ -224,7 +228,9 @@ export function renderOrUpdateInteractiveChart(
     brush(brushG);
 
     setTimeout(() => {
-        const [minDate, maxDate] = xScale.domain();
+        const [minDate, originalMaxDate] = xScale.domain();
+        const today = new Date();
+        const maxDate = new Date(Math.max(originalMaxDate.getTime(), today.getTime()));
         if (!minDate || !maxDate) {
             brushG.call(brush.move, [0, width]);
             selectedClip.attr("x", 0).attr("width", width);
