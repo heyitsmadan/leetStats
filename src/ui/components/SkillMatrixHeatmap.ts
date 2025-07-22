@@ -20,7 +20,7 @@ function parseRgb(rgbString: string): { r: number; g: number; b: number } {
 
 // Helper function to determine the best default chart view based on time span
 function getOptimalChartView(
-    points: TimeSeriesPoint[] | undefined, 
+    points: TimeSeriesPoint[] | undefined,
     timeRange: TimeRange
 ): 'Daily' | 'Monthly' | 'Yearly' {
     if (!points || points.length < 2) {
@@ -122,7 +122,7 @@ export function renderOrUpdateSkillMatrixHeatmap(
         const metrics = ['problemsSolved', 'avgTries', 'firstAceRate'] as const;
         const metricLabels = {
             problemsSolved: 'Problems Solved',
-            avgTries: 'Average Attempts', 
+            avgTries: 'Average Attempts',
             firstAceRate: 'First Ace Rate'
         };
 
@@ -187,7 +187,7 @@ export function renderOrUpdateSkillMatrixHeatmap(
                     expandableContent.offsetHeight;
                     expandableContent.style.maxHeight = '0px';
                     expandableContent.style.opacity = '0';
-                    
+
                     expandableContent.addEventListener('transitionend', () => {
                         if (chartRow.parentNode) chartRow.remove();
                     }, { once: true });
@@ -202,21 +202,21 @@ export function renderOrUpdateSkillMatrixHeatmap(
             button.querySelector('span')!.textContent = '+';
         } else {
             expandedRows.add(topic);
-            
+
             if (!chartOptions.has(topic)) {
                 const timeSeriesForMetric = data.timeSeriesData[topic]?.['problemsSolved'];
                 const optimalView = getOptimalChartView(timeSeriesForMetric, options.timeRange);
                 chartOptions.set(topic, { metric: 'problemsSolved', view: optimalView, split: false });
             }
             const currentChartOptions = chartOptions.get(topic)!;
-            
+
             const newRow = document.createElement('tr');
 newRow.className = 'expanded-row';
             newRow.innerHTML = getChartRowHtml(topic, currentChartOptions.view);
-            
+
             topicRow.insertAdjacentElement('afterend', newRow);
             addChartControlListeners(newRow, topic);
-            
+
             const expandableContent = newRow.querySelector('.expandable-content') as HTMLElement;
             if (expandableContent) {
                 expandableContent.style.maxHeight = '0px';
@@ -225,9 +225,9 @@ newRow.className = 'expanded-row';
                 expandableContent.style.maxHeight = expandableContent.scrollHeight + 'px';
                 expandableContent.style.opacity = '1';
             }
-            
+
             button.querySelector('span')!.textContent = '−';
-            
+
             requestAnimationFrame(() => renderChart(topic));
         }
     }
@@ -334,7 +334,7 @@ newRow.className = 'expanded-row';
     function addChartControlListeners(row: HTMLElement, topic: string) {
         const metricSelector = row.querySelector('.metric-selector');
         const metricOptions = row.querySelector('.metric-options');
-        
+
         metricSelector?.addEventListener('click', (e) => {
             e.preventDefault();
             const isHidden = metricOptions?.classList.contains('hidden');
@@ -346,7 +346,7 @@ newRow.className = 'expanded-row';
                 metricSelector.setAttribute('aria-expanded', 'false');
             }
         });
-        
+
         // Option selection
         metricOptions?.querySelectorAll('[data-value]').forEach(option => {
             option.addEventListener('click', () => {
@@ -354,15 +354,15 @@ newRow.className = 'expanded-row';
                 const span = metricSelector?.querySelector('span');
                 const labels = {
                     problemsSolved: 'Problems Solved',
-                    avgTries: 'Average Attempts', 
+                    avgTries: 'Average Attempts',
                     firstAceRate: 'First Ace Rate'
                 };
                 if (span) span.textContent = labels[value];
-                
+
                 const opts = chartOptions.get(topic)!;
                 opts.metric = value;
                 chartOptions.set(topic, opts);
-                
+
                 metricOptions?.querySelectorAll('[data-value]').forEach(opt => {
                     const checkIcon = opt.querySelector('span:last-child');
                     if (checkIcon) {
@@ -370,10 +370,10 @@ newRow.className = 'expanded-row';
                         checkIcon.classList.toggle('invisible', opt !== option);
                     }
                 });
-                
+
                 metricOptions?.classList.add('hidden');
                 metricSelector?.setAttribute('aria-expanded', 'false');
-                
+
                 renderChart(topic);
             });
         });
@@ -385,7 +385,7 @@ newRow.className = 'expanded-row';
                 const opts = chartOptions.get(topic)!;
                 opts.view = view;
                 chartOptions.set(topic, opts);
-                
+
                 button.parentElement?.querySelectorAll('button').forEach(btn => {
                     btn.setAttribute('data-state', btn === button ? 'active' : 'inactive');
                 });
@@ -401,7 +401,7 @@ newRow.className = 'expanded-row';
                 const opts = chartOptions.get(topic)!;
                 opts.split = !isAggregate;
                 chartOptions.set(topic, opts);
-                
+
                 button.parentElement?.querySelectorAll('button').forEach(btn => {
                     const btnIsAggregate = btn.textContent?.trim() === 'Aggregate';
                     btn.setAttribute('data-state', (btnIsAggregate === isAggregate) ? 'active' : 'inactive');
@@ -434,7 +434,53 @@ newRow.className = 'expanded-row';
             return;
         }
 
-        const aggregatedData = aggregateTimeSeriesData(metricData, localOpts.view);
+        // --- START OF FIX ---
+
+        const timeRangeStartDate = new Date(data.timeRangeStart);
+
+        // Filter points to be within the selected time range.
+        let dataForChart = metricData.filter(point =>
+            new Date(point.date) >= timeRangeStartDate
+        );
+
+        // For time ranges other than "All Time", find the cumulative value at the start of the range
+        // to draw the line correctly from the beginning of the x-axis.
+        if (options.timeRange !== 'All Time') {
+            // Find the last data point *before* the start of the current time range.
+            const lastPointBeforeRange = metricData
+                .slice()
+                .reverse()
+                .find(point => new Date(point.date) < timeRangeStartDate);
+
+            if (lastPointBeforeRange) {
+                // Check if there's already a data point exactly on the start date.
+                const firstPointIsOnStartDate = dataForChart.length > 0 &&
+                    new Date(dataForChart[0].date).getTime() === timeRangeStartDate.getTime();
+
+                // If not, prepend an artificial point to carry over the cumulative value.
+                if (!firstPointIsOnStartDate) {
+                    dataForChart.unshift({
+                        ...lastPointBeforeRange,
+                        date: data.timeRangeStart, // Set its date to the exact start of the range.
+                    });
+                }
+            }
+        }
+
+        const aggregatedData = aggregateTimeSeriesData(
+            dataForChart,
+            localOpts.view
+        );
+
+        // For "All Time", adjust the axis to start at the first submission instead of 1970.
+        // For other views, it starts at the beginning of the time range (e.g., 90 days ago).
+        const xScaleMin = options.timeRange === 'All Time' && aggregatedData.length > 0
+            ? aggregatedData[0].date // Use the date of the first data point
+            : data.timeRangeStart;   // Use the calculated range start
+
+        // --- END OF FIX ---
+
+
         const datasets: any[] = [];
 
         if (localOpts.split) {
@@ -452,7 +498,7 @@ newRow.className = 'expanded-row';
                 borderColor: colors.status.accepted,
             });
         }
-        
+
         const timeScaleConfig = {
             'Daily': { unit: 'day', tooltipFormat: 'MMM dd, yyyy' },
             'Monthly': { unit: 'month', tooltipFormat: 'MMM yyyy' },
@@ -483,7 +529,7 @@ newRow.className = 'expanded-row';
                 scales: {
                     x: {
                         type: 'time',
-                        min: data.timeRangeStart, 
+                        min: xScaleMin, // Use the dynamically determined minimum
                         time: {
                             unit: timeScaleConfig[localOpts.view].unit,
                             tooltipFormat: timeScaleConfig[localOpts.view].tooltipFormat
@@ -524,7 +570,7 @@ newRow.className = 'expanded-row';
 
                             let formattedDate: string;
                             const pointDate = new Date(dataPoint.date);
-                            
+
                             if (localOpts.view === 'Yearly') {
                                 formattedDate = pointDate.getUTCFullYear().toString();
                             } else if (localOpts.view === 'Monthly') {
@@ -601,7 +647,7 @@ newRow.className = 'expanded-row';
         const worstColor = parseRgb(colors.status.wrongAnswer);
 
         if (!bestColor || !middleColor || !worstColor) return 'transparent';
-        
+
         let percent = 0;
 
         if (metric === 'avgTries') {
@@ -614,7 +660,7 @@ newRow.className = 'expanded-row';
         } else { // firstAceRate
             percent = 1 - Math.sqrt(value / 100);
         }
-        
+
         let r, g, b;
         if (percent <= 0.5) {
             const localPercent = percent * 2;

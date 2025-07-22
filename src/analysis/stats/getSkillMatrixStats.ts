@@ -152,136 +152,133 @@ function getValidMetricValue(
 
 // Main function to calculate all skill matrix statistics
 export function getSkillMatrixStats(
-    data: ProcessedData,
-    filters: { timeRange: TimeRange; difficulty: Difficulty }, 
-    skillMatrixTimeRange?: 'Last 30 Days' | 'Last 90 Days' | 'Last 365 Days' | 'All Time'
+  data: ProcessedData,
+  filters: { timeRange: TimeRange; difficulty: Difficulty }, 
+  skillMatrixTimeRange?: 'Last 30 Days' | 'Last 90 Days' | 'Last 365 Days' | 'All Time'
 ): SkillMatrixData | null {
-    console.log('[SkillMatrix] Starting stat calculation...');
-    const startTime = performance.now();
+  console.log('[SkillMatrix] Starting stat calculation...');
+  const startTime = performance.now();
+  
+  if (!data.submissions.length) {
+    console.log('[SkillMatrix] No submissions found. Aborting.');
+    return null;
+  }
 
-    if (!data.submissions.length) {
-        console.log('[SkillMatrix] No submissions found. Aborting.');
-        return null;
-    }
+  const effectiveTimeRange = skillMatrixTimeRange || filters.timeRange;
+  const timeRangeStart = getTimeRangeStart(effectiveTimeRange);
 
-    const effectiveTimeRange = skillMatrixTimeRange || filters.timeRange;
+  // 1. Filter submissions for TABLE METRICS (only selected time range)
+  const tableSubmissions = data.submissions.filter(sub => {
+    const passesTime = sub.date >= timeRangeStart;
+    const passesDiff = filters.difficulty === 'All' || sub.metadata?.difficulty === filters.difficulty;
+    return passesTime && passesDiff && sub.metadata?.topics?.length;
+  });
+  
+  // 2. Filter submissions for CHARTS (all time, but we'll filter by range later)
+  const chartSubmissions = data.submissions.filter(sub => {
+    const passesDiff = filters.difficulty === 'All' || sub.metadata?.difficulty === filters.difficulty;
+    return passesDiff && sub.metadata?.topics?.length;
+  });
 
-    // Filter submissions based on the global filters for the main table.
-    const filteredSubmissions = data.submissions.filter(sub => {
-        const passesTime = passesTimeRangeFilter(sub.date, effectiveTimeRange);
-        const passesDiff = filters.difficulty === 'All' || sub.metadata?.difficulty === filters.difficulty;
-        return passesTime && passesDiff && sub.metadata?.topics?.length;
-    });
-    console.log(`[SkillMatrix] Filtered down to ${filteredSubmissions.length} submissions for the table view.`);
+  // Determine topics from TABLE submissions
+  const topicsSet = new Set<string>();
+  tableSubmissions.forEach(sub => 
+    sub.metadata?.topics?.forEach(topic => topicsSet.add(topic))
+  );
+  const unsortedTopics = Array.from(topicsSet);
 
-    // Determine topics to display based on filtered results.
-    const topicsSet = new Set<string>();
-    filteredSubmissions.forEach(sub => sub.metadata?.topics?.forEach(topic => topicsSet.add(topic)));
-    
-    const unsortedTopics = Array.from(topicsSet);
-    console.log(`[SkillMatrix] Found ${unsortedTopics.length} topics to display.`);
-
-    // NEW: Calculate the start date of the time range for chart axis
-    let timeRangeStart: string;
-    const now = new Date();
-    switch (effectiveTimeRange) {
-        case 'Last 30 Days':
-            timeRangeStart = new Date(new Date().setDate(now.getDate() - 30)).toISOString();
-            break;
-        case 'Last 90 Days':
-            timeRangeStart = new Date(new Date().setDate(now.getDate() - 90)).toISOString();
-            break;
-        case 'Last 365 Days':
-            timeRangeStart = new Date(new Date().setDate(now.getDate() - 365)).toISOString();
-            break;
-        case 'All Time':
-        default:
-            // For 'All Time', the start is the first submission date.
-            if (data.submissions.length > 0) {
-                 const firstSub = [...data.submissions].sort((a,b) => a.date.getTime() - b.date.getTime())[0];
-                 timeRangeStart = firstSub.date.toISOString();
-            } else {
-                 timeRangeStart = new Date().toISOString();
-            }
-            break;
-    }
-
-
-    if (unsortedTopics.length === 0) {
-        console.log('[SkillMatrix] No topics match filters. Aborting.');
-        const endTime = performance.now();
-        console.log(`[SkillMatrix] Total calculation finished in ${(endTime - startTime).toFixed(2)}ms.`);
-        return { topics: [], metrics: { problemsSolved: {}, avgTries: {}, firstAceRate: {} }, timeSeriesData: {}, timeRangeStart };
-    }
-    
-    // Pre-group FILTERED submissions by topic for time series generation
-    console.log('[SkillMatrix] Pre-grouping filtered submissions by topic for time series generation...');
-    const submissionsByTopic = new Map<string, ProcessedSubmission[]>();
-
-    // Apply the same filters used for metrics to the time series data
-    const filteredSubmissionsForCharts = data.submissions.filter(sub => {
-        const passesTime = passesTimeRangeFilter(sub.date, effectiveTimeRange);
-        const passesDiff = filters.difficulty === 'All' || sub.metadata?.difficulty === filters.difficulty;
-        return passesTime && passesDiff && sub.metadata?.topics?.length;
-    });
-
-    for (const sub of filteredSubmissionsForCharts) {
-        if (sub.metadata?.topics) {
-            for (const topic of sub.metadata.topics) {
-                if (!submissionsByTopic.has(topic)) {
-                    submissionsByTopic.set(topic, []);
-                }
-                submissionsByTopic.get(topic)!.push(sub);
-            }
+  // Pre-group submissions for CHARTS (all time)
+  const submissionsByTopic = new Map<string, ProcessedSubmission[]>();
+  for (const sub of chartSubmissions) {
+    if (sub.metadata?.topics) {
+      for (const topic of sub.metadata.topics) {
+        if (!submissionsByTopic.has(topic)) {
+          submissionsByTopic.set(topic, []);
         }
+        submissionsByTopic.get(topic)!.push(sub);
+      }
     }
-    console.log('[SkillMatrix] Finished pre-grouping filtered submissions.');
+  }
 
-    const metrics: SkillMatrixData['metrics'] = {
-        problemsSolved: {},
-        avgTries: {},
-        firstAceRate: {}
-    };
-    const timeSeriesData: SkillMatrixData['timeSeriesData'] = {};
+  const metrics: SkillMatrixData['metrics'] = {
+    problemsSolved: {},
+    avgTries: {},
+    firstAceRate: {}
+  };
+  
+  const timeSeriesData: SkillMatrixData['timeSeriesData'] = {};
 
-    console.log('[SkillMatrix] Calculating metrics for each topic...');
-    unsortedTopics.forEach((topic) => {
-        // Calculate metrics for the main table
-        const topicSubmissionsForTable = filteredSubmissions.filter(sub => sub.metadata?.topics?.includes(topic));
-        
-        const problemGroupsForTable = new Map<string, ProcessedSubmission[]>();
-        topicSubmissionsForTable.forEach(sub => {
-            if (!problemGroupsForTable.has(sub.titleSlug)) {
-                problemGroupsForTable.set(sub.titleSlug, []);
-            }
-            problemGroupsForTable.get(sub.titleSlug)!.push(sub);
-        });
-
-        for (const subs of problemGroupsForTable.values()) {
-            subs.sort((a, b) => a.date.getTime() - b.date.getTime());
-        }
-
-        const overallMetrics = calculateMetricsFromGroups(problemGroupsForTable);
-        metrics.problemsSolved[topic] = overallMetrics.problemsSolved;
-        metrics.avgTries[topic] = overallMetrics.avgTries;
-        metrics.firstAceRate[topic] = overallMetrics.firstAceRate;
-
-        // Generate time series for the chart
-        const allTopicSubmissions = submissionsByTopic.get(topic) || [];
-        timeSeriesData[topic] = generateTimeSeriesForTopic(allTopicSubmissions);
+  // Calculate TABLE METRICS (only for selected time range)
+  unsortedTopics.forEach((topic) => {
+    const topicSubmissions = tableSubmissions.filter(
+      sub => sub.metadata?.topics?.includes(topic)
+    );
+    
+    // Group by problem for accurate metric calculation
+    const problemGroups = new Map<string, ProcessedSubmission[]>();
+    topicSubmissions.forEach(sub => {
+      if (!problemGroups.has(sub.titleSlug)) {
+        problemGroups.set(sub.titleSlug, []);
+      }
+      problemGroups.get(sub.titleSlug)!.push(sub);
     });
+    
+    // Sort each group chronologically
+    for (const subs of problemGroups.values()) {
+      subs.sort((a, b) => a.date.getTime() - b.date.getTime());
+    }
 
-    // Sort topics by problems solved (descending)
-    const topics = unsortedTopics.sort((a, b) => {
-        const aProblems = metrics.problemsSolved[a] || 0;
-        const bProblems = metrics.problemsSolved[b] || 0;
-        return bProblems - aProblems;
-    });
+    // Calculate metrics
+    const solvedProblems = Array.from(problemGroups.values()).filter(
+      subs => subs.some(s => s.status === 10)
+    );
+    
+    // 1. Problems Solved
+    metrics.problemsSolved[topic] = solvedProblems.length;
+    
+    // 2. Average Attempts
+    const totalSubmissions = topicSubmissions.length;
+    const acceptedSubmissions = topicSubmissions.filter(s => s.status === 10).length;
+    metrics.avgTries[topic] = acceptedSubmissions > 0 ? 
+      totalSubmissions / acceptedSubmissions : Infinity;
+    
+    // 3. First Ace Rate
+    const firstAces = solvedProblems.filter(subs => 
+      subs.length > 0 && subs[0].status === 10
+    ).length;
+    metrics.firstAceRate[topic] = solvedProblems.length > 0 ? 
+      (firstAces / solvedProblems.length) * 100 : 0;
+  });
 
-    console.log('[SkillMatrix] Topics sorted by problems solved (descending)');
+  // Prepare CHART DATA (all time cumulative)
+  unsortedTopics.forEach(topic => {
+    const allTopicSubmissions = submissionsByTopic.get(topic) || [];
+    timeSeriesData[topic] = generateTimeSeriesForTopic(allTopicSubmissions);
+  });
 
-    const endTime = performance.now();
-    console.log(`[SkillMatrix] Total calculation finished in ${(endTime - startTime).toFixed(2)}ms.`);
+  // Sort topics by problems solved
+  const topics = unsortedTopics.sort((a, b) => 
+    (metrics.problemsSolved[b] || 0) - (metrics.problemsSolved[a] || 0)
+  );
 
-    return { topics, metrics, timeSeriesData, timeRangeStart };
+  console.log(`[SkillMatrix] Total calculation finished in ${
+    (performance.now() - startTime).toFixed(2)
+  }ms.`);
+
+  return {
+    topics,
+    metrics,
+    timeSeriesData,
+    timeRangeStart: timeRangeStart.toISOString()
+  };
+}
+
+function getTimeRangeStart(timeRange: TimeRange): Date {
+  const now = new Date();
+  switch (timeRange) {
+    case 'Last 30 Days': return new Date(now.setDate(now.getDate() - 30));
+    case 'Last 90 Days': return new Date(now.setDate(now.getDate() - 90));
+    case 'Last 365 Days': return new Date(now.setDate(now.getDate() - 365));
+    default: return new Date(0); // All Time
+  }
 }
