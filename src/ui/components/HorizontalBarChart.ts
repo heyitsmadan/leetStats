@@ -4,7 +4,6 @@ import { colors } from '../theme/colors'; // Import the centralized colors
 
 export type HorizontalBarChartInstance = Chart;
 
-// This color is not in the theme file, so it remains unchanged.
 const GLOW_COLOR = 'rgba(255, 255, 0, 0.7)';
 const GLOW_BLUR = 15;
 
@@ -20,7 +19,6 @@ function getOrCreateTooltip(chart: Chart): HTMLElement {
             parent.appendChild(tooltipEl);
         }
 
-        // Inject styles using colors from the theme file
         const style = document.createElement('style');
         style.textContent = `
             .chart-tooltip {
@@ -42,9 +40,11 @@ function getOrCreateTooltip(chart: Chart): HTMLElement {
                 transition: opacity 0.2s ease, transform 0.15s ease-out;
             }
             .tooltip-header { font-weight: 500; margin-bottom: 8px; color: ${colors.text.primary}; }
-            .tooltip-subheader { margin-bottom: 12px; font-size: 12px; color: ${colors.text.subtle}; }
-            .tooltip-subheader-value { font-weight: 500; color: ${colors.text.primary}; margin-left: 6px; }
+            .tooltip-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px; }
+            .tooltip-label { color: ${colors.text.subtle}; }
+            .tooltip-value { font-weight: 500; color: ${colors.text.primary}; }
             .tooltip-divider { border-top: 1px solid ${colors.background.secondarySection}; margin: 10px 0; }
+            .tooltip-breakdown-header { font-size: 12px; color: ${colors.text.subtle}; margin-bottom: 8px; }
             .tooltip-breakdown-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
             .tooltip-breakdown-item { display: flex; align-items: center; justify-content: space-between; font-size: 12px; gap: 16px}
             .tooltip-breakdown-label { display: flex; align-items: center; gap: 8px; color: ${colors.text.subtle}; }
@@ -88,12 +88,14 @@ export function renderOrUpdateHorizontalBarChart(
         const breakdown = tooltipData.solvedBreakdown;
 
         let innerHtml = `<div class="tooltip-header">${tooltipData.label}</div>`;
-        innerHtml += `<div class="tooltip-subheader">Acceptance Rate: <span class="tooltip-subheader-value">${tooltipData.rate}</span></div>`;
+        
+        innerHtml += `<div class="tooltip-row"><span class="tooltip-label">Total Submissions</span><span class="tooltip-value">${tooltipData.totalSubmissions}</span></div>`;
+        innerHtml += `<div class="tooltip-row"><span class="tooltip-label">Acceptance Rate</span><span class="tooltip-value">${tooltipData.acceptanceRate}</span></div>`;
         
         if (filters.difficulty === 'All' && breakdown) {
             innerHtml += `<div class="tooltip-divider"></div>`;
+            innerHtml += `<div class="tooltip-breakdown-header">Problems Solved</div>`;
             innerHtml += `<ul class="tooltip-breakdown-list">`;
-            // Using colors from the theme file for the breakdown
             innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.easy};"></span> Easy</span><span class="tooltip-breakdown-value">${breakdown.E || 0}</span></li>`;
             innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.medium};"></span> Medium</span><span class="tooltip-breakdown-value">${breakdown.M || 0}</span></li>`;
             innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.hard};"></span> Hard</span><span class="tooltip-breakdown-value">${breakdown.H || 0}</span></li>`;
@@ -151,12 +153,12 @@ export function renderOrUpdateHorizontalBarChart(
         scales: {
             x: {
                 stacked: true,
-                ticks: { color: colors.text.subtle }, // This color is not in colors.ts
+                ticks: { color: colors.text.subtle },
                 grid: { display: false }
             },
             y: {
                 stacked: true,
-                ticks: { color: colors.text.subtle }, // This color is not in colors.ts
+                ticks: { color: colors.text.subtle },
                 grid: { display: false }
             },
         },

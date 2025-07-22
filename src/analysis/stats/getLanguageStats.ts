@@ -34,14 +34,15 @@ export function getLanguageStats(
       return null;
   }
 
+  // The map now tracks sets of unique solved problem names.
   const langMap = new Map<string, {
     accepted: number;
     failed: number;
     firstUsed: Date;
     lastUsed: Date;
-    solvedEasy: number;
-    solvedMedium: number;
-    solvedHard: number;
+    solvedEasy: Set<string>;
+    solvedMedium: Set<string>;
+    solvedHard: Set<string>;
   }>();
 
   for (const sub of filteredSubmissions) {
@@ -51,18 +52,22 @@ export function getLanguageStats(
         failed: 0,
         firstUsed: sub.date,
         lastUsed: sub.date,
-        solvedEasy: 0,
-        solvedMedium: 0,
-        solvedHard: 0,
+        solvedEasy: new Set(),
+        solvedMedium: new Set(),
+        solvedHard: new Set(),
       });
     }
     const bucket = langMap.get(sub.lang)!;
     
     if (sub.status === STATUS_ACCEPTED) {
         bucket.accepted++;
-        if (sub.metadata?.difficulty === 'Easy') bucket.solvedEasy++;
-        else if (sub.metadata?.difficulty === 'Medium') bucket.solvedMedium++;
-        else if (sub.metadata?.difficulty === 'Hard') bucket.solvedHard++;
+        // Assumes a unique problem identifier exists at sub.metadata.name
+        // If your identifier is different (e.g., sub.problemId), change it here.
+        if (sub.metadata?.slug) {
+            if (sub.metadata?.difficulty === 'Easy') bucket.solvedEasy.add(sub.metadata.slug);
+            else if (sub.metadata?.difficulty === 'Medium') bucket.solvedMedium.add(sub.metadata.slug);
+            else if (sub.metadata?.difficulty === 'Hard') bucket.solvedHard.add(sub.metadata.slug);
+        }
     } else {
         bucket.failed++;
     }
@@ -94,20 +99,25 @@ export function getLanguageStats(
         label: 'Accepted',
         data: sortedLangs.map(entry => entry[1].accepted),
         backgroundColor: colors.status.accepted,
+        maxBarThickness: 30,
       },
       {
         label: 'Failed',
         data: sortedLangs.map(entry => entry[1].failed),
         backgroundColor: colors.background.empty,
+        maxBarThickness: 30,
       }
     ],
     tooltipsData: sortedLangs.map(entry => ({
-        // FIX: Add the label property for the tooltip header
         label: entry[0],
-        total: entry[1].accepted + entry[1].failed,
-        accepted: entry[1].accepted,
-        rate: entry[1].accepted + entry[1].failed > 0 ? ((entry[1].accepted / (entry[1].accepted + entry[1].failed)) * 100).toFixed(1) + '%' : 'N/A',
-        solvedBreakdown: { E: entry[1].solvedEasy, M: entry[1].solvedMedium, H: entry[1].solvedHard },
+        totalSubmissions: entry[1].accepted + entry[1].failed,
+        acceptanceRate: entry[1].accepted + entry[1].failed > 0 ? ((entry[1].accepted / (entry[1].accepted + entry[1].failed)) * 100).toFixed(1) + '%' : 'N/A',
+        // Use the size of the sets for the unique solved counts
+        solvedBreakdown: { 
+            E: entry[1].solvedEasy.size, 
+            M: entry[1].solvedMedium.size, 
+            H: entry[1].solvedHard.size 
+        },
         firstUsed: formatDate(entry[1].firstUsed),
         lastUsed: formatDate(entry[1].lastUsed)
     })),
