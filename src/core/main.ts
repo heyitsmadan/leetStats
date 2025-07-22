@@ -97,8 +97,8 @@ export async function initialize(loader: ILoader): Promise<void> {
 
   } catch (err) {
     console.error("❌ Failed to initialize LeetCode stats:", err);
-    const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-    loader.error(`❌ Error: ${errorMessage}`);
+    // Display a generic, one-line error message in the loader.
+    loader.error('An unexpected error occurred.');
     throw err;
   }
 }
