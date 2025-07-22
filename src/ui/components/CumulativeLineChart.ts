@@ -140,34 +140,28 @@ export function renderOrUpdateCumulativeLineChart(
                 grid: { display: false }, 
                 ticks: { 
                     color: colors.text.subtle, // Using color from theme
-                    maxTicksLimit: 6,
+                    maxTicksLimit: 5,
+                    // --- MODIFIED LOGIC ---
+                    // This callback now formats the x-axis labels based on the aggregation level (cumulativeView)
+                    // for a more intuitive and less confusing result.
                     callback: function(value, index, ticks) {
                         const label = this.getLabelForValue(value as number);
                         const date = new Date(label);
-                        const range = filters.timeRange;
-                        
-                        if (range === 'Last 30 Days' || range === 'Last 90 Days') {
-                            return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-                        }
+                        const view = filters.cumulativeView; // Use the aggregation view directly
 
-                        if (range === 'Last 365 Days') {
-                             return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+                        // Format the label based on the selected aggregation level
+                        switch (view) {
+                            case 'Yearly':
+                                // For a yearly view, the label should ONLY be the year.
+                                return date.toLocaleDateString(undefined, { year: 'numeric' });
+                            case 'Monthly':
+                                // For a monthly view, show the short month and year.
+                                return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
+                            case 'Daily':
+                            default:
+                                // For a daily view, show the short month and day.
+                                return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
                         }
-                        
-                        if (range === 'All Time') {
-                            const labels = this.chart.data.labels as string[];
-                            if (labels && labels.length > 1) {
-                                const firstDate = new Date(labels[0]);
-                                const lastDate = new Date(labels[labels.length - 1]);
-                                const yearDifference = lastDate.getFullYear() - firstDate.getFullYear();
-
-                                if (yearDifference >= 2) {
-                                    return date.toLocaleDateString(undefined, { year: 'numeric' });
-                                }
-                            }
-                            return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
-                        }
-                        return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
                     }
                 } 
             },
