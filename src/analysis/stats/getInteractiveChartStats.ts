@@ -1,4 +1,68 @@
 import { colors } from '../../ui/theme/colors';
+import type {
+  ProcessedData,
+  InteractiveChartData,
+  BrushChartData,
+  InteractiveChartFilters,
+  TooltipData
+} from '../../types';
+
+// === HELPER FUNCTIONS (some are new/modified) ===
+
+// FIX: New helper function to create timezone-safe date keys.
+// This avoids UTC conversion issues and ensures submissions are grouped into the correct local day.
+function getDateKey(date: Date, level: 'Daily' | 'Monthly' | 'Yearly'): string {
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1; // JS months are 0-indexed
+    const day = date.getDate();
+
+    if (level === 'Daily') {
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+    if (level === 'Monthly') {
+        return `${year}-${String(month).padStart(2, '0')}`;
+    }
+    // Yearly
+    return String(year);
+}
+
+
+// Generates a complete sequence of dates/weeks/months between a start and end
+function generateAllIntervals(
+  startDate: Date,
+  endDate: Date,
+  aggregationLevel: 'Daily' | 'Monthly' | 'Yearly'
+): string[] {
+  const intervals: string[] = [];
+  // Start at midnight to avoid DST issues
+  let current = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+
+  if (aggregationLevel === 'Daily') {
+    while (current <= endDate) {
+      // FIX: Use the new timezone-safe helper to generate keys
+      intervals.push(getDateKey(current, 'Daily'));
+      current.setDate(current.getDate() + 1);
+    }
+  } else if (aggregationLevel === 'Monthly') {
+    current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    const endMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+    while (current <= endMonth) {
+      // FIX: Use the new timezone-safe helper to generate keys
+      intervals.push(getDateKey(current, 'Monthly'));
+      current.setMonth(current.getMonth() + 1);
+    }
+  } else { // Yearly
+    current = new Date(startDate.getFullYear(), 0, 1);
+    const endYear = new Date(endDate.getFullYear(), 0, 1);
+    while (current <= endYear) {
+      // FIX: Use the new timezone-safe helper to generate keys
+      intervals.push(getDateKey(current, 'Yearly'));
+      current.setFullYear(current.getFullYear() + 1);
+    }
+  }
+  return intervals;
+}
+
 
 // Updated createChartData function with performance and logic fixes
 function createChartData(
@@ -8,12 +72,12 @@ function createChartData(
   effectiveDateRange?: { start: Date; end: Date } | null
 ): InteractiveChartData {
   
-  // Use effective date range if available, otherwise fall back to timeGroups dates
   let startDate: Date, endDate: Date;
   
   if (effectiveDateRange) {
-    startDate = effectiveDateRange.start;
-    endDate = effectiveDateRange.end;
+    // FIX: Create copies to prevent mutating the original brushWindow dates
+    startDate = new Date(effectiveDateRange.start);
+    endDate = new Date(effectiveDateRange.end);
   } else {
     // Fallback to existing logic
     const allDates = Object.keys(timeGroups);
@@ -30,13 +94,38 @@ function createChartData(
     endDate = new Date(sortedDates[sortedDates.length - 1]);
   }
 
-  // Adjust dates based on aggregation level for proper boundaries
-  if (aggregationLevel === 'Monthly') {
-    startDate.setDate(1); // Start of month
-    endDate.setMonth(endDate.getMonth() + 1, 0); // End of month
+  // FIX: This is the logic to remove partial bars from the main chart
+  // Adjust dates to only include full intervals, discarding partial periods.
+  if (aggregationLevel === 'Daily') {
+    if (startDate.getHours() !== 0 || startDate.getMinutes() !== 0 || startDate.getSeconds() !== 0 || startDate.getMilliseconds() !== 0) {
+      startDate.setDate(startDate.getDate() + 1);
+      startDate.setHours(0, 0, 0, 0);
+    }
+    endDate.setDate(endDate.getDate() - 1);
+    endDate.setHours(23, 59, 59, 999);
+  } else if (aggregationLevel === 'Monthly') {
+    if (startDate.getDate() !== 1) {
+      startDate.setMonth(startDate.getMonth() + 1, 1);
+    }
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setDate(0);
+    endDate.setHours(23, 59, 59, 999);
   } else if (aggregationLevel === 'Yearly') {
-    startDate.setMonth(0, 1); // Start of year
-    endDate.setMonth(11, 31); // End of year
+    if (startDate.getMonth() !== 0 || startDate.getDate() !== 1) {
+      startDate.setFullYear(startDate.getFullYear() + 1, 0, 1);
+    }
+    startDate.setHours(0, 0, 0, 0);
+    endDate.setFullYear(endDate.getFullYear(), 0, 0);
+    endDate.setHours(23, 59, 59, 999);
+  }
+
+  if (startDate > endDate) {
+    return {
+      labels: [],
+      datasets: [],
+      aggregationLevel,
+      timeRange: { start: effectiveDateRange?.start || new Date(), end: effectiveDateRange?.end || new Date() }
+    };
   }
 
   // Generate complete intervals for the determined date range
@@ -49,15 +138,14 @@ function createChartData(
     const dataMaps: { [difficulty: string]: { [key: string]: number } } = {};
     difficulties.forEach(d => dataMaps[d] = {});
 
-    // Initialize all intervals with 0 for each difficulty
     allIntervals.forEach(interval => {
         difficulties.forEach(difficulty => {
             dataMaps[difficulty][interval] = 0;
         });
     });
 
-    // Single loop through timeGroups to populate dataMaps efficiently
     Object.entries(timeGroups).forEach(([date, submissions]) => {
+        if (!allIntervals.includes(date)) return;
         if (filters.primaryView === 'Submissions') {
             const counts: { [key: string]: number } = { 'Easy': 0, 'Medium': 0, 'Hard': 0 };
             submissions.forEach(sub => {
@@ -67,14 +155,10 @@ function createChartData(
                 }
             });
             difficulties.forEach(difficulty => {
-                if (dataMaps[difficulty]) dataMaps[difficulty][date] = counts[difficulty];
+                if (dataMaps[difficulty]) dataMaps[difficulty][date] = (dataMaps[difficulty][date] || 0) + counts[difficulty];
             });
         } else { // Problems Solved
-            const solvedProblems: { [difficulty: string]: Set<string> } = {
-                'Easy': new Set(),
-                'Medium': new Set(),
-                'Hard': new Set()
-            };
+            const solvedProblems: { [difficulty: string]: Set<string> } = { 'Easy': new Set(), 'Medium': new Set(), 'Hard': new Set() };
             submissions.forEach(sub => {
                 if (sub.status === 10) {
                     const difficulty = sub.metadata?.difficulty;
@@ -84,12 +168,11 @@ function createChartData(
                 }
             });
             difficulties.forEach(difficulty => {
-                if (dataMaps[difficulty]) dataMaps[difficulty][date] = solvedProblems[difficulty].size;
+                if (dataMaps[difficulty]) dataMaps[difficulty][date] = (dataMaps[difficulty][date] || 0) + solvedProblems[difficulty].size;
             });
         }
     });
 
-    // Create datasets from the populated maps
     difficulties.forEach(difficulty => {
         const data = allIntervals.map(interval => dataMaps[difficulty][interval] || 0);
         datasets.push({
@@ -106,7 +189,6 @@ function createChartData(
     const acceptedDataMap: { [key: string]: number } = {};
     const failedDataMap: { [key: string]: number } = {};
 
-    // Initialize all intervals with 0
     allIntervals.forEach(interval => {
         acceptedDataMap[interval] = 0;
         if (filters.primaryView === 'Submissions') {
@@ -114,8 +196,8 @@ function createChartData(
         }
     });
 
-    // Single loop through timeGroups to populate maps
     Object.entries(timeGroups).forEach(([date, submissions]) => {
+        if (!allIntervals.includes(date)) return;
         if (filters.primaryView === 'Submissions') {
             let acceptedCount = 0;
             let failedCount = 0;
@@ -123,8 +205,8 @@ function createChartData(
                 if (sub.status === 10) acceptedCount++;
                 else failedCount++;
             });
-            acceptedDataMap[date] = acceptedCount;
-            failedDataMap[date] = failedCount;
+            acceptedDataMap[date] = (acceptedDataMap[date] || 0) + acceptedCount;
+            failedDataMap[date] = (failedDataMap[date] || 0) + failedCount;
         } else { // Problems Solved
             const solvedProblems = new Set<string>();
             submissions.forEach(sub => {
@@ -132,11 +214,10 @@ function createChartData(
                     solvedProblems.add(sub.titleSlug);
                 }
             });
-            acceptedDataMap[date] = solvedProblems.size;
+            acceptedDataMap[date] = (acceptedDataMap[date] || 0) + solvedProblems.size;
         }
     });
 
-    // Create 'Accepted' dataset
     const acceptedData = allIntervals.map(interval => acceptedDataMap[interval] || 0);
     datasets.push({
         label: 'Accepted',
@@ -147,7 +228,6 @@ function createChartData(
         maxBarThickness: 30,
     });
 
-    // FIX: Only add 'Failed' data for 'Submissions' view, not for 'Problems Solved'
     if (filters.primaryView === 'Submissions') {
         const failedData = allIntervals.map(interval => failedDataMap[interval] || 0);
         datasets.push({
@@ -160,24 +240,20 @@ function createChartData(
         });
     }
   } else if (filters.secondaryView === 'Language') {
-    // Collect all unique languages from the data
     const allLanguages = new Set<string>();
-    Object.values(timeGroups).forEach(submissions => {
-      submissions.forEach(sub => allLanguages.add(sub.lang));
-    });
+    Object.values(timeGroups).flat().forEach(sub => allLanguages.add(sub.lang));
     const languages = Array.from(allLanguages);
     const dataMaps: { [lang: string]: { [key: string]: number } } = {};
     languages.forEach(lang => dataMaps[lang] = {});
 
-    // Initialize all intervals with 0 for each language
     allIntervals.forEach(interval => {
         languages.forEach(lang => {
             dataMaps[lang][interval] = 0;
         });
     });
 
-    // Single loop through timeGroups to populate maps efficiently
     Object.entries(timeGroups).forEach(([date, submissions]) => {
+        if (!allIntervals.includes(date)) return;
         const langData: { [lang: string]: number | Set<string> } = {};
         languages.forEach(lang => {
             langData[lang] = filters.primaryView === 'Submissions' ? 0 : new Set<string>();
@@ -196,15 +272,12 @@ function createChartData(
         });
 
         languages.forEach(lang => {
-            if (filters.primaryView === 'Submissions') {
-                dataMaps[lang][date] = langData[lang] as number;
-            } else {
-                dataMaps[lang][date] = (langData[lang] as Set<string>).size;
-            }
+            const value = filters.primaryView === 'Submissions' ? langData[lang] as number : (langData[lang] as Set<string>).size;
+            dataMaps[lang][date] = (dataMaps[lang][date] || 0) + value;
         });
     });
     
-    // Create datasets from the populated maps
+    const LANGUAGE_COLORS = ['#C5A3DC', '#A7C7E7', '#E09CA4', '#FFB997', '#B4D9A6', '#9ED9CC', '#F2A6A0', '#F6D6AD', '#AFCBFF', '#DDBDD5', '#FCD5CE', '#C9E4DE', '#EFD3D7', '#B5EAD7', '#FFDAC1', '#C7CEEA', '#FFB5E8', '#FFABAB', '#D5AAFF', '#A0E7E5', '#B2F7EF', '#E3C6FF', '#F7C5CC', '#F1F7B5', '#C2F784'];
     languages.forEach((lang, index) => {
         const data = allIntervals.map(interval => dataMaps[lang][interval] || 0);
         datasets.push({
@@ -233,161 +306,49 @@ function formatDateLabel(dateStr: string, aggregationLevel: 'Daily' | 'Monthly' 
     return dateStr; // Just the year
   } else if (aggregationLevel === 'Monthly') {
     const [year, month] = dateStr.split('-');
-    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
-                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return `${monthNames[parseInt(month) - 1]} ${year}`;
   } else {
-    // Daily format: DD-MM-YYYY
-    const date = new Date(dateStr);
-    return `${date.getDate().toString().padStart(2, '0')}-${(date.getMonth() + 1).toString().padStart(2, '0')}-${date.getFullYear()}`;
+    // FIX: Safely parse 'YYYY-MM-DD' to avoid timezone issues and output 'DD-MM-YYYY'
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return `${String(day).padStart(2, '0')}-${String(month).padStart(2, '0')}-${year}`;
   }
 }
 
 function getTimeRangeCutoff(timeRange: string): Date {
   const now = new Date();
   switch (timeRange) {
-    case 'Last 30 Days':
-      return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    case 'Last 90 Days':
-      return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-    case 'Last 365 Days':
-      return new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-    default:
-      return new Date(0);
+    case 'Last 30 Days': return new Date(now.setDate(now.getDate() - 30));
+    case 'Last 90 Days': return new Date(now.setDate(now.getDate() - 90));
+    case 'Last 365 Days': return new Date(now.setDate(now.getDate() - 365));
+    default: return new Date(0);
   }
 }
 
 function getDateRangeFromLabel(label: string, level: 'Daily' | 'Monthly' | 'Yearly'): { start: Date; end: Date } {
   if (level === 'Daily') {
-    // Handles "DD-MM-YYYY" format from formatDateLabel
     const [day, month, year] = label.split('-').map(Number);
     const start = new Date(year, month - 1, day);
-    const end = new Date(year, month - 1, day, 23, 59, 59, 999); // Full day
+    const end = new Date(year, month - 1, day, 23, 59, 59, 999);
     return { start, end };
   } else if (level === 'Monthly') {
-    // Handles "Mon YYYY" format from formatDateLabel (e.g., "Jul 2025")
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const [monthStr, yearStr] = label.split(' ');
     const month = monthNames.indexOf(monthStr);
     const year = parseInt(yearStr);
     const start = new Date(year, month, 1);
-    const end = new Date(year, month + 1, 0, 23, 59, 59, 999); // Last moment of the month
+    const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
     return { start, end };
   } else { // Yearly
-    // Handles "YYYY" format
     const year = parseInt(label);
     const start = new Date(year, 0, 1);
-    const end = new Date(year, 11, 31, 23, 59, 59, 999); // Last moment of the year
+    const end = new Date(year, 11, 31, 23, 59, 59, 999);
     return { start, end };
   }
 }
-
-import type {
-  ProcessedData,
-  InteractiveChartData,
-  BrushChartData,
-  InteractiveChartFilters,
-  TooltipData
-} from '../../types';
-
-// === HELPER FUNCTIONS (some are new/modified) ===
-
-// Helper to get an ISO week key (e.g., "2023-W34") from a date
-function getWeekKey(date: Date): string {
-  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-  const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, '0')}`;
-}
-
-// Helper to get the first date of an ISO week
-function getDateOfISOWeek(weekKey: string): Date {
-    const [yearStr, weekStr] = weekKey.split('-W');
-    const year = parseInt(yearStr);
-    const week = parseInt(weekStr);
-    const simple = new Date(year, 0, 1 + (week - 1) * 7);
-    const dow = simple.getDay();
-    const isoWeekStart = simple;
-    if (dow <= 4)
-        isoWeekStart.setDate(simple.getDate() - simple.getDay() + 1);
-    else
-        isoWeekStart.setDate(simple.getDate() + 8 - simple.getDay());
-    return isoWeekStart;
-}
-
-
-// Generates a complete sequence of dates/weeks/months between a start and end
-function generateAllIntervals(
-  startDate: Date,
-  endDate: Date,
-  aggregationLevel: 'Daily' | 'Monthly' | 'Yearly'
-): string[] {
-  const intervals: string[] = [];
-  let current = new Date(startDate);
-
-  if (aggregationLevel === 'Daily') {
-    while (current <= endDate) {
-      intervals.push(current.toISOString().split('T')[0]);
-      current.setDate(current.getDate() + 1);
-    }
-  } else if (aggregationLevel === 'Monthly') {
-    current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
-    while (current <= endDate) {
-      intervals.push(`${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}`);
-      current.setMonth(current.getMonth() + 1);
-    }
-  } else { // Yearly
-    current = new Date(startDate.getFullYear(), 0, 1);
-    while (current <= endDate) {
-      intervals.push(current.getFullYear().toString());
-      current.setFullYear(current.getFullYear() + 1);
-    }
-  }
-  return intervals;
-}
-
-
-function fillMissingIntervals(
-  dataMap: { [key: string]: number },
-  allIntervals: string[]
-): number[] {
-  return allIntervals.map(interval => dataMap[interval] || 0);
-}
-
 
 // === MAIN EXPORTED FUNCTIONS ===
 
-const LANGUAGE_COLORS = [
-  '#C5A3DC', // soft lavender
-  '#A7C7E7', // baby blue
-  '#E09CA4', // rose pink
-  '#FFB997', // peach
-  '#B4D9A6', // mint green
-  '#9ED9CC', // aqua
-  '#F2A6A0', // coral pink
-  '#F6D6AD', // pastel apricot
-  '#AFCBFF', // sky blue
-  '#DDBDD5', // dusty mauve
-  '#FCD5CE', // pastel salmon
-  '#C9E4DE', // pale seafoam
-  '#EFD3D7', // light blush
-  '#B5EAD7', // mint cream
-  '#FFDAC1', // soft peach
-  '#C7CEEA', // periwinkle
-  '#FFB5E8', // candy pink
-  '#FFABAB', // cherry blossom
-  '#D5AAFF', // pastel purple
-  '#A0E7E5', // cyan mint
-  '#B2F7EF', // pale teal
-  '#E3C6FF', // light lilac
-  '#F7C5CC', // soft rose
-  '#F1F7B5', // mellow yellow
-  '#C2F784'  // fresh green
-];
-
-
-// Updated main function
 export function getInteractiveChartStats(
   processedData: ProcessedData,
   filters: InteractiveChartFilters
@@ -395,16 +356,12 @@ export function getInteractiveChartStats(
   const { submissions } = processedData;
   if (!submissions.length) return null;
 
-  // Filter submissions by brush window or time range
   let filteredSubmissions = submissions;
   let effectiveDateRange: { start: Date; end: Date } | null = null;
   
   if (filters.brushWindow) {
     const [start, end] = filters.brushWindow;
-    filteredSubmissions = submissions.filter(sub => 
-      sub.date >= start && sub.date <= end
-    );
-    // Use the BRUSH WINDOW dates for aggregation level, not filtered submissions
+    filteredSubmissions = submissions.filter(sub => sub.date >= start && sub.date <= end);
     effectiveDateRange = { start, end };
   } else if (filters.timeRange !== 'All Time') {
     const cutoffDate = getTimeRangeCutoff(filters.timeRange);
@@ -416,64 +373,39 @@ export function getInteractiveChartStats(
   }
 
   if (filters.difficulty !== 'All') {
-    filteredSubmissions = filteredSubmissions.filter(sub =>
-      sub.metadata?.difficulty === filters.difficulty
-    );
+    filteredSubmissions = filteredSubmissions.filter(sub => sub.metadata?.difficulty === filters.difficulty);
   }
 
-  // ✅ FIX: Determine aggregation level based on the effective date range, not filtered submissions
   const aggregationLevel = effectiveDateRange 
     ? getAggregationLevelFromDateRange(effectiveDateRange.start, effectiveDateRange.end)
     : getAggregationLevel(filteredSubmissions);
   
-  // Group submissions by time period
   const timeGroups = groupByTimePeriod(filteredSubmissions, aggregationLevel);
   
-  // Create chart data with complete date range
   const chartData = createChartData(timeGroups, filters, aggregationLevel, effectiveDateRange);
   
   return chartData;
 }
 
-// Updated navigator function
 export function getBrushChartData(processedData: ProcessedData): BrushChartData | null {
   const { submissions } = processedData;
   if (!submissions.length) return null;
   
-  // Always use full range from first submission to today for navigator
   const dateRange = getExtendedDateRange(submissions, true);
-  
-  // Determine aggregation level for navigator
   const aggregationLevel = getAggregationLevel(submissions, true);
-  
-  // Generate complete intervals
   const allIntervals = generateAllIntervals(dateRange.start, dateRange.end, aggregationLevel);
   
-  // Group submissions
   const groupedData: { [key: string]: any[] } = {};
+  allIntervals.forEach(interval => { groupedData[interval] = []; });
   
-  // Initialize all intervals with empty arrays
-  allIntervals.forEach(interval => {
-    groupedData[interval] = [];
-  });
-  
-  // Populate with actual submissions
   submissions.forEach(sub => {
-    let key: string;
-    if (aggregationLevel === 'Daily') {
-      key = sub.date.toISOString().split('T')[0];
-    } else if (aggregationLevel === 'Monthly') {
-      key = `${sub.date.getFullYear()}-${String(sub.date.getMonth() + 1).padStart(2, '0')}`;
-    } else {
-      key = sub.date.getFullYear().toString();
-    }
-    
-    if (groupedData[key]) {
+    // FIX: Use the new timezone-safe helper for grouping
+    const key = getDateKey(sub.date, aggregationLevel);
+    if (groupedData.hasOwnProperty(key)) {
       groupedData[key].push(sub);
     }
   });
   
-  // Create data array with counts
   const data = allIntervals.map(interval => groupedData[interval]?.length || 0);
   
   return {
@@ -488,23 +420,17 @@ export function getTooltipData(
   processedData: ProcessedData,
   date: string,
   filters: InteractiveChartFilters,
-  aggregationLevel: 'Daily' | 'Monthly' | 'Yearly' // accepting the level as an argument
+  aggregationLevel: 'Daily' | 'Monthly' | 'Yearly'
 ): TooltipData | null {
   const { submissions } = processedData;
-
   const dateRange = getDateRangeFromLabel(date, aggregationLevel);
+  const periodSubmissions = submissions.filter(sub => sub.date >= dateRange.start && sub.date <= dateRange.end);
 
-  const periodSubmissions = submissions.filter(sub =>
-    sub.date >= dateRange.start && sub.date <= dateRange.end
-  );
-
-  // This check is now removed, allowing tooltips for empty bars:
   if (!periodSubmissions.length) return null;
 
   const totalSubmissionsInPeriod = periodSubmissions.length;
   const acceptedSubmissions = periodSubmissions.filter(sub => sub.status === 10);
   const uniqueProblemsSolved = new Set(acceptedSubmissions.map(sub => sub.titleSlug));
-
   const breakdown: { [key: string]: number } = {};
   let acceptanceRate: number | undefined = undefined;
 
@@ -513,7 +439,7 @@ export function getTooltipData(
       let count = 0;
       if (filters.primaryView === 'Submissions') {
         count = periodSubmissions.filter(sub => sub.metadata?.difficulty === difficulty).length;
-      } else { // Problems Solved
+      } else {
         const solvedInDifficulty = new Set<string>();
         acceptedSubmissions.forEach(sub => {
           if (sub.metadata?.difficulty === difficulty) {
@@ -530,7 +456,7 @@ export function getTooltipData(
       let count = 0;
       if (filters.primaryView === 'Submissions') {
         count = periodSubmissions.filter(sub => sub.lang === lang).length;
-      } else { // Problems Solved
+      } else {
         const solvedInLang = new Set<string>();
         acceptedSubmissions.forEach(sub => {
           if (sub.lang === lang) {
@@ -551,44 +477,32 @@ export function getTooltipData(
     }
   }
 
-  return {
-    date,
-    totalSubmissions: totalSubmissionsInPeriod,
-    problemsSolved: uniqueProblemsSolved.size,
-    breakdown,
-    acceptanceRate
-  };
+  return { date, totalSubmissions: totalSubmissionsInPeriod, problemsSolved: uniqueProblemsSolved.size, breakdown, acceptanceRate };
 }
 
-// These functions remain the same
-// Better aggregation logic - considers optimal bar count
 function getAggregationLevel(submissions: any[], isNavigator: boolean = false): 'Daily' | 'Monthly' | 'Yearly' {
   if (!submissions.length) return 'Daily';
   
-  const start = new Date(Math.min(...submissions.map(s => s.date.getTime())));
-  const end = isNavigator ? new Date() : new Date(Math.max(...submissions.map(s => s.date.getTime())));
+  const { start, end } = getExtendedDateRange(submissions, isNavigator);
   const daysDiff = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
   
-  // Optimal bar counts: 15-60 bars for good visualization
-  if (daysDiff <= 60) return 'Daily';        // Up to 90 bars
-  if (daysDiff <= 1095) return 'Monthly';    // Up to 36 bars (3 years)
-  return 'Yearly';                           // For longer periods
+  if (daysDiff <= 90) return 'Daily';
+  if (daysDiff <= 1095) return 'Monthly';
+  return 'Yearly';
 }
 
 function groupByTimePeriod(submissions: any[], level: 'Daily' | 'Monthly' | 'Yearly') {
   const groups: { [key: string]: any[] } = {};
   submissions.forEach(sub => {
-    let key: string;
-    if (level === 'Daily') key = sub.date.toISOString().split('T')[0];
-    else if (level === 'Monthly') key = `${sub.date.getFullYear()}-${String(sub.date.getMonth() + 1).padStart(2, '0')}`;
-    else key = sub.date.getFullYear().toString();
+    // FIX: Use the new timezone-safe helper for grouping
+    const key = getDateKey(sub.date, level);
     if (!groups[key]) groups[key] = [];
     groups[key].push(sub);
   });
   return groups;
 }
 
-// Enhanced date range extension to today
+// FIX: Correctly calculate the end date for the navigator to include the full current day.
 function getExtendedDateRange(submissions: any[], isNavigator: boolean = false): { start: Date; end: Date } {
   if (!submissions.length) {
     const today = new Date();
@@ -596,17 +510,22 @@ function getExtendedDateRange(submissions: any[], isNavigator: boolean = false):
   }
   
   const start = new Date(Math.min(...submissions.map(s => s.date.getTime())));
-  const end = isNavigator ? new Date() : new Date(); // Always extend to today
+  let end: Date;
+
+  if (isNavigator) {
+    end = new Date(); // Get current date and time
+    end.setHours(23, 59, 59, 999); // Set to the very end of the current day
+  } else {
+    end = new Date(Math.max(...submissions.map(s => s.date.getTime())));
+  }
   
   return { start, end };
 }
 
-// ✅ NEW: Calculate aggregation level based on specific date range
 function getAggregationLevelFromDateRange(startDate: Date, endDate: Date): 'Daily' | 'Monthly' | 'Yearly' {
   const daysDiff = (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24);
   
-  // Use the same thresholds as your existing logic
-  if (daysDiff <= 60) return 'Daily';        // Up to 90 days
-  if (daysDiff <= 1095) return 'Monthly';    // Up to 3 years  
-  return 'Yearly';                           // For longer periods
+  if (daysDiff <= 90) return 'Daily';
+  if (daysDiff <= 1095) return 'Monthly';  
+  return 'Yearly';
 }
