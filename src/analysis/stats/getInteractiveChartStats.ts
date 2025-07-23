@@ -69,7 +69,8 @@ function createChartData(
   timeGroups: { [key: string]: any[] },
   filters: InteractiveChartFilters,
   aggregationLevel: 'Daily' | 'Monthly' | 'Yearly',
-  effectiveDateRange?: { start: Date; end: Date } | null
+  effectiveDateRange?: { start: Date; end: Date } | null,
+  boundaryDates?: { min: Date; max: Date }
 ): InteractiveChartData {
   
   let startDate: Date, endDate: Date;
@@ -94,30 +95,70 @@ function createChartData(
     endDate = new Date(sortedDates[sortedDates.length - 1]);
   }
 
-  // FIX: This is the logic to remove partial bars from the main chart
-  // Adjust dates to only include full intervals, discarding partial periods.
-  if (aggregationLevel === 'Daily') {
-    if (startDate.getHours() !== 0 || startDate.getMinutes() !== 0 || startDate.getSeconds() !== 0 || startDate.getMilliseconds() !== 0) {
-      startDate.setDate(startDate.getDate() + 1);
-      startDate.setHours(0, 0, 0, 0);
-    }
-    endDate.setDate(endDate.getDate() - 1);
-    endDate.setHours(23, 59, 59, 999);
-  } else if (aggregationLevel === 'Monthly') {
-    if (startDate.getDate() !== 1) {
-      startDate.setMonth(startDate.getMonth() + 1, 1);
-    }
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setDate(0);
-    endDate.setHours(23, 59, 59, 999);
-  } else if (aggregationLevel === 'Yearly') {
-    if (startDate.getMonth() !== 0 || startDate.getDate() !== 1) {
-      startDate.setFullYear(startDate.getFullYear() + 1, 0, 1);
-    }
-    startDate.setHours(0, 0, 0, 0);
-    endDate.setFullYear(endDate.getFullYear(), 0, 0);
-    endDate.setHours(23, 59, 59, 999);
+  // --- MODIFIED LOGIC TO HANDLE PARTIAL DATA AT BOTH ENDS ---
+  const today = new Date();
+  const minDataDate = boundaryDates?.min;
+
+  let isSelectionAtTheVeryBeginning = false;
+  if (minDataDate && startDate) {
+      if (
+          startDate.getFullYear() === minDataDate.getFullYear() &&
+          startDate.getMonth() === minDataDate.getMonth() &&
+          startDate.getDate() === minDataDate.getDate()
+      ) {
+          isSelectionAtTheVeryBeginning = true;
+      }
   }
+
+  let isSelectionAtTheVeryEnd = false;
+  if (endDate) {
+      // We check if the brush selection's end date matches today's date.
+      // The navigator's range goes up to today, so this defines the "rightmost end".
+      if (
+          endDate.getFullYear() === today.getFullYear() &&
+          endDate.getMonth() === today.getMonth() &&
+          endDate.getDate() === today.getDate()
+      ) {
+          isSelectionAtTheVeryEnd = true;
+      }
+  }
+
+  // --- Adjust date range to include only full periods ---
+
+  // 1. Adjust Start Date: Only trim partial start periods if the selection is NOT at the very beginning.
+  if (!isSelectionAtTheVeryBeginning) {
+      if (aggregationLevel === 'Monthly') {
+          if (startDate.getDate() !== 1) { // If not the first day of the month
+              startDate.setMonth(startDate.getMonth() + 1, 1); // Move to start of next month
+          }
+      } else if (aggregationLevel === 'Yearly') {
+          if (startDate.getMonth() !== 0 || startDate.getDate() !== 1) { // If not Jan 1st
+              startDate.setFullYear(startDate.getFullYear() + 1, 0, 1); // Move to start of next year
+          }
+      }
+  }
+  // Always floor the start date to the beginning of the day.
+  startDate.setHours(0, 0, 0, 0);
+
+  // 2. Adjust End Date: Only trim partial end periods if the selection is NOT at the very end.
+  if (!isSelectionAtTheVeryEnd) {
+      if (aggregationLevel === 'Monthly') {
+          const lastDayOfMonth = new Date(endDate.getFullYear(), endDate.getMonth() + 1, 0);
+          if (endDate.getDate() < lastDayOfMonth.getDate()) { // If not the last day of the month
+              endDate.setDate(0); // Move to the end of the previous month
+          }
+      } else if (aggregationLevel === 'Yearly') {
+          if (endDate.getMonth() !== 11 || endDate.getDate() !== 31) { // If not Dec 31st
+              endDate.setFullYear(endDate.getFullYear(), 0, 0); // Move to the end of the previous year
+          }
+      } else if (aggregationLevel === 'Daily') {
+          // If the selection is not at the very end, remove the last partial day to be consistent with month/year logic.
+          endDate.setDate(endDate.getDate() - 1);
+      }
+  }
+  endDate.setHours(23, 59, 59, 999);
+  // --- END OF MODIFIED LOGIC ---
+
 
   if (startDate > endDate) {
     return {
@@ -356,6 +397,9 @@ export function getInteractiveChartStats(
   const { submissions } = processedData;
   if (!submissions.length) return null;
 
+  // MODIFICATION: Get the absolute earliest date from the entire dataset.
+  const minDataDate = new Date(Math.min(...submissions.map(s => s.date.getTime())));
+
   let filteredSubmissions = submissions;
   let effectiveDateRange: { start: Date; end: Date } | null = null;
   
@@ -382,7 +426,8 @@ export function getInteractiveChartStats(
   
   const timeGroups = groupByTimePeriod(filteredSubmissions, aggregationLevel);
   
-  const chartData = createChartData(timeGroups, filters, aggregationLevel, effectiveDateRange);
+  // MODIFICATION: Pass the minDataDate to the chart creation function.
+  const chartData = createChartData(timeGroups, filters, aggregationLevel, effectiveDateRange, { min: minDataDate, max: new Date() });
   
   return chartData;
 }
