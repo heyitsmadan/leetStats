@@ -135,7 +135,7 @@ export function renderOrUpdateStackedBarChart(
             },
             y: {
                 stacked: true,
-                ticks: { color: colors.text.subtle },
+                ticks: { color: colors.text.subtle, precision: 0 },
                 grid: { display: false }
             },
         },

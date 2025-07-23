@@ -541,7 +541,7 @@ newRow.className = 'expanded-row';
                         beginAtZero: localOpts.metric !== 'avgTries',
                         min: localOpts.metric === 'avgTries' ? 1 : undefined,
                         grid: { display: false },
-                        ticks: { color: colors.text.subtle }
+                        ticks: { color: colors.text.subtle, precision: localOpts.metric === 'problemsSolved' ? 0 : undefined }
                     }
                 },
                 plugins: {

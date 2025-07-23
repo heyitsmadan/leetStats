@@ -168,7 +168,7 @@ export function renderOrUpdateCumulativeLineChart(
             y: { 
                 beginAtZero: true, 
                 grid: { display: false }, 
-                ticks: { color: colors.text.subtle } // Using color from theme
+                ticks: { color: colors.text.subtle, precision: 0 } // Using color from theme
             },
         },
         plugins: {
