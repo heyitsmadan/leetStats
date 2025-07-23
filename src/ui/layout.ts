@@ -127,7 +127,7 @@ export function renderPageLayout(processedData: ProcessedData) {
 
   if (processedData.submissions.length === 0) {
     // If no data, fill pane with the empty state message
-    const imageUrl = chrome.runtime.getURL('src/public/assets/images/null_dark.png');
+    const imageUrl = chrome.runtime.getURL('assets/images/null_dark.png');
     statsPane.innerHTML = `
       <div class="mb-[70px] mt-[57px] flex-1">
         <div class="flex h-full flex-col items-center justify-center">

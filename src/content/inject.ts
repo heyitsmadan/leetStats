@@ -1,5 +1,5 @@
 import { initialize } from '../core/main';
-import { FetchLoader } from './components/Loader';
+import { FetchLoader } from '../ui/components/Loader';
 
 console.log("🚀 LeetCode Stats Extension Injected!");
 

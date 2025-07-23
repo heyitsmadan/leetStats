@@ -15,7 +15,7 @@
         "https://leetcode.com/*"
       ],
       "js": [
-        "src/ui/inject.ts"
+        "src/content/inject.ts"
       ],
       "run_at": "document_idle"
     }
@@ -26,7 +26,7 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "src/public/assets/images/null_dark.png"
+        "assets/images/null_dark.png"
       ],
       "matches": [
         "https://leetcode.com/*"
