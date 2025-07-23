@@ -6,12 +6,9 @@ import type { ProcessedData, LegacyStats, TrophyData, MilestoneData, RecordData,
  * repetitive sorting in the various helper functions.
  */
 export function getLegacyStats(processedData: ProcessedData): LegacyStats | null {
-  // Always use ALL submissions for legacy stats, ignore filters
   const allSubmissions = processedData.submissions;
-  
   if (!allSubmissions.length) return null;
 
-  // Sort all submissions by date once to be passed to helper functions.
   const sortedSubmissions = [...allSubmissions].sort((a, b) => a.date.getTime() - b.date.getTime());
 
   const trophies = calculateTrophies(processedData, sortedSubmissions);
@@ -262,100 +259,102 @@ function calculateMilestones(sortedSubmissions: ProcessedSubmission[]): Mileston
  */
 function calculateRecords(processedData: ProcessedData, sortedSubmissions: any[]): RecordData[] {
   const records: RecordData[] = [];
-  
-  // 1. Problems solved on first try (logic is correct and uses problemMap).
+
+  // 1. One Shot Solves
   let firstTryEasy = 0;
   let firstTryMedium = 0;
   let firstTryHard = 0;
-  
   for (const [slug, subs] of processedData.problemMap) {
-    // Check if the first submission for this problem was an accepted one.
-    if (subs[0].status === 10) { 
+    if (subs[0].status === 10) {
       const difficulty = subs[0].metadata?.difficulty;
       if (difficulty === 'Easy') firstTryEasy++;
       else if (difficulty === 'Medium') firstTryMedium++;
       else if (difficulty === 'Hard') firstTryHard++;
     }
   }
-  
   const oneShotSolves = firstTryEasy + firstTryMedium + firstTryHard;
-
-  // --- NEW LOGIC START ---
-
-  // Calculate the total number of unique problems solved.
-  let totalUniqueSolved = 0;
-  for (const subs of processedData.problemMap.values()) {
-    // A problem is considered solved if any of its submissions were accepted.
-    if (subs.some(s => s.status === 10)) {
-      totalUniqueSolved++;
+  if (oneShotSolves > 0) {
+    let totalUniqueSolved = 0;
+    for (const subs of processedData.problemMap.values()) {
+        if (subs.some(s => s.status === 10)) totalUniqueSolved++;
     }
+    const percentage = totalUniqueSolved > 0 ? Math.round((oneShotSolves / totalUniqueSolved) * 100) : 0;
+    records.push({
+        name: 'One Shot Solves',
+        value: oneShotSolves,
+        subStats: { easy: firstTryEasy, medium: firstTryMedium, hard: firstTryHard },
+        dateStat: `~${percentage}% of solved problems`
+    });
+  } else {
+    records.push({ name: 'One Shot Solves', mainStat: '—', dateStat: '&nbsp;' });
   }
 
-  // Create the subtext. Handle division by zero.
-  let oneShotSubtext = '&nbsp;'; // Default empty space
-  if (totalUniqueSolved > 0) {
-    const percentage = Math.round((oneShotSolves / totalUniqueSolved) * 100);
-    // This text provides great context, as you suggested.
-    oneShotSubtext = `~${percentage}% of solved problems`;
-  }
-  
-  // --- NEW LOGIC END ---
-
-  records.push({
-    name: 'One Shot Solves',
-    value: oneShotSolves,
-    subStats: { easy: firstTryEasy, medium: firstTryMedium, hard: firstTryHard },
-    dateStat: oneShotSubtext // Add the newly created subtext here.
-  });
-  
-  // 2. Longest submission streak (uses pre-sorted submissions).
-  // ... (rest of the function remains the same) ...
+  // 2. Longest Streak
   const streakData = calculateLongestStreak(sortedSubmissions);
-  records.push({
-    name: 'Longest Streak',
-    mainStat: pluralize(streakData.length, 'day'),
-    dateStat: `ending on ${formatDate(streakData.endDate)}`
-  });
-  
-  // 3. Longest break (uses pre-sorted submissions).
+  if (streakData.length > 0) {
+    records.push({
+        name: 'Longest Streak',
+        mainStat: pluralize(streakData.length, 'day'), // This already ensures it's in days
+        dateStat: `ending on ${formatDate(streakData.endDate)}`
+    });
+  } else {
+    records.push({ name: 'Longest Streak', mainStat: '—', dateStat: '&nbsp;' });
+  }
+
+  // 3. Longest Break
   const breakData = calculateLongestBreak(sortedSubmissions);
-  records.push({
-    name: 'Longest Break',
-    mainStat: `${formatDuration(breakData.days)}`,
-    dateStat: `${formatDate(breakData.startDate)} - ${formatDate(breakData.endDate)}`
-  });
-  
-  // 4. Busiest day.
+  if (breakData.breakInMs > 0) {
+    records.push({
+        name: 'Longest Break',
+        mainStat: formatDuration(breakData.breakInMs), // Uses the new, more detailed formatter
+        dateStat: `on ${formatDate(breakData.date)}`
+    });
+  } else {
+    records.push({ name: 'Longest Break', mainStat: '—', dateStat: '&nbsp;' });
+  }
+
+  // 4. Busiest Day
   const dayMap = new Map<string, number>();
   for (const sub of sortedSubmissions) {
     const dateKey = sub.date.toDateString();
     dayMap.set(dateKey, (dayMap.get(dateKey) || 0) + 1);
   }
-  
   let busiestDay = '';
   let maxDaySubmissions = 0;
   for (const [date, count] of dayMap) {
     if (count > maxDaySubmissions) {
-      maxDaySubmissions = count;
-      busiestDay = date;
+        maxDaySubmissions = count;
+        busiestDay = date;
     }
   }
-  
-  records.push({
-    name: 'Busiest Day',
-    mainStat: pluralize(maxDaySubmissions, 'submission'),
-    dateStat: `on ${formatDate(new Date(busiestDay))}`
-  });
-  
-  // 5-7. Best periods.
+  if (maxDaySubmissions > 0) {
+    records.push({
+        name: 'Busiest Day',
+        mainStat: pluralize(maxDaySubmissions, 'submission'),
+        dateStat: `on ${formatDate(new Date(busiestDay))}`
+    });
+  } else {
+    records.push({ name: 'Busiest Day', mainStat: '—', dateStat: '&nbsp;' });
+  }
+
+  // 5-7. Best Periods
   const bestPeriods = calculateBestPeriods(sortedSubmissions);
-  
-  records.push(
-    { name: 'Best Day', mainStat: `${pluralize(bestPeriods.bestDay.count, 'problem')} solved`, dateStat: `on ${formatDate(bestPeriods.bestDay.date)}`},
-    { name: 'Best Month', mainStat: `${pluralize(bestPeriods.bestMonth.count, 'problem')} solved`, dateStat: `in ${formatMonthYear(bestPeriods.bestMonth.date)}`},
-    { name: 'Best Year', mainStat: `${pluralize(bestPeriods.bestYear.count, 'problem')} solved`, dateStat: `in ${bestPeriods.bestYear.date.getFullYear()}`}
-  );
-  
+  if (bestPeriods.bestDay.count > 0) {
+    records.push({ name: 'Best Day', mainStat: `${pluralize(bestPeriods.bestDay.count, 'problem')} solved`, dateStat: `on ${formatDate(bestPeriods.bestDay.date)}`});
+  } else {
+    records.push({ name: 'Best Day', mainStat: '—', dateStat: '&nbsp;' });
+  }
+  if (bestPeriods.bestMonth.count > 0) {
+    records.push({ name: 'Best Month', mainStat: `${pluralize(bestPeriods.bestMonth.count, 'problem')} solved`, dateStat: `in ${formatMonthYear(bestPeriods.bestMonth.date)}`});
+  } else {
+    records.push({ name: 'Best Month', mainStat: '—', dateStat: '&nbsp;' });
+  }
+  if (bestPeriods.bestYear.count > 0) {
+    records.push({ name: 'Best Year', mainStat: `${pluralize(bestPeriods.bestYear.count, 'problem')} solved`, dateStat: `in ${bestPeriods.bestYear.date.getFullYear()}`});
+  } else {
+    records.push({ name: 'Best Year', mainStat: '—', dateStat: '&nbsp;' });
+  }
+
   return records;
 }
 
@@ -421,26 +420,23 @@ function calculateLongestStreak(sortedSubmissions: any[]): { length: number; end
  * Helper to calculate longest break.
  * REFACTOR: Uses the pre-sorted submissions array.
  */
-function calculateLongestBreak(sortedSubmissions: any[]): { days: number; startDate: Date; endDate: Date } {
+function calculateLongestBreak(sortedSubmissions: any[]): { breakInMs: number; date: Date } {
   if (sortedSubmissions.length < 2) {
-    return { days: 0, startDate: new Date(), endDate: new Date() };
+    return { breakInMs: 0, date: new Date() };
   }
 
   let maxBreak = 0;
-  let maxBreakStart: Date = sortedSubmissions[0].date;
-  let maxBreakEnd: Date = sortedSubmissions[0].date;
-  
+  let breakStartDate: Date = sortedSubmissions[0].date;
+
   for (let i = 1; i < sortedSubmissions.length; i++) {
-    const gap = sortedSubmissions[i].date.getTime() - sortedSubmissions[i-1].date.getTime();
+    const gap = sortedSubmissions[i].date.getTime() - sortedSubmissions[i - 1].date.getTime();
     if (gap > maxBreak) {
       maxBreak = gap;
-      maxBreakStart = sortedSubmissions[i-1].date;
-      maxBreakEnd = sortedSubmissions[i].date;
+      breakStartDate = sortedSubmissions[i - 1].date;
     }
   }
-  
-  const breakDays = Math.floor(maxBreak / (1000 * 60 * 60 * 24));
-  return { days: breakDays, startDate: maxBreakStart, endDate: maxBreakEnd };
+
+  return { breakInMs: maxBreak, date: breakStartDate };
 }
 
 // Helper to calculate best periods (unchanged).
@@ -493,28 +489,50 @@ function calculateBestPeriods(submissions: any[]) {
 }
 
 // Helper function to format duration (unchanged).
-function formatDuration(days: number): string {
-  if (days < 30) {
-    return pluralize(days, 'day');
+function formatDuration(ms: number): string {
+  if (ms < 1000) {
+    return '0 seconds';
   }
-  
+
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
   const years = Math.floor(days / 365);
-  const remainingAfterYears = days % 365;
-  const months = Math.floor(remainingAfterYears / 30);
-  const remainingDays = remainingAfterYears % 30;
-  
-  let result = '';
-  if (years > 0) {
-    result += pluralize(years, 'year');
+
+  const timeParts = [
+    { value: years, unit: 'year' },
+    { value: days % 365, unit: 'day' },
+    { value: hours % 24, unit: 'hour' },
+    { value: minutes % 60, unit: 'minute' },
+    { value: seconds % 60, unit: 'second' },
+  ];
+
+  // Handle months separately for better accuracy
+  if (days > 30) {
+      const months = Math.floor(days / 30.44);
+      timeParts[0] = { value: Math.floor(months / 12), unit: 'year' };
+      timeParts.splice(1, 1, { value: months % 12, unit: 'month' });
+      timeParts[2] = { value: days % 30, unit: 'day' };
   }
-  if (months > 0) {
-    if (result) result += ' ';
-    result += pluralize(months, 'month');
+
+  const nonZeroParts = timeParts.filter(part => part.value > 0);
+
+  if (nonZeroParts.length === 0) {
+    return '0 seconds';
   }
-  if (remainingDays > 0 && years === 0) {
-    if (result) result += ' ';
-    result += pluralize(remainingDays, 'day');
+
+  // If the largest unit is seconds, just show that.
+  if (nonZeroParts[0].unit === 'second') {
+    return pluralize(nonZeroParts[0].value, 'second');
   }
-  
-  return result;
+
+  // Take the two largest non-zero parts.
+  const partsToShow = nonZeroParts.slice(0, 2);
+
+  if (partsToShow.length === 1) {
+    return pluralize(partsToShow[0].value, partsToShow[0].unit);
+  }
+
+  return `${pluralize(partsToShow[0].value, partsToShow[0].unit)} and ${pluralize(partsToShow[1].value, partsToShow[1].unit)}`;
 }
