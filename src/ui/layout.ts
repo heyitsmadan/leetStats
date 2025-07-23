@@ -119,27 +119,48 @@ export function renderPageLayout(processedData: ProcessedData) {
     tabBar.append(statsTab);
   }
 
-  // 3. Create stats content pane
-  const statsPane = createStatsPaneWithGrid();
-  contentContainer.append(statsPane);
+  // 3. Create stats content pane based on whether data exists
+  const statsPane = document.createElement('div');
+  statsPane.id = 'lc-stats-pane';
   statsPane.style.display = 'none'; // Start hidden
+  statsPane.className = 'w-full';
+
+  if (processedData.submissions.length === 0) {
+    // If no data, fill pane with the empty state message
+    const imageUrl = chrome.runtime.getURL('src/public/assets/images/null_dark.png');
+    statsPane.innerHTML = `
+      <div class="mb-[70px] mt-[57px] flex-1">
+        <div class="flex h-full flex-col items-center justify-center">
+          <img class="w-[200px]" src="${imageUrl}" alt="No data available">
+          <span class="mt-3 text-sm font-medium text-label-4 dark:text-dark-label-4">
+            No stats
+          </span>
+        </div>
+      </div>
+    `;
+  } else {
+    // If there's data, fill it with the charts grid
+    const grid = createStatsPaneWithGrid();
+    // Move children from the created grid element to the pane
+    while (grid.firstChild) {
+      statsPane.appendChild(grid.firstChild);
+    }
+  }
+  contentContainer.append(statsPane);
 
   // 4. Setup content observer
   let contentObserver: MutationObserver | null = null;
   
   const startContentObservation = () => {
-    // Clean up any existing observer
     if (contentObserver) contentObserver.disconnect();
     
     contentObserver = new MutationObserver((mutations) => {
       for (const mutation of mutations) {
-        // Check if LeetCode content pane exists
         const leetcodeContent = Array.from(contentContainer.children).find(
           child => child !== tabBar && child !== statsPane
         );
         
         if (leetcodeContent) {
-          // Initialize tab logic now that content exists
           setupTabLogic(statsTab, tabBar, contentContainer, statsPane, processedData);
           contentObserver?.disconnect();
           contentObserver = null;
@@ -148,13 +169,8 @@ export function renderPageLayout(processedData: ProcessedData) {
       }
     });
     
-    // Observe for child additions
-    contentObserver.observe(contentContainer, {
-      childList: true,
-      subtree: false
-    });
+    contentObserver.observe(contentContainer, { childList: true, subtree: false });
     
-    // Set timeout as fallback
     setTimeout(() => {
       if (contentObserver) {
         console.warn('Content not detected, forcing setup');
@@ -172,8 +188,8 @@ export function renderPageLayout(processedData: ProcessedData) {
   
   if (initialContent) {
     setupTabLogic(statsTab, tabBar, contentContainer, statsPane, processedData);
-    // First-time chart rendering
-    if (!window.statsRendered) {
+    // First-time chart rendering (only if there is data)
+    if (!window.statsRendered && processedData.submissions.length > 0) {
       requestAnimationFrame(() => {
         renderAllCharts(processedData);
         window.statsRendered = true;
@@ -914,7 +930,7 @@ function setupTabLogic(
     startContentObservation();
     
     // First-time chart rendering
-    if (!window.statsRendered) {
+    if (!window.statsRendered && processedData.submissions.length > 0) {
       requestAnimationFrame(() => {
         renderAllCharts(processedData);
         window.statsRendered = true;

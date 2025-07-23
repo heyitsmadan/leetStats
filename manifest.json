@@ -22,5 +22,15 @@
   ],
   "action": {
     "default_title": "LeetCode Stats"
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "src/public/assets/images/null_dark.png"
+      ],
+      "matches": [
+        "https://leetcode.com/*"
+      ]
+    }
+  ]
 }

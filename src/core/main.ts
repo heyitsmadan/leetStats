@@ -77,18 +77,24 @@ export async function initialize(loader: ILoader): Promise<void> {
       onProgress
     );
 
-    if (newSubmissions.length > 0) {
-      const allSubmissions = [...cachedSubmissionsData.submissions, ...newSubmissions];
-      // 7. Save updated submissions for the specific user.
-      await saveSubmissionsToStorage(loggedInUsername, allSubmissions);
+    const allSubmissions = [...cachedSubmissionsData.submissions, ...newSubmissions];
 
-      // 8. Fetch and process data only if there are new submissions.
+    // If there are any new submissions, save the combined list back to storage.
+    if (newSubmissions.length > 0) {
+      await saveSubmissionsToStorage(loggedInUsername, allSubmissions);
+    }
+
+    // Now, decide whether to render charts or the empty state.
+    if (allSubmissions.length > 0) {
+      // This block now handles both cases where there are submissions (new or cached).
       const metadataResult = await fetchAndSaveMissingMetadata(allSubmissions, cachedMetadata);
       const processedData = processData(allSubmissions, metadataResult.updatedMetadata);
       renderPageLayout(processedData);
-    } else if (cachedSubmissionsData.submissions.length > 0) {
-      // If no new submissions, just render the data from the cache.
-      const processedData = processData(cachedSubmissionsData.submissions, cachedMetadata);
+    } else {
+      // This is the new case for when there are absolutely no submissions.
+      // We call processData with an empty array to get a valid ProcessedData object,
+      // which layout.ts will then use to determine it should show the "No data" state.
+      const processedData = processData([], {});
       renderPageLayout(processedData);
     }
 
