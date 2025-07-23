@@ -119,6 +119,21 @@ export function renderOrUpdateSkillMatrixHeatmap(
     }>();
 
     function renderInitialTable() {
+        // --- START OF NEW CODE ---
+        if (data.topics.length === 0) {
+            // No topics match the current filters, so display the empty state message.
+            const imageUrl = chrome.runtime.getURL('assets/images/null_dark.png');
+            container.innerHTML = `
+              <div class="flex h-full flex-col items-center justify-center py-16">
+                <img class="w-[200px]" src="${imageUrl}" alt="No data available">
+                <span class="mt-3 text-sm font-medium text-label-4 dark:text-dark-label-4">
+                  No data for the selected period
+                </span>
+              </div>
+            `;
+            return; // Stop the function here to prevent rendering an empty table.
+        }
+        // --- END OF NEW CODE ---
         const metrics = ['problemsSolved', 'avgTries', 'firstAceRate'] as const;
         const metricLabels = {
             problemsSolved: 'Problems Solved',
