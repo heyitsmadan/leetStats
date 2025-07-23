@@ -18,7 +18,7 @@ const RUNTIME_ERROR_DEFAULT = { label: 'Runtime Error', colorKey: 'runtimeError'
  * Calculates all necessary data for the Submission Signature doughnut chart.
  * @param processedData The main processed data object.
  * @param filters An object containing the current filter settings.
- * @returns Data formatted for the Chart.js component, or null if no data.
+ * @returns Data formatted for the Chart.js component.
  */
 export function getSubmissionSignatureStats(
   processedData: ProcessedData,
@@ -32,33 +32,42 @@ export function getSubmissionSignatureStats(
   const ONE_DAY_MS = 24 * 60 * 60 * 1000;
   
   const filteredSubmissions = submissions.filter(sub => {
-  const submissionTime = sub.date.getTime();
-  const nowTime = now.getTime();
+    const submissionTime = sub.date.getTime();
+    const nowTime = now.getTime();
 
-  if (timeRange !== 'All Time') {
-    let maxAgeInDays = 0;
-    if (timeRange === 'Last 30 Days') {
-      maxAgeInDays = 30;
-    } else if (timeRange === 'Last 90 Days') {
-      maxAgeInDays = 90;
-    } else if (timeRange === 'Last 365 Days') {
-      maxAgeInDays = 365;
+    if (timeRange !== 'All Time') {
+        let maxAgeInDays = 0;
+        if (timeRange === 'Last 30 Days') maxAgeInDays = 30;
+        else if (timeRange === 'Last 90 Days') maxAgeInDays = 90;
+        else if (timeRange === 'Last 365 Days') maxAgeInDays = 365;
+        
+        if (nowTime - submissionTime > maxAgeInDays * ONE_DAY_MS) {
+            return false;
+        }
     }
-    if (nowTime - submissionTime > maxAgeInDays * ONE_DAY_MS) {
-      return false;
+
+    if (difficulty !== 'All' && sub.metadata?.difficulty !== difficulty) {
+        return false;
     }
-  }
 
-  if (difficulty !== 'All' && sub.metadata?.difficulty !== difficulty) {
-    return false;
-  }
-
-  return true;
-});
+    return true;
+  });
   
   const totalSubmissions = filteredSubmissions.length;
+
+  // --- EMPTY STATE HANDLING ---
   if (totalSubmissions === 0) {
-      return null; // Return null if there's nothing to display
+      // Return a default structure for an empty doughnut chart
+      return {
+          labels: ['No Submissions'],
+          datasets: [{
+              data: [1], // A single data point to make the circle full
+              backgroundColor: [colors.background.empty],
+              borderColor: colors.background.secondarySection,
+              borderWidth: 2,
+          }],
+          tooltipsData: [{ count: 0, percent: '0%', breakdown: { E: 0, M: 0, H: 0 } }],
+      };
   }
 
   // --- 2. Aggregate data by submission status ---
@@ -74,7 +83,6 @@ export function getSubmissionSignatureStats(
     const bucket = signatureMap.get(key)!;
     bucket.count++;
 
-    // Increment difficulty counts
     if (sub.metadata?.difficulty === 'Easy') bucket.easy++;
     else if (sub.metadata?.difficulty === 'Medium') bucket.medium++;
     else if (sub.metadata?.difficulty === 'Hard') bucket.hard++;
@@ -91,7 +99,6 @@ export function getSubmissionSignatureStats(
   for (const [label, values] of sortedSignature) {
     labels.push(label);
     data.push(values.count);
-    // Use the colorKey to look up the color from the central theme file
     backgroundColors.push(colors.status[values.colorKey]);
     tooltipsData.push({
       count: values.count,
@@ -105,7 +112,7 @@ export function getSubmissionSignatureStats(
     datasets: [{
       data: data,
       backgroundColor: backgroundColors,
-      borderColor: colors.background.secondarySection, // Using color from theme
+      borderColor: colors.background.secondarySection,
       borderWidth: 2,
     }],
     tooltipsData,

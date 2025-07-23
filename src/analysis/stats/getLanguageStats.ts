@@ -30,11 +30,20 @@ export function getLanguageStats(
     return true;
   });
 
+  // --- EMPTY STATE HANDLING ---
   if (filteredSubmissions.length === 0) {
-      return null;
+      // Return a default structure for an empty horizontal bar chart
+      return {
+          labels: [],
+          datasets: [
+              { label: 'Accepted', data: [], backgroundColor: colors.status.accepted, maxBarThickness: 30 },
+              { label: 'Failed', data: [], backgroundColor: colors.background.empty, maxBarThickness: 30 }
+          ],
+          tooltipsData: [],
+          bestLang: '',
+      };
   }
 
-  // The map now tracks sets of unique solved problem names.
   const langMap = new Map<string, {
     accepted: number;
     failed: number;
@@ -61,8 +70,6 @@ export function getLanguageStats(
     
     if (sub.status === STATUS_ACCEPTED) {
         bucket.accepted++;
-        // Assumes a unique problem identifier exists at sub.metadata.name
-        // If your identifier is different (e.g., sub.problemId), change it here.
         if (sub.metadata?.slug) {
             if (sub.metadata?.difficulty === 'Easy') bucket.solvedEasy.add(sub.metadata.slug);
             else if (sub.metadata?.difficulty === 'Medium') bucket.solvedMedium.add(sub.metadata.slug);
@@ -112,7 +119,6 @@ export function getLanguageStats(
         label: entry[0],
         totalSubmissions: entry[1].accepted + entry[1].failed,
         acceptanceRate: entry[1].accepted + entry[1].failed > 0 ? ((entry[1].accepted / (entry[1].accepted + entry[1].failed)) * 100).toFixed(1) + '%' : 'N/A',
-        // Use the size of the sets for the unique solved counts
         solvedBreakdown: { 
             E: entry[1].solvedEasy.size, 
             M: entry[1].solvedMedium.size, 
