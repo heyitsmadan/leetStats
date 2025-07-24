@@ -35,13 +35,23 @@ function pluralize(count: number, singular: string, plural?: string): string {
 function calculateTrophies(processedData: ProcessedData, sortedSubmissions: ProcessedSubmission[]): TrophyData[] {
   const trophies: TrophyData[] = [];
 
+  // Define paths to your SVG assets
+  const trophySvgs = {
+    first_blood: 'assets/trophies/first_blood.svg',
+    easy_trap: 'assets/trophies/easy_trap.svg',
+    white_whale: 'assets/trophies/white_whale.svg',
+    nemesis: 'assets/trophies/nemesis.svg',
+    phoenix: 'assets/trophies/phoenix.svg',
+    locked: 'assets/trophies/trophy_locked.svg', // Your generic locked trophy SVG
+  };
+
   // Subtitles for unachieved trophies, hinting at the challenge.
-  const unachievedTrophyData = {
-    'first_blood': { subtitle: 'For the first taste of triumph.', icon: '❓' },
-    'easy_trap': { subtitle: "For the 'Easy' problem that fought back the hardest.", icon: '❓' },
-    'white_whale': { subtitle: 'For the one that got away.', icon: '❓' },
-    'nemesis': { subtitle: 'For the problem that tested your limits the most.', icon: '❓' },
-    'phoenix': { subtitle: 'For the return no one saw coming.', icon: '❓' }
+  const unachievedTrophySubtitles = {
+    'first_blood': 'For the first taste of triumph.',
+    'easy_trap': "For the 'Easy' problem that fought back the hardest.",
+    'white_whale': 'For the one that got away.',
+    'nemesis': 'For the problem that tested your limits the most.',
+    'phoenix': 'For the return no one saw coming.'
   };
 
   // Use the pre-grouped `problemMap` to build problem-specific stats.
@@ -68,7 +78,7 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
       subtitle: 'Your very first solved problem',
       problemTitle: firstAccepted.title,
       problemSlug: firstAccepted.titleSlug,
-      icon: '🩸',
+      icon: trophySvgs.first_blood, // <-- SVG Path
       stat: 1,
       personalNote: `...oh, my sweet summer child`,
       achieved: true
@@ -77,17 +87,17 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
     trophies.push({
       id: 'first_blood',
       title: 'First Blood',
-      subtitle: unachievedTrophyData.first_blood.subtitle,
+      subtitle: unachievedTrophySubtitles.first_blood,
       problemTitle: '',
       problemSlug: 'placeholder',
-      icon: unachievedTrophyData.first_blood.icon,
+      icon: trophySvgs.locked, // <-- Locked SVG Path
       stat: 0,
       personalNote: '',
       achieved: false
     });
   }
 
-  // 2. Easy Trap - Easy with most failed attempts (Threshold: 3)
+  // 2. Easy Trap - Easy with most failed attempts (Threshold: 4)
   let maxFailedEasy = 0;
   let trapProblem: any = null;
   for (const [slug, stats] of problemStats) {
@@ -105,7 +115,7 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
       subtitle: `${pluralize(maxFailedEasy, 'failed attempt')} on an "Easy" problem`,
       problemTitle: trapProblem.title || trapProblem.slug,
       problemSlug: trapProblem.slug,
-      icon: '🪤',
+      icon: trophySvgs.easy_trap, // <-- SVG Path
       stat: maxFailedEasy,
       personalNote: `...we won't tell anybody`,
       achieved: true
@@ -114,10 +124,10 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
     trophies.push({
       id: 'easy_trap',
       title: 'Easy Trap',
-      subtitle: unachievedTrophyData.easy_trap.subtitle,
+      subtitle: unachievedTrophySubtitles.easy_trap,
       problemTitle: '',
       problemSlug: 'placeholder',
-      icon: unachievedTrophyData.easy_trap.icon,
+      icon: trophySvgs.locked, // <-- Locked SVG Path
       stat: 0,
       personalNote: '',
       achieved: false
@@ -141,7 +151,7 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
       subtitle: `${pluralize(maxSubmissionsUnsolved, 'attempt')} and counting`,
       problemTitle: whaleProblem.title || whaleProblem.slug,
       problemSlug: whaleProblem.slug,
-      icon: '🐋',
+      icon: trophySvgs.white_whale, // <-- SVG Path
       stat: maxSubmissionsUnsolved,
       personalNote: `...one day, Captain Ahab`,
       achieved: true
@@ -150,10 +160,10 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
     trophies.push({
       id: 'white_whale',
       title: 'White Whale',
-      subtitle: unachievedTrophyData.white_whale.subtitle,
+      subtitle: unachievedTrophySubtitles.white_whale,
       problemTitle: '',
       problemSlug: 'placeholder',
-      icon: unachievedTrophyData.white_whale.icon,
+      icon: trophySvgs.locked, // <-- Locked SVG Path
       stat: 0,
       personalNote: '',
       achieved: false
@@ -178,7 +188,7 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
       subtitle: `Conquered after ${pluralize(nemesisProblem.failedSubmissions, 'failed attempt')}`,
       problemTitle: nemesisProblem.title || nemesisProblem.slug,
       problemSlug: nemesisProblem.slug,
-      icon: '⚔️',
+      icon: trophySvgs.nemesis, // <-- SVG Path
       stat: nemesisProblem.failedSubmissions,
       personalNote: `...there were tears`,
       achieved: true
@@ -187,17 +197,17 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
     trophies.push({
       id: 'nemesis',
       title: 'Nemesis',
-      subtitle: unachievedTrophyData.nemesis.subtitle,
+      subtitle: unachievedTrophySubtitles.nemesis,
       problemTitle: '',
       problemSlug: 'placeholder',
-      icon: unachievedTrophyData.nemesis.icon,
+      icon: trophySvgs.locked, // <-- Locked SVG Path
       stat: 0,
       personalNote: '',
       achieved: false
     });
   }
 
-  // 5. The Phoenix - Biggest time gap between first submission and acceptance (Threshold: 15 days)
+  // 5. The Phoenix - Biggest time gap between first submission and acceptance (Threshold: 30 days)
   let maxTimeGap = 0;
   let phoenixProblem: any = null;
   for (const [slug, stats] of problemStats) {
@@ -210,29 +220,27 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
     }
   }
 
-  if (phoenixProblem && maxTimeGap > 0) {
-    const days = Math.floor(maxTimeGap / (1000 * 60 * 60 * 24));
-    if (days >= 30) {
+  const days = Math.floor(maxTimeGap / (1000 * 60 * 60 * 24));
+  if (phoenixProblem && days >= 30) {
       trophies.push({
         id: 'phoenix',
         title: 'The Phoenix',
         subtitle: `Rose from the ashes after ${pluralize(days, 'day')}`,
         problemTitle: phoenixProblem.title || phoenixProblem.slug,
         problemSlug: phoenixProblem.slug,
-        icon: '🔥',
+        icon: trophySvgs.phoenix, // <-- SVG Path
         stat: days,
         personalNote: `...we are so back`,
         achieved: true
       });
-    }
   } else {
     trophies.push({
       id: 'phoenix',
       title: 'The Phoenix',
-      subtitle: unachievedTrophyData.phoenix.subtitle,
+      subtitle: unachievedTrophySubtitles.phoenix,
       problemTitle: '',
       problemSlug: 'placeholder',
-      icon: unachievedTrophyData.phoenix.icon,
+      icon: trophySvgs.locked, // <-- Locked SVG Path
       stat: 0,
       personalNote: '',
       achieved: false

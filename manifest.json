@@ -26,7 +26,9 @@
   "web_accessible_resources": [
     {
       "resources": [
-        "assets/images/null_dark.png"
+        "assets/images/*",
+        "assets/trophies/*",
+        "assets/icons/*"
       ],
       "matches": [
         "https://leetcode.com/*"

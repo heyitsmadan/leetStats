@@ -319,8 +319,9 @@ ${legacyStats.milestones.map((milestone: any, index: number) => {
   <div class="mt-4 space-y-3">
     ${legacyStats.trophies.map((trophy: any) => `
   <div class="flex items-center space-x-4 p-3 rounded-lg bg-[rgba(0,0,0,0.02)] dark:bg-[rgba(255,255,255,0.06)] ${!trophy.achieved ? 'opacity-75' : ''}">
-    <!-- Icon is never blurred -->
-    <span class="text-2xl flex-shrink-0 pt-0.5">${trophy.icon}</span>
+    
+    <!-- FIX: Use chrome.runtime.getURL() to resolve the asset path -->
+    <img src="${chrome.runtime.getURL(trophy.icon)}" alt="${trophy.title} Trophy" class="w-10 h-10 flex-shrink-0" />
 
     <div class="flex-1 flex flex-col space-y-1">
       <!-- Title is never blurred and always shows real title -->
@@ -354,6 +355,7 @@ ${legacyStats.milestones.map((milestone: any, index: number) => {
     </div>
   </div>
 `).join('')}
+
 
 
   </div>
@@ -1017,9 +1019,12 @@ function createStatsTab(): HTMLElement {
   const tab = document.createElement('div');
   tab.id = 'lc-stats-tab';
   tab.className = 'cursor-pointer';
+  // Resolve the path to your SVG icon using the Chrome runtime API
+  const iconUrl = chrome.runtime.getURL('assets/icons/sparkles.svg'); 
+
   tab.innerHTML = `
     <div class="lc-md:space-x-2 flex items-center rounded-[5px] px-5 py-[10px] font-medium hover:text-label-1 dark:hover:text-dark-label-1">
-      <span class="lc-md:inline hidden text-2xl">✨</span>
+      <img src="${iconUrl}" alt="Stats Icon" class="lc-md:inline hidden w-6 h-6" />
       <span class="whitespace-nowrap">Stats</span>
     </div>
   `;
