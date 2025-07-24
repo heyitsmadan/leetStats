@@ -119,9 +119,7 @@ export function renderOrUpdateSkillMatrixHeatmap(
     }>();
 
     function renderInitialTable() {
-        // --- START OF NEW CODE ---
         if (data.topics.length === 0) {
-            // No topics match the current filters, so display the empty state message.
             const imageUrl = chrome.runtime.getURL('assets/images/null_dark.png');
             container.innerHTML = `
               <div class="flex h-full flex-col items-center justify-center py-16">
@@ -131,9 +129,8 @@ export function renderOrUpdateSkillMatrixHeatmap(
                 </span>
               </div>
             `;
-            return; // Stop the function here to prevent rendering an empty table.
+            return;
         }
-        // --- END OF NEW CODE ---
         const metrics = ['problemsSolved', 'avgTries', 'firstAceRate'] as const;
         const metricLabels = {
             problemsSolved: 'Problems Solved',
@@ -226,8 +223,12 @@ export function renderOrUpdateSkillMatrixHeatmap(
             const currentChartOptions = chartOptions.get(topic)!;
 
             const newRow = document.createElement('tr');
-newRow.className = 'expanded-row';
-            newRow.innerHTML = getChartRowHtml(topic, currentChartOptions.view);
+            newRow.className = 'expanded-row';
+            // --- FIX START ---
+            // Pass the entire options object to the HTML generation function
+            // to ensure controls are rendered in their persisted state.
+            newRow.innerHTML = getChartRowHtml(topic, currentChartOptions);
+            // --- FIX END ---
 
             topicRow.insertAdjacentElement('afterend', newRow);
             addChartControlListeners(newRow, topic);
@@ -247,7 +248,37 @@ newRow.className = 'expanded-row';
         }
     }
 
-    function getChartRowHtml(topic: string, defaultView: 'Daily' | 'Monthly' | 'Yearly'): string {
+    // --- FIX START ---
+    // The function now accepts the full chart options object to correctly render the state of the controls.
+    function getChartRowHtml(topic: string, currentOpts: { metric: 'problemsSolved' | 'avgTries' | 'firstAceRate', view: 'Daily' | 'Monthly' | 'Yearly', split: boolean }): string {
+        const metricLabels = {
+            problemsSolved: 'Problems Solved',
+            avgTries: 'Average Attempts',
+            firstAceRate: 'First Ace Rate'
+        };
+        const metrics: ('problemsSolved' | 'avgTries' | 'firstAceRate')[] = ['problemsSolved', 'avgTries', 'firstAceRate'];
+
+        // Dynamically generate the HTML for metric dropdown options based on the current selection.
+        const metricOptionsHtml = metrics.map(metric => {
+            const isSelected = currentOpts.metric === metric;
+            const selectedClasses = 'rounded bg-fill-3 dark:bg-dark-fill-3';
+            const checkmarkVisibility = isSelected ? 'visible' : 'invisible';
+            const fontWeightClass = isSelected ? 'font-medium' : '';
+
+            return `
+                <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 ${isSelected ? selectedClasses : ''}" data-value="${metric}">
+                    <div class="flex h-5 flex-1 items-center pr-2 ${fontWeightClass}">
+                        <div class="whitespace-nowrap">${metricLabels[metric]}</div>
+                    </div>
+                    <span class="text-blue dark:text-dark-blue flex items-center pr-2 ${checkmarkVisibility}">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path>
+                        </svg>
+                    </span>
+                </div>
+            `;
+        }).join('');
+
         return `
             <td colspan="5" class="p-0 bg-layer-1 dark:bg-dark-layer-1">
                 <div class="expandable-content">
@@ -256,62 +287,33 @@ newRow.className = 'expanded-row';
                             <div class="ml-[21px]">
                                 <div class="relative" data-headlessui-state>
                                     <button class="flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3 metric-selector" data-topic="${topic}" type="button" aria-haspopup="listbox" aria-expanded="false">
-                                        <span class="whitespace-nowrap">Problems Solved</span>
+                                        <span class="whitespace-nowrap">${metricLabels[currentOpts.metric]}</span>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="pointer-events-none ml-3 w-4 h-4" aria-hidden="true">
                                             <path fill-rule="evenodd" d="M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z" clip-rule="evenodd"></path>
                                         </svg>
                                     </button>
                                     <div class="hidden z-dropdown absolute max-h-56 overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 left-0 mt-2 shadow-level3 dark:shadow-dark-level3 metric-options" style="filter: drop-shadow(rgba(0, 0, 0, 0.04) 0px 1px 3px) drop-shadow(rgba(0, 0, 0, 0.12) 0px 6px 16px);">
-                                        <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded bg-fill-3 dark:bg-dark-fill-3" data-value="problemsSolved">
-                                            <div class="flex h-5 flex-1 items-center pr-2 font-medium">
-                                                <div class="whitespace-nowrap">Problems Solved</div>
-                                            </div>
-                                            <span class="text-blue dark:text-dark-blue flex items-center pr-2 visible">
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4" aria-hidden="true">
-                                                    <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path>
-                                                </svg>
-                                            </span>
-                                        </div>
-                                        <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="avgTries">
-                                            <div class="flex h-5 flex-1 items-center pr-2">
-                                                <div class="whitespace-nowrap">Average Attempts</div>
-                                            </div>
-                                            <span class="text-blue dark:text-dark-blue flex items-center pr-2 invisible">
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4" aria-hidden="true">
-                                                    <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path>
-                                                </svg>
-                                            </span>
-                                        </div>
-                                        <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1" data-value="firstAceRate">
-                                            <div class="flex h-5 flex-1 items-center pr-2">
-                                                <div class="whitespace-nowrap">First Ace Rate</div>
-                                            </div>
-                                            <span class="text-blue dark:text-dark-blue flex items-center pr-2 invisible">
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4" aria-hidden="true">
-                                                    <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path>
-                                                </svg>
-                                            </span>
-                                        </div>
+                                        ${metricOptionsHtml}
                                     </div>
                                 </div>
                             </div>
                             <div class="flex gap-2 flex-wrap">
                                 <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
-                                    <button class="chart-view-btn whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs" data-view="Daily" data-topic="${topic}" data-state="${defaultView === 'Daily' ? 'active' : 'inactive'}">
+                                    <button class="chart-view-btn whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs" data-view="Daily" data-topic="${topic}" data-state="${currentOpts.view === 'Daily' ? 'active' : 'inactive'}">
                                         Daily
                                     </button>
-                                    <button class="chart-view-btn whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs" data-view="Monthly" data-topic="${topic}" data-state="${defaultView === 'Monthly' ? 'active' : 'inactive'}">
+                                    <button class="chart-view-btn whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs" data-view="Monthly" data-topic="${topic}" data-state="${currentOpts.view === 'Monthly' ? 'active' : 'inactive'}">
                                         Monthly
                                     </button>
-                                    <button class="chart-view-btn whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs" data-view="Yearly" data-topic="${topic}" data-state="${defaultView === 'Yearly' ? 'active' : 'inactive'}">
+                                    <button class="chart-view-btn whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs" data-view="Yearly" data-topic="${topic}" data-state="${currentOpts.view === 'Yearly' ? 'active' : 'inactive'}">
                                         Yearly
                                     </button>
                                 </div>
                                 <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
-                                    <button class="difficulty-toggle whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs" data-topic="${topic}" data-state="active">
+                                    <button class="difficulty-toggle whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs" data-topic="${topic}" data-state="${!currentOpts.split ? 'active' : 'inactive'}">
                                         Aggregate
                                     </button>
-                                    <button class="difficulty-toggle whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs" data-topic="${topic}" data-state="inactive">
+                                    <button class="difficulty-toggle whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs" data-topic="${topic}" data-state="${currentOpts.split ? 'active' : 'inactive'}">
                                         Split
                                     </button>
                                 </div>
@@ -345,6 +347,7 @@ newRow.className = 'expanded-row';
             </style>
         `;
     }
+    // --- FIX END ---
 
     function addChartControlListeners(row: HTMLElement, topic: string) {
         const metricSelector = row.querySelector('.metric-selector');
@@ -383,6 +386,16 @@ newRow.className = 'expanded-row';
                     if (checkIcon) {
                         checkIcon.classList.toggle('visible', opt === option);
                         checkIcon.classList.toggle('invisible', opt !== option);
+                    }
+                    // --- Small style fix to match original behavior ---
+                    const textDiv = opt.querySelector('.flex-1');
+                    const parentDiv = opt as HTMLElement;
+                    if (opt === option) {
+                        textDiv?.classList.add('font-medium');
+                        parentDiv.classList.add('rounded', 'bg-fill-3', 'dark:bg-dark-fill-3');
+                    } else {
+                        textDiv?.classList.remove('font-medium');
+                        parentDiv.classList.remove('rounded', 'bg-fill-3', 'dark:bg-dark-fill-3');
                     }
                 });
 
@@ -449,34 +462,26 @@ newRow.className = 'expanded-row';
             return;
         }
 
-        // --- START OF FIX ---
-
         const timeRangeStartDate = new Date(data.timeRangeStart);
 
-        // Filter points to be within the selected time range.
         let dataForChart = metricData.filter(point =>
             new Date(point.date) >= timeRangeStartDate
         );
 
-        // For time ranges other than "All Time", find the cumulative value at the start of the range
-        // to draw the line correctly from the beginning of the x-axis.
         if (options.timeRange !== 'All Time') {
-            // Find the last data point *before* the start of the current time range.
             const lastPointBeforeRange = metricData
                 .slice()
                 .reverse()
                 .find(point => new Date(point.date) < timeRangeStartDate);
 
             if (lastPointBeforeRange) {
-                // Check if there's already a data point exactly on the start date.
                 const firstPointIsOnStartDate = dataForChart.length > 0 &&
                     new Date(dataForChart[0].date).getTime() === timeRangeStartDate.getTime();
 
-                // If not, prepend an artificial point to carry over the cumulative value.
                 if (!firstPointIsOnStartDate) {
                     dataForChart.unshift({
                         ...lastPointBeforeRange,
-                        date: data.timeRangeStart, // Set its date to the exact start of the range.
+                        date: data.timeRangeStart,
                     });
                 }
             }
@@ -487,13 +492,9 @@ newRow.className = 'expanded-row';
             localOpts.view
         );
 
-        // For "All Time", adjust the axis to start at the first submission instead of 1970.
-        // For other views, it starts at the beginning of the time range (e.g., 90 days ago).
         const xScaleMin = options.timeRange === 'All Time' && aggregatedData.length > 0
-            ? aggregatedData[0].date // Use the date of the first data point
-            : data.timeRangeStart;   // Use the calculated range start
-
-        // --- END OF FIX ---
+            ? aggregatedData[0].date
+            : data.timeRangeStart;
 
 
         const datasets: any[] = [];
@@ -544,7 +545,7 @@ newRow.className = 'expanded-row';
                 scales: {
                     x: {
                         type: 'time',
-                        min: xScaleMin, // Use the dynamically determined minimum
+                        min: xScaleMin,
                         time: {
                             unit: timeScaleConfig[localOpts.view].unit,
                             tooltipFormat: timeScaleConfig[localOpts.view].tooltipFormat
@@ -589,19 +590,17 @@ newRow.className = 'expanded-row';
                             if (localOpts.view === 'Yearly') {
                                 formattedDate = pointDate.getUTCFullYear().toString();
                             } else if (localOpts.view === 'Monthly') {
-                                // For a monthly key like "2023-04-01", we want "April 2023"
                                 formattedDate = pointDate.toLocaleDateString(undefined, {
                                     month: 'long',
                                     year: 'numeric',
-                                    timeZone: 'UTC' // Keep UTC here to show 'January 2023' not 'December 2022' for a '2023-01-01' key
+                                    timeZone: 'UTC'
                                 });
                             } else { // Daily
-                                // For a daily key, show the full date
                                 formattedDate = pointDate.toLocaleDateString(undefined, {
                                     day: 'numeric',
                                     month: 'short',
                                     year: 'numeric',
-                                    timeZone: 'UTC' // Likewise, keep UTC to avoid day-before issues
+                                    timeZone: 'UTC'
                                 });
                             }
 
