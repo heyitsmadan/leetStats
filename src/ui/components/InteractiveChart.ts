@@ -335,7 +335,7 @@ export function renderOrUpdateInteractiveChart(
     });
   }
 
-  function handleTooltip(context: any) {
+ function handleTooltip(context: any) {
     const tooltipEl = container.querySelector('#chart-tooltip') as HTMLElement;
     if (!tooltipEl) return;
     const tooltipModel = context.tooltip;
@@ -381,7 +381,9 @@ export function renderOrUpdateInteractiveChart(
         });
       } else if (currentFilters.secondaryView === 'Language') {
         Object.entries(tooltipData.breakdown).sort((a, b) => b[1] - a[1]).forEach(([key, value]) => {
-          innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label">${key}</span><span class="tooltip-breakdown-value">${value}</span></li>`;
+          const dataset = mainChart?.data.datasets.find(d => d.label === key);
+          const color = (dataset?.backgroundColor as string) || colors.text.subtle;
+          innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${color};"></span> ${key}</span><span class="tooltip-breakdown-value">${value}</span></li>`;
         });
       } else if (currentFilters.secondaryView === 'Status' && currentFilters.primaryView === 'Submissions') {
         innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.status.accepted};"></span> Accepted</span><span class="tooltip-breakdown-value">${tooltipData.breakdown['Accepted'] || 0}</span></li>`;
