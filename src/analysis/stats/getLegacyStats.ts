@@ -171,7 +171,7 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
     }
   }
 
-  if (nemesisProblem && nemesisProblem.failedSubmissions >= 5) {
+  if (nemesisProblem && nemesisProblem.failedSubmissions >= 6) {
     trophies.push({
       id: 'nemesis',
       title: 'Nemesis',
