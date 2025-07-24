@@ -69,6 +69,7 @@ export interface CumulativeChartStats {
 
 // Add these interfaces to your existing types.ts
 
+// Add this to your existing TrophyData interface
 export interface TrophyData {
   id: string;
   title: string;
@@ -78,6 +79,7 @@ export interface TrophyData {
   icon: string;
   stat: number;
   personalNote?: string;
+  achieved: boolean; // Add this new field
 }
 
 export interface MilestoneData {

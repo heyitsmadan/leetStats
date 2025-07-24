@@ -311,28 +311,44 @@ ${legacyStats.milestones.map((milestone: any, index: number) => {
   <div class="${styles.subSectionHeader}">Trophies</div>
   <div class="mt-4 space-y-3">
     ${legacyStats.trophies.map((trophy: any) => `
-      <div class="flex items-center space-x-4 p-3 rounded-lg bg-[rgba(0,0,0,0.02)] dark:bg-[rgba(255,255,255,0.06)]">
+  <div class="flex items-center space-x-4 p-3 rounded-lg bg-[rgba(0,0,0,0.02)] dark:bg-[rgba(255,255,255,0.06)] ${!trophy.achieved ? 'opacity-75' : ''}">
+    <!-- Icon is never blurred -->
     <span class="text-2xl flex-shrink-0 pt-0.5">${trophy.icon}</span>
 
     <div class="flex-1 flex flex-col space-y-1">
-        <div class="${styles.trophyName}">
-            ${trophy.title}
-        </div>
-        <div class="border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b"></div>
+      <!-- Title is never blurred and always shows real title -->
+      <div class="${styles.trophyName}">
+        ${trophy.title}
+      </div>
+      
+      <div class="border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b"></div>
+      
+      ${trophy.achieved && trophy.problemSlug !== 'placeholder' ? `
         <a href="https://leetcode.com/problems/${trophy.problemSlug}/" class="${styles.trophyProblem}" target="_blank" rel="noopener noreferrer">
-            ${trophy.problemTitle}
+          ${trophy.problemTitle}
         </a>
-        
-        <div class="${styles.trophyDescription} pt-1"> ${trophy.subtitle}
+      ` : `
+        <div class="${styles.trophyProblem} trophy-hidden cursor-default">
+          ${trophy.problemTitle}
         </div>
+      `}
+      
+      <!-- Subtitle is blurred for unachieved trophies -->
+      <div class="${styles.trophyDescription} pt-1 ${!trophy.achieved ? 'trophy-hidden' : ''}">
+        ${trophy.subtitle}
+      </div>
 
-        ${trophy.personalNote ? `
-            <div class="${styles.trophyPersonalNote} pt-1.5"> ${trophy.personalNote}
-            </div>
-        ` : ''}
+      ${trophy.personalNote ? `
+        <!-- Personal note is blurred for unachieved trophies -->
+        <div class="${styles.trophyPersonalNote} pt-1.5 ${!trophy.achieved ? 'trophy-hidden' : ''}">
+          ${trophy.personalNote}
+        </div>
+      ` : ''}
     </div>
-</div>
-    `).join('')}
+  </div>
+`).join('')}
+
+
   </div>
 </div>
 
@@ -370,6 +386,8 @@ ${legacyStats.milestones.map((milestone: any, index: number) => {
 </div>
   </div>
 </div>
+<style>
+</style>
   `;
 }
 

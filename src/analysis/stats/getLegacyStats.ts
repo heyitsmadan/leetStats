@@ -2,7 +2,7 @@ import type { ProcessedData, LegacyStats, TrophyData, MilestoneData, RecordData,
 
 /**
  * Main function to calculate all legacy stats.
- * REFACTOR: Sorts all submissions by date once at the top level to avoid 
+ * REFACTOR: Sorts all submissions by date once at the top level to avoid
  * repetitive sorting in the various helper functions.
  */
 export function getLegacyStats(processedData: ProcessedData): LegacyStats | null {
@@ -26,28 +26,29 @@ function pluralize(count: number, singular: string, plural?: string): string {
 
 /**
  * Calculates user trophies.
- * REFACTOR: Uses the pre-grouped `problemMap` from `processedData` to derive problem statistics,
- * avoiding a redundant iteration and grouping of all submissions. It also uses the pre-sorted
- * list of submissions for the 'First Blood' trophy.
+ * REFACTOR:
+ * - Trophies are now sorted with achieved ones first.
+ * - Unachieved trophies have improved cryptic subtitles.
+ * - Unachieved trophies use a greyscale version of their real icon.
+ * - Added thresholds for unlocking certain trophies.
  */
 function calculateTrophies(processedData: ProcessedData, sortedSubmissions: ProcessedSubmission[]): TrophyData[] {
   const trophies: TrophyData[] = [];
-  
-  // Use the pre-grouped `problemMap` to build problem-specific stats.
-  const problemStats = new Map<string, {
-    submissions: number;
-    accepted: number;
-    firstSubmission: Date;
-    firstAccepted?: Date;
-    difficulty?: string;
-    allSubmissions: ProcessedSubmission[];
-  }>();
 
+  // Subtitles for unachieved trophies, hinting at the challenge.
+  const unachievedTrophyData = {
+    'first_blood': { subtitle: 'For the first taste of triumph.', icon: '❓' },
+    'easy_trap': { subtitle: "For the 'Easy' problem that fought back the hardest.", icon: '❓' },
+    'white_whale': { subtitle: 'For the one that got away.', icon: '❓' },
+    'nemesis': { subtitle: 'For the problem that tested your limits the most.', icon: '❓' },
+    'phoenix': { subtitle: 'For the return no one saw coming.', icon: '❓' }
+  };
+
+  // Use the pre-grouped `problemMap` to build problem-specific stats.
+  const problemStats = new Map();
   for (const [slug, subs] of processedData.problemMap) {
-    // It's assumed subs in problemMap are already sorted chronologically.
     const firstAcceptedSub = subs.find(sub => sub.status === 10);
     const acceptedCount = firstAcceptedSub ? subs.filter(sub => sub.status === 10).length : 0;
-
     problemStats.set(slug, {
       allSubmissions: subs,
       submissions: subs.length,
@@ -58,9 +59,8 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
     });
   }
 
-  // 1. First Blood - First problem solved (uses pre-sorted list).
+  // 1. First Blood - First problem solved (No threshold)
   const firstAccepted = sortedSubmissions.find(s => s.status === 10);
-  
   if (firstAccepted) {
     trophies.push({
       id: 'first_blood',
@@ -70,14 +70,26 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
       problemSlug: firstAccepted.titleSlug,
       icon: '🩸',
       stat: 1,
-      personalNote: `...oh, my sweet summer child`
+      personalNote: `...oh, my sweet summer child`,
+      achieved: true
+    });
+  } else {
+    trophies.push({
+      id: 'first_blood',
+      title: 'First Blood',
+      subtitle: unachievedTrophyData.first_blood.subtitle,
+      problemTitle: '',
+      problemSlug: 'placeholder',
+      icon: unachievedTrophyData.first_blood.icon,
+      stat: 0,
+      personalNote: '',
+      achieved: false
     });
   }
 
-  // 2. Easy Trap - Easy with most failed attempts.
+  // 2. Easy Trap - Easy with most failed attempts (Threshold: 3)
   let maxFailedEasy = 0;
   let trapProblem: any = null;
-  
   for (const [slug, stats] of problemStats) {
     const failed = stats.submissions - stats.accepted;
     if (stats.difficulty === 'Easy' && failed > maxFailedEasy) {
@@ -85,8 +97,8 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
       trapProblem = { slug, title: stats.allSubmissions[0].title };
     }
   }
-  
-  if (trapProblem && maxFailedEasy > 0) {
+
+  if (trapProblem && maxFailedEasy >= 4) {
     trophies.push({
       id: 'easy_trap',
       title: 'Easy Trap',
@@ -95,22 +107,34 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
       problemSlug: trapProblem.slug,
       icon: '🪤',
       stat: maxFailedEasy,
-      personalNote: `...we won't tell anybody`
+      personalNote: `...we won't tell anybody`,
+      achieved: true
+    });
+  } else {
+    trophies.push({
+      id: 'easy_trap',
+      title: 'Easy Trap',
+      subtitle: unachievedTrophyData.easy_trap.subtitle,
+      problemTitle: '',
+      problemSlug: 'placeholder',
+      icon: unachievedTrophyData.easy_trap.icon,
+      stat: 0,
+      personalNote: '',
+      achieved: false
     });
   }
 
-  // 3. White Whale - Most submissions, never solved.
+  // 3. White Whale - Most submissions, never solved (Threshold: 5)
   let maxSubmissionsUnsolved = 0;
   let whaleProblem: any = null;
-  
   for (const [slug, stats] of problemStats) {
     if (stats.accepted === 0 && stats.submissions > maxSubmissionsUnsolved) {
       maxSubmissionsUnsolved = stats.submissions;
       whaleProblem = { slug, title: stats.allSubmissions[0].title };
     }
   }
-  
-  if (whaleProblem && maxSubmissionsUnsolved > 0) {
+
+  if (whaleProblem && maxSubmissionsUnsolved >= 5) {
     trophies.push({
       id: 'white_whale',
       title: 'White Whale',
@@ -119,14 +143,26 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
       problemSlug: whaleProblem.slug,
       icon: '🐋',
       stat: maxSubmissionsUnsolved,
-      personalNote: `...one day, Captain Ahab`
+      personalNote: `...one day, Captain Ahab`,
+      achieved: true
+    });
+  } else {
+    trophies.push({
+      id: 'white_whale',
+      title: 'White Whale',
+      subtitle: unachievedTrophyData.white_whale.subtitle,
+      problemTitle: '',
+      problemSlug: 'placeholder',
+      icon: unachievedTrophyData.white_whale.icon,
+      stat: 0,
+      personalNote: '',
+      achieved: false
     });
   }
 
-  // 4. Nemesis - Eventually solved with most failed submissions.
+  // 4. Nemesis - Eventually solved with most failed submissions (Threshold: 6)
   let maxFailedSubmissions = 0;
   let nemesisProblem: any = null;
-
   for (const [slug, stats] of problemStats) {
     const failedSubmissions = stats.submissions - stats.accepted;
     if (stats.accepted > 0 && failedSubmissions > maxFailedSubmissions) {
@@ -135,7 +171,7 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
     }
   }
 
-  if (nemesisProblem) {
+  if (nemesisProblem && nemesisProblem.failedSubmissions >= 5) {
     trophies.push({
       id: 'nemesis',
       title: 'Nemesis',
@@ -144,14 +180,26 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
       problemSlug: nemesisProblem.slug,
       icon: '⚔️',
       stat: nemesisProblem.failedSubmissions,
-      personalNote: `...there were tears`
+      personalNote: `...there were tears`,
+      achieved: true
+    });
+  } else {
+    trophies.push({
+      id: 'nemesis',
+      title: 'Nemesis',
+      subtitle: unachievedTrophyData.nemesis.subtitle,
+      problemTitle: '',
+      problemSlug: 'placeholder',
+      icon: unachievedTrophyData.nemesis.icon,
+      stat: 0,
+      personalNote: '',
+      achieved: false
     });
   }
 
-  // 5. The Phoenix - Biggest time gap between first submission and acceptance.
+  // 5. The Phoenix - Biggest time gap between first submission and acceptance (Threshold: 15 days)
   let maxTimeGap = 0;
   let phoenixProblem: any = null;
-  
   for (const [slug, stats] of problemStats) {
     if (stats.accepted > 0 && stats.firstAccepted) {
       const timeGap = stats.firstAccepted.getTime() - stats.firstSubmission.getTime();
@@ -161,11 +209,10 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
       }
     }
   }
-  
+
   if (phoenixProblem && maxTimeGap > 0) {
     const days = Math.floor(maxTimeGap / (1000 * 60 * 60 * 24));
-    
-    if (days > 0) {
+    if (days >= 30) {
       trophies.push({
         id: 'phoenix',
         title: 'The Phoenix',
@@ -174,13 +221,32 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
         problemSlug: phoenixProblem.slug,
         icon: '🔥',
         stat: days,
-        personalNote: `...we are so back`
+        personalNote: `...we are so back`,
+        achieved: true
       });
     }
+  } else {
+    trophies.push({
+      id: 'phoenix',
+      title: 'The Phoenix',
+      subtitle: unachievedTrophyData.phoenix.subtitle,
+      problemTitle: '',
+      problemSlug: 'placeholder',
+      icon: unachievedTrophyData.phoenix.icon,
+      stat: 0,
+      personalNote: '',
+      achieved: false
+    });
   }
+
+  // Sort the trophies: achieved first, then unachieved.
+  trophies.sort((a, b) => Number(b.achieved) - Number(a.achieved));
 
   return trophies;
 }
+
+
+
 
 
 /**
@@ -191,16 +257,16 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
 function calculateMilestones(sortedSubmissions: ProcessedSubmission[]): MilestoneData[] {
   const milestones: MilestoneData[] = [];
   const milestoneNumbers = [1, 10, 50, 100, 500, 1000, 2000, 3000, 4000, 5000];
-  
+
   let totalSubmissions = 0;
   let problemsSolved = new Set<string>();
   let easyCount = 0;
   let mediumCount = 0;
   let hardCount = 0;
-  
+
   for (const sub of sortedSubmissions) {
     totalSubmissions++;
-    
+
     if (milestoneNumbers.includes(totalSubmissions)) {
       milestones.push({
         type: 'submissions',
@@ -211,11 +277,11 @@ function calculateMilestones(sortedSubmissions: ProcessedSubmission[]): Mileston
         submissionId: sub.id
       });
     }
-    
+
     if (sub.status === 10 && !problemsSolved.has(sub.titleSlug)) {
       problemsSolved.add(sub.titleSlug);
       const solvedCount = problemsSolved.size;
-      
+
       if (milestoneNumbers.includes(solvedCount)) {
         milestones.push({
           type: 'problems_solved',
@@ -226,7 +292,7 @@ function calculateMilestones(sortedSubmissions: ProcessedSubmission[]): Mileston
           submissionId: sub.id
         });
       }
-      
+
       if (sub.metadata?.difficulty === 'Easy') {
         easyCount++;
         if (milestoneNumbers.includes(easyCount)) {
@@ -245,14 +311,10 @@ function calculateMilestones(sortedSubmissions: ProcessedSubmission[]): Mileston
       }
     }
   }
-  
+
   return milestones;
 }
 
-/**
- * Calculates user records.
- * REFACTOR: Passes the pre-sorted submissions array to its helper functions.
- */
 /**
  * Calculates user records.
  * REFACTOR: Passes the pre-sorted submissions array to its helper functions.
@@ -383,10 +445,10 @@ function calculateLongestStreak(sortedSubmissions: any[]): { length: number; end
   let lastDate: Date | null = null;
   let maxStreakEndDate: Date = new Date();
   let currentStreakEndDate: Date = new Date();
-  
+
   for (const sub of sortedSubmissions) {
     const currentDate = new Date(sub.date.getFullYear(), sub.date.getMonth(), sub.date.getDate());
-    
+
     if (lastDate) {
       const dayDiff = Math.floor((currentDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
       if (dayDiff === 1) {
@@ -404,15 +466,15 @@ function calculateLongestStreak(sortedSubmissions: any[]): { length: number; end
       currentStreak = 1;
       currentStreakEndDate = currentDate;
     }
-    
+
     lastDate = currentDate;
   }
-  
+
   if (currentStreak > maxStreak) {
     maxStreak = currentStreak;
     maxStreakEndDate = currentStreakEndDate;
   }
-  
+
   return { length: maxStreak, endDate: maxStreakEndDate };
 }
 
@@ -442,7 +504,7 @@ function calculateLongestBreak(sortedSubmissions: any[]): { breakInMs: number; d
 // Helper to calculate best periods (unchanged).
 function calculateBestPeriods(submissions: any[]) {
   const acceptedSubs = submissions.filter(sub => sub.status === 10);
-  
+
   const dayMap = new Map<string, Set<string>>();
   const monthMap = new Map<string, Set<string>>();
   const yearMap = new Map<string, Set<string>>();
