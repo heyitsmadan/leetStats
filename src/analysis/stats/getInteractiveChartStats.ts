@@ -534,7 +534,7 @@ function getAggregationLevel(submissions: any[], isNavigator: boolean = false): 
   const daysDiff = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24);
   
   if (daysDiff <= 90) return 'Daily';
-  if (daysDiff <= 1095) return 'Monthly';
+  if (daysDiff <= 1825) return 'Monthly';
   return 'Yearly';
 }
 
