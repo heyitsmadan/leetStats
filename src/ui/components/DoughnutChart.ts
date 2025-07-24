@@ -73,11 +73,10 @@ export function renderOrUpdateDoughnutChart(
         datasets: [{
             data: reversedData,
             backgroundColor: reversedColors,
-            borderColor: colors.background.section, // This color is not in colors.ts
+            borderColor: colors.background.section,
             borderWidth: 2,
-            hoverBackgroundColor: reversedColors,
-            hoverBorderColor: colors.background.section, // This color is not in colors.ts
-            hoverBorderWidth: 2,
+            hoverBackgroundColor: reversedColors, // Keep this line
+            hoverBorderColor: colors.background.section, // Set this to the same as borderColor
         }],
     };
 
@@ -143,8 +142,6 @@ export function renderOrUpdateDoughnutChart(
         elements: {
             arc: {
                 borderWidth: 2,
-                hoverBorderWidth: 4,
-                hoverBorderColor: '#555', // This color is not in colors.ts
             }
         },
         plugins: {

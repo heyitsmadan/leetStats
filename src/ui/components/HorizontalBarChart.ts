@@ -71,6 +71,12 @@ export function renderOrUpdateHorizontalBarChart(
         datasets: data.datasets,
     };
 
+    // Add this loop to disable hover color changes
+    chartData.datasets.forEach(dataset => {
+        dataset.hoverBackgroundColor = dataset.backgroundColor;
+        dataset.hoverBorderColor = dataset.borderColor;
+    });
+
     const handleTooltip = (context: { chart: Chart, tooltip: TooltipModel<'bar'> }) => {
         const tooltipEl = getOrCreateTooltip(context.chart);
         const tooltipModel = context.tooltip;
@@ -168,8 +174,8 @@ export function renderOrUpdateHorizontalBarChart(
                 // @ts-ignore
                 shadowOffsetX: 0,
                 shadowOffsetY: 0,
-                shadowBlur: (ctx: any) => (ctx.label === data.bestLang ? GLOW_BLUR : 0),
-                shadowColor: (ctx: any) => (ctx.label === data.bestLang ? GLOW_COLOR : 'transparent'),
+                shadowBlur: 0,
+                shadowColor: 'transparent',
             }
         }
     };

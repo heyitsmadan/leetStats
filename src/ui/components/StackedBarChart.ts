@@ -65,6 +65,12 @@ export function renderOrUpdateStackedBarChart(
         datasets: data.datasets,
     };
 
+    // Add this loop to disable hover color changes
+    chartData.datasets.forEach(dataset => {
+        dataset.hoverBackgroundColor = dataset.backgroundColor;
+        dataset.hoverBorderColor = dataset.borderColor;
+    });
+
     const handleTooltip = (context: { chart: Chart, tooltip: TooltipModel<'bar'> }) => {
         const tooltipEl = getOrCreateTooltip(context.chart);
         const tooltipModel = context.tooltip;
@@ -145,8 +151,8 @@ export function renderOrUpdateStackedBarChart(
                 // @ts-ignore
                 shadowOffsetX: 0,
                 shadowOffsetY: 0,
-                shadowBlur: (ctx: any) => (ctx.dataIndex === data.bestIndex ? GLOW_BLUR : 0),
-                shadowColor: (ctx: any) => (ctx.dataIndex === data.bestIndex ? GLOW_COLOR : 'transparent'),
+                shadowBlur: 0,
+                shadowColor: 'transparent',
             }
         }
     };

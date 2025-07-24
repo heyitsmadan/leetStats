@@ -127,6 +127,11 @@ export function renderOrUpdateInteractiveChart(
     if (!ctx) return;
     const chartData = getInteractiveChartStats(processedData, currentFilters);
     if (!chartData) return;
+
+    chartData.datasets.forEach(dataset => {
+        (dataset as any).hoverBackgroundColor = dataset.backgroundColor;
+    });
+
     const showLegend = currentFilters.secondaryView === 'Language';
 
     mainChart = new Chart(ctx, {
@@ -288,6 +293,13 @@ export function renderOrUpdateInteractiveChart(
         mainChart.update('none');
         return;
     };
+
+    currentChartData.datasets.forEach(dataset => {
+        (dataset as any).hoverBackgroundColor = dataset.backgroundColor;
+    });
+
+
+
     mainChart.data.labels = currentChartData.labels;
     mainChart.data.datasets = currentChartData.datasets;
     const showLegend = currentFilters.secondaryView === 'Language';
