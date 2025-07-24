@@ -1,11 +1,8 @@
 import Chart from 'chart.js/auto';
 import type { ChartData, ChartOptions, TooltipModel, BarElement } from 'chart.js';
-import { colors } from '../theme/colors'; // Import the centralized colors
+import { colors } from '../theme/colors'; // Assuming this path is correct
 
 export type HorizontalBarChartInstance = Chart;
-
-const GLOW_COLOR = 'rgba(255, 255, 0, 0.7)';
-const GLOW_BLUR = 15;
 
 function getOrCreateTooltip(chart: Chart): HTMLElement {
     let tooltipEl = chart.canvas.parentNode?.querySelector('div.chart-tooltip') as HTMLElement;
@@ -15,10 +12,12 @@ function getOrCreateTooltip(chart: Chart): HTMLElement {
         tooltipEl.classList.add('chart-tooltip');
         const parent = chart.canvas.parentNode as HTMLElement;
         if (parent) {
+            // The parent needs a position context for the absolute tooltip
             parent.style.position = 'relative';
             parent.appendChild(tooltipEl);
         }
 
+        // Tooltip styles are injected once
         const style = document.createElement('style');
         style.textContent = `
             .chart-tooltip {
@@ -38,6 +37,7 @@ function getOrCreateTooltip(chart: Chart): HTMLElement {
                 opacity: 0;
                 pointer-events: none;
                 transition: opacity 0.2s ease, transform 0.15s ease-out;
+                visibility: visible;
             }
             .tooltip-header { font-weight: 500; margin-bottom: 8px; color: ${colors.text.primary}; }
             .tooltip-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px; }
@@ -71,7 +71,7 @@ export function renderOrUpdateHorizontalBarChart(
         datasets: data.datasets,
     };
 
-    // Add this loop to disable hover color changes
+    // Disable the default hover color change to rely on the tooltip
     chartData.datasets.forEach(dataset => {
         dataset.hoverBackgroundColor = dataset.backgroundColor;
         dataset.hoverBorderColor = dataset.borderColor;
@@ -81,20 +81,20 @@ export function renderOrUpdateHorizontalBarChart(
         const tooltipEl = getOrCreateTooltip(context.chart);
         const tooltipModel = context.tooltip;
 
+        // Hide the tooltip if the mouse is not over an element
         if (tooltipModel.opacity === 0) {
             tooltipEl.style.opacity = '0';
-            tooltipEl.style.pointerEvents = 'none';
             return;
         }
 
         const dataIndex = tooltipModel.dataPoints[0]?.dataIndex;
         if (dataIndex === undefined) return;
 
+        // --- Populate Tooltip Content ---
         const tooltipData = data.tooltipsData[dataIndex];
         const breakdown = tooltipData.solvedBreakdown;
 
         let innerHtml = `<div class="tooltip-header">${tooltipData.label}</div>`;
-        
         innerHtml += `<div class="tooltip-row"><span class="tooltip-label">Total Submissions</span><span class="tooltip-value">${tooltipData.totalSubmissions}</span></div>`;
         innerHtml += `<div class="tooltip-row"><span class="tooltip-label">Acceptance Rate</span><span class="tooltip-value">${tooltipData.acceptanceRate}</span></div>`;
         
@@ -116,27 +116,89 @@ export function renderOrUpdateHorizontalBarChart(
 
         tooltipEl.innerHTML = innerHtml;
 
+        // --- POSITIONING LOGIC ---
         const activeElement = context.tooltip.dataPoints[0]?.element as BarElement;
         if (!activeElement) return;
 
-        const totalValue = context.chart.data.datasets.reduce((sum, dataset) => {
-            const value = dataset.data[dataIndex];
-            return sum + (Number(value) || 0);
-        }, 0);
-
-        const barEndPixelPosition = context.chart.scales.x.getPixelForValue(totalValue);
-        const chartContainer = context.chart.canvas.parentNode as HTMLElement;
-        const desiredOffset = 15;
-        const newLeft = barEndPixelPosition + desiredOffset;
-        let newTop = activeElement.y - tooltipEl.offsetHeight / 2;
-
-        if (newTop < 0) newTop = 0;
-        if (newTop + tooltipEl.offsetHeight > chartContainer.offsetHeight) {
-            newTop = chartContainer.offsetHeight - tooltipEl.offsetHeight;
+        // To get accurate dimensions, the tooltip must be rendered. We make it briefly
+        // invisible while we measure it to prevent a flicker.
+        const wasHidden = tooltipEl.style.opacity !== '1';
+        if (wasHidden) {
+            tooltipEl.style.visibility = 'hidden';
+            tooltipEl.style.opacity = '1';
+        }
+        const tooltipWidth = tooltipEl.offsetWidth;
+        const tooltipHeight = tooltipEl.offsetHeight;
+        if (wasHidden) {
+            tooltipEl.style.visibility = 'visible';
+            tooltipEl.style.opacity = '0';
         }
 
+        const chartContainer = context.chart.canvas.parentNode as HTMLElement;
+        const containerRect = chartContainer.getBoundingClientRect();
+        const desiredOffset = 15; // Space between bar and tooltip in pixels
+
+        let newLeft: number;
+        let newTop: number;
+
+        // --- Fallback Strategy: Right -> Above -> Below ---
+
+        // 1. Calculate potential positions
+        const totalValue = context.chart.data.datasets.reduce((sum, dataset) => sum + (Number(dataset.data[dataIndex]) || 0), 0);
+        const barEndPixelPosition = context.chart.scales.x.getPixelForValue(totalValue);
+        const barStartPixelPosition = context.chart.scales.x.getPixelForValue(0);
+
+        const posRight = {
+            left: barEndPixelPosition + desiredOffset,
+            top: activeElement.y - tooltipHeight / 2
+        };
+
+        const posBelow = {
+            left: barStartPixelPosition + (barEndPixelPosition - barStartPixelPosition) / 2 - tooltipWidth / 2,
+            top: activeElement.y + (activeElement as any).height / 2 + desiredOffset
+        };
+
+        const posAbove = {
+            left: posBelow.left, // Same horizontal centering
+            top: activeElement.y - (activeElement as any).height / 2 - tooltipHeight - desiredOffset
+        };
+
+        // 2. Decide which position to use
+        // Default to the 'right' position
+        newLeft = posRight.left;
+        newTop = posRight.top;
+
+        // Check if 'right' overflows the viewport
+        if (containerRect.left + newLeft + tooltipWidth > window.innerWidth) {
+            // It overflows. Try 'above'.
+            newLeft = posAbove.left;
+            newTop = posAbove.top;
+
+            // Check if 'above' also overflows the viewport (top)
+            if (containerRect.top + newTop < 0) {
+                // It overflows. Use 'below' as the final fallback.
+                newLeft = posBelow.left;
+                newTop = posBelow.top;
+            }
+        }
+
+        // 3. Final boundary clamping to ensure it's always visible
+        // Clamp horizontal position
+        if (containerRect.left + newLeft < 0) {
+            newLeft = -containerRect.left;
+        } else if (containerRect.left + newLeft + tooltipWidth > window.innerWidth) {
+            newLeft = window.innerWidth - tooltipWidth - containerRect.left;
+        }
+
+        // Clamp vertical position
+        if (containerRect.top + newTop < 0) {
+            newTop = -containerRect.top;
+        } else if (containerRect.top + newTop + tooltipHeight > window.innerHeight) {
+            newTop = window.innerHeight - tooltipHeight - containerRect.top;
+        }
+        
+        // Apply the final position and make the tooltip visible.
         tooltipEl.style.opacity = '1';
-        tooltipEl.style.pointerEvents = 'none';
         tooltipEl.style.transform = `translate(${newLeft}px, ${newTop}px)`;
     };
 
@@ -152,8 +214,8 @@ export function renderOrUpdateHorizontalBarChart(
         plugins: {
             legend: { display: false },
             tooltip: {
-                enabled: false,
-                external: handleTooltip,
+                enabled: false, // Disable native tooltip
+                external: handleTooltip, // Use our custom one
             },
         },
         scales: {
@@ -171,17 +233,13 @@ export function renderOrUpdateHorizontalBarChart(
         elements: {
             bar: {
                 borderRadius: 5,
-                // @ts-ignore
-                shadowOffsetX: 0,
-                shadowOffsetY: 0,
-                shadowBlur: 0,
-                shadowColor: 'transparent',
             }
         }
     };
 
     if (existingChart) {
         existingChart.data = chartData;
+        // It's important to cast to ChartOptions to avoid type conflicts
         existingChart.options = options as ChartOptions;
         existingChart.update();
         return existingChart;
