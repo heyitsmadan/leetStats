@@ -229,6 +229,13 @@ function renderAllCharts(processedData: ProcessedData) {
     }
   });
 }, 100);
+// Force resize after a brief delay
+    setTimeout(() => {
+        if (codingClockChart) codingClockChart.resize();
+        if (cumulativeLineChart) cumulativeLineChart.resize();
+        if (signatureChart) signatureChart.resize();
+        if (languageChart) languageChart.resize();
+    }, 100);
 }
 
 // Add a new function for rendering only the filtered charts
