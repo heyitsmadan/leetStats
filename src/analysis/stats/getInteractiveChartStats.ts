@@ -454,7 +454,9 @@ export function getBrushChartData(processedData: ProcessedData): BrushChartData 
   const data = allIntervals.map(interval => groupedData[interval]?.length || 0);
   
   return {
-    labels: allIntervals.map(interval => formatDateLabel(interval, aggregationLevel)),
+    // FIX: Return the raw 'YYYY-MM-DD' date keys for reliable parsing in D3.
+    // The D3 axis will handle formatting these for display.
+    labels: allIntervals,
     data,
     fullTimeRange: dateRange
   };
