@@ -14,6 +14,7 @@ import { renderOrUpdateMiniBarChart, MiniBarChartInstance } from './components/M
 import { getSkillMatrixStats } from '../analysis/stats/getSkillMatrixStats';
 import { renderOrUpdateSkillMatrixHeatmap, SkillMatrixHeatmapInstance } from './components/SkillMatrixHeatmap';
 import { renderOrUpdateInteractiveChart, InteractiveChartInstance } from './components/InteractiveChart';
+import { initializeBentoGenerator } from './bento/bento';
 
 // --- Constants ---
 const ACTIVE_INNER_DIV_CLASSES = 'text-label-1 dark:text-dark-label-1 bg-fill-3 dark:bg-dark-fill-3'.split(' ');
@@ -91,7 +92,7 @@ const MAX_RETRIES = 5;
 const RETRY_DELAY = 300;
 
 /** Main function to inject stats UI */
-export function renderPageLayout(processedData: ProcessedData) {
+export function renderPageLayout(processedData: ProcessedData, username: string) {
   // 1. Find the main container (A)
   const contentContainer = document.querySelector('.space-y-\\[18px\\]') || 
                           document.querySelector('[class*="space-y-["]');
@@ -140,7 +141,7 @@ export function renderPageLayout(processedData: ProcessedData) {
     `;
   } else {
     // If there's data, fill it with the charts grid
-    const grid = createStatsPaneWithGrid();
+    const grid = createStatsPaneWithGrid(username);
     // Move children from the created grid element to the pane
     while (grid.firstChild) {
       statsPane.appendChild(grid.firstChild);
@@ -161,7 +162,7 @@ export function renderPageLayout(processedData: ProcessedData) {
         );
         
         if (leetcodeContent) {
-          setupTabLogic(statsTab, tabBar, contentContainer, statsPane, processedData);
+          setupTabLogic(statsTab, tabBar, contentContainer, statsPane, processedData, username);
           contentObserver?.disconnect();
           contentObserver = null;
           return;
@@ -174,7 +175,7 @@ export function renderPageLayout(processedData: ProcessedData) {
     setTimeout(() => {
       if (contentObserver) {
         console.warn('Content not detected, forcing setup');
-        setupTabLogic(statsTab, tabBar, contentContainer, statsPane, processedData);
+        setupTabLogic(statsTab, tabBar, contentContainer, statsPane, processedData, username);
         contentObserver.disconnect();
         contentObserver = null;
       }
@@ -187,11 +188,11 @@ export function renderPageLayout(processedData: ProcessedData) {
   );
   
   if (initialContent) {
-    setupTabLogic(statsTab, tabBar, contentContainer, statsPane, processedData);
+    setupTabLogic(statsTab, tabBar, contentContainer, statsPane, processedData, username);
     // First-time chart rendering (only if there is data)
     if (!window.statsRendered && processedData.submissions.length > 0) {
       requestAnimationFrame(() => {
-        renderAllCharts(processedData);
+        renderAllCharts(processedData, username);
         window.statsRendered = true;
       });
     }
@@ -206,7 +207,7 @@ export function renderPageLayout(processedData: ProcessedData) {
 /**
  * A master function to render or update all charts at once.
  */
-function renderAllCharts(processedData: ProcessedData) {
+function renderAllCharts(processedData: ProcessedData, username: string) {
     currentFilters.cumulativeView = getSmartCumulativeView(currentFilters.timeRange, processedData);
     renderInteractiveChart(processedData); // Add this line BEFORE 
     renderLegacySection(processedData); // Add this line
@@ -216,6 +217,7 @@ function renderAllCharts(processedData: ProcessedData) {
     renderLanguageChart(processedData); // <-- ADD THIS
     renderSkillMatrix(processedData); // Add this line
     setupFilterListeners(processedData);
+    initializeBentoGenerator(processedData, username);
     setTimeout(() => {
   legacyStats.records.forEach((record: any) => {
     if (record.subStats) {
@@ -652,12 +654,33 @@ function setupFilterListeners(processedData: ProcessedData) {
     updateCumulativeViewToggle(currentFilters.cumulativeView);
 }
 
-function createStatsPaneWithGrid(): HTMLElement {
+function createStatsPaneWithGrid(username: string): HTMLElement {
     const statsPane = document.createElement('div');
     statsPane.id = 'lc-stats-pane';
     statsPane.style.display = 'none';
     statsPane.className = 'w-full';
     statsPane.innerHTML = `
+    <!-- FIX: REMOVED the CDN script tag for html2canvas -->
+
+    <!-- =================================================================== -->
+    <!-- =================== NEW: SHAREABLE CARD SECTION =================== -->
+    <!-- =================================================================== -->
+    <div class="space-y-4">
+        <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="${styles.sectionHeader}">Shareable Card</h2>
+                    <p class="text-sm text-gray-400 mt-1">
+                        Create a custom, shareable bento grid of your LeetCode stats.
+                    </p>
+                </div>
+                <button id="generate-card-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200">
+                    Generate Card
+                </button>
+            </div>
+        </div>
+        <div class="border-divider-3 dark:border-dark-divider-3 my-4 h-px w-full border-b"></div>
+    
     <div class="space-y-4">
         <!-- INTERACTIVE CHART SECTION -->
         <div class="rounded-lg p-4">
@@ -843,7 +866,175 @@ function createStatsPaneWithGrid(): HTMLElement {
             <div class="mt-4" id="skill-matrix-container"></div>
         </div>
     </div>
-`;
+
+<!-- =================================================================== -->
+    <!-- =================== BENTO MODAL UI (RESTRUCTURED) ================= -->
+    <!-- =================================================================== -->
+    <div id="bento-modal" style="display: none; background-color: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px);" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="bg-dark-layer-1 rounded-xl w-full max-w-2xl h-full max-h-[90vh] shadow-2xl flex flex-row p-1.5 gap-1.5">
+
+            <!-- Left Panel: Controls -->
+            <div class="w-1/3 max-w-xs bg-dark-layer-0 rounded-lg p-4 overflow-y-auto">
+                <h2 class="text-xl font-bold text-white mb-4">Customize Card</h2>
+                <div class="space-y-2">
+                    <!-- History Accordion Item -->
+                        <div class="bg-dark-layer-1 rounded-lg">
+                            <div class="bento-accordion-header flex justify-between items-center p-3 cursor-pointer">
+                                <h3 class="font-semibold text-white">History</h3>
+                                <svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                            <div id="bento-history-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;">
+                                <p class="text-xs text-gray-500">History options coming soon.</p>
+                            </div>
+                        </div>
+                        <!-- Milestones Accordion Item -->
+                        <div class="bg-dark-layer-1 rounded-lg">
+                            <div class="bento-accordion-header flex justify-between items-center p-3 cursor-pointer"><h3 class="font-semibold text-white">Milestones</h3><svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
+                            <div id="bento-milestones-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"><p class="text-xs text-gray-500">Milestone options coming soon.</p></div>
+                        </div>
+                        <!-- Trophies Accordion Item -->
+                        <div class="bg-dark-layer-1 rounded-lg">
+                            <div class="bento-accordion-header flex justify-between items-center p-3 cursor-pointer"><h3 class="font-semibold text-white">Trophies</h3><svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
+                            <div id="bento-trophies-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"><p class="text-xs text-gray-500">Trophy options coming soon.</p></div>
+                        </div>
+                        <!-- Records Accordion Item -->
+                        <div class="bg-dark-layer-1 rounded-lg">
+                            <div class="bento-accordion-header flex justify-between items-center p-3 cursor-pointer"><h3 class="font-semibold text-white">Records</h3><svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
+                            <div id="bento-records-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
+                        </div>
+                        <!-- Activity Accordion Item -->
+                        <div class="bg-dark-layer-1 rounded-lg">
+                            <div class="bento-accordion-header flex justify-between items-center p-3 cursor-pointer"><h3 class="font-semibold text-white">Activity</h3><svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
+                            <div id="bento-activity-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"><p class="text-xs text-gray-500">Activity options coming soon.</p></div>
+                        </div>
+                        <!-- Skills Accordion Item -->
+                        <div class="bg-dark-layer-1 rounded-lg">
+                            <div class="bento-accordion-header flex justify-between items-center p-3 cursor-pointer"><h3 class="font-semibold text-white">Skills</h3><svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
+                            <div id="bento-skills-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"><p class="text-xs text-gray-500">Skill options coming soon.</p></div>
+                        </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Preview & Actions -->
+            <div class="flex-1 flex flex-col min-w-0 bg-dark-layer-0 rounded-lg">
+                <!-- Row 1: Close Button -->
+                <div class="flex-shrink-0 flex justify-end p-2">
+                    <button id="bento-modal-close-btn" class="text-gray-400 hover:text-white z-20 p-1 rounded-full hover:bg-white/10">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
+                <!-- Row 2: Preview Area (takes remaining space) -->
+                <div class="flex-grow flex items-center justify-center min-h-0 p-4">
+                    <div id="bento-preview-wrapper" class="w-full h-full flex items-center justify-center">
+                        <div id="bento-preview-loader" style="display: none;">
+                            <p class="text-white animate-pulse">Generating Preview...</p>
+                        </div>
+                        <canvas id="bento-preview-canvas" class="rounded-xl shadow-inner-heavy" style="display: none;"></canvas>
+                    </div>
+                </div>
+
+                <!-- Row 3: Share Button -->
+                <div class="flex-shrink-0 flex justify-end p-4">
+                    <button id="share-bento-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-5 rounded-lg transition-colors duration-200 disabled:bg-gray-500">
+                        Share
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =================================================================== -->
+    <!-- ========================= BENTO CSS (UPDATED) ===================== -->
+    <!-- =================================================================== -->
+    <style>
+        #bento-preview-canvas {
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
+
+        /* Styles for consistent rendering, using PX units */
+        .render-safe {
+            color: #EFEFEF;
+        }
+        .render-safe #bento-header {
+            padding: 24px;
+            font-size: 20px;
+            font-weight: 700;
+        }
+        .render-safe #bento-grid {
+             display: grid;
+             grid-template-columns: repeat(6, 1fr);
+             grid-template-rows: repeat(6, 1fr);
+             padding: 24px;
+             padding-top: 0;
+             gap: 16px;
+             height: 100%;
+             /* This centers children (the cards) within the grid area */
+             place-items: center;
+        }
+        .render-safe #bento-footer {
+            padding: 24px;
+            padding-top: 0;
+            text-align: right;
+            font-size: 10px;
+            color: #666;
+            font-family: monospace;
+        }
+        .render-safe .bento-card {
+            /* REMOVED width: 100% to allow the card to hug its content */
+            max-width: 100%; /* Prevent overflow on small screens */
+            background-color: rgba(30, 30, 30, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            /* The card will be placed in a grid cell that spans the full width,
+               but the card itself will be centered within that cell by the parent's 'place-items' rule. */
+        }
+        .render-safe .bento-card-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #a0a0a0;
+            margin-bottom: 12px;
+        }
+        .render-safe .bento-card-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .render-safe .record-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 14px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 8px;
+            gap: 24px; /* Add gap between label and value */
+        }
+        .render-safe .record-item:last-child {
+            border-bottom: none;
+        }
+        .render-safe .record-label {
+            color: #b0b0b0;
+            white-space: nowrap; /* Prevent label from wrapping */
+        }
+        .render-safe .record-value {
+            text-align: right;
+            font-weight: 600;
+            color: #FFFFFF;
+        }
+        .render-safe .record-context {
+            display: block;
+            font-size: 11px;
+            font-weight: 400;
+            color: #888;
+        }
+    </style>`;
     return statsPane;
 }
 
@@ -854,7 +1045,8 @@ function setupTabLogic(
   tabBar: Element,
   contentSection: Element,
   statsPane: HTMLElement,
-  processedData: ProcessedData
+  processedData: ProcessedData,
+  username: string
 ) {
   const ACTIVE_CLASSES = 'text-label-1 dark:text-dark-label-1 bg-fill-3 dark:bg-dark-fill-3'.split(' ');
   let isStatsActive = false;
@@ -959,7 +1151,7 @@ function setupTabLogic(
     // First-time chart rendering
     if (!window.statsRendered && processedData.submissions.length > 0) {
       requestAnimationFrame(() => {
-        renderAllCharts(processedData);
+        renderAllCharts(processedData, username);
         window.statsRendered = true;
       });
     }

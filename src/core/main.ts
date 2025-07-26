@@ -86,16 +86,14 @@ export async function initialize(loader: ILoader): Promise<void> {
 
     // Now, decide whether to render charts or the empty state.
     if (allSubmissions.length > 0) {
-      // This block now handles both cases where there are submissions (new or cached).
       const metadataResult = await fetchAndSaveMissingMetadata(allSubmissions, cachedMetadata);
       const processedData = processData(allSubmissions, metadataResult.updatedMetadata);
-      renderPageLayout(processedData);
+      // FIX: Pass the profileUsername to the layout function
+      renderPageLayout(processedData, profileUsername);
     } else {
-      // This is the new case for when there are absolutely no submissions.
-      // We call processData with an empty array to get a valid ProcessedData object,
-      // which layout.ts will then use to determine it should show the "No data" state.
       const processedData = processData([], {});
-      renderPageLayout(processedData);
+      // FIX: Pass the profileUsername to the layout function
+      renderPageLayout(processedData, profileUsername);
     }
 
 
@@ -103,7 +101,6 @@ export async function initialize(loader: ILoader): Promise<void> {
 
   } catch (err) {
     console.error("❌ Failed to initialize LeetCode stats:", err);
-    // Display a generic, one-line error message in the loader.
     loader.error('An unexpected error occurred.');
     throw err;
   }
