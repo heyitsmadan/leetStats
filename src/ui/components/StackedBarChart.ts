@@ -1,12 +1,8 @@
 import Chart from 'chart.js/auto';
 import type { ChartData, ChartOptions, TooltipModel, BarElement } from 'chart.js';
-import { colors } from '../theme/colors'; // Import the centralized colors
+import { colors } from '../theme/colors';
 
 export type CodingClockChartInstance = Chart;
-
-// This color is not in the theme file, so it remains unchanged.
-const GLOW_COLOR = 'rgba(255, 255, 0, 0.7)';
-const GLOW_BLUR = 15;
 
 function getOrCreateTooltip(chart: Chart): HTMLElement {
     let tooltipEl = chart.canvas.parentNode?.querySelector('div.chart-tooltip') as HTMLElement;
@@ -20,7 +16,6 @@ function getOrCreateTooltip(chart: Chart): HTMLElement {
             parent.appendChild(tooltipEl);
         }
 
-        // Inject styles using colors from the theme file
         const style = document.createElement('style');
         style.textContent = `
             .chart-tooltip {
@@ -55,7 +50,8 @@ function getOrCreateTooltip(chart: Chart): HTMLElement {
 export function renderOrUpdateStackedBarChart(
     container: HTMLElement,
     data: any,
-    existingChart?: CodingClockChartInstance
+    existingChart?: CodingClockChartInstance,
+    config: { isInteractive?: boolean } = { isInteractive: true }
 ): CodingClockChartInstance {
     const canvas = container.querySelector('canvas') as HTMLCanvasElement;
     if (!canvas) throw new Error('Canvas element not found in the container.');
@@ -65,7 +61,6 @@ export function renderOrUpdateStackedBarChart(
         datasets: data.datasets,
     };
 
-    // Add this loop to disable hover color changes
     chartData.datasets.forEach(dataset => {
         dataset.hoverBackgroundColor = dataset.backgroundColor;
         dataset.hoverBorderColor = dataset.borderColor;
@@ -95,33 +90,19 @@ export function renderOrUpdateStackedBarChart(
 
         tooltipEl.innerHTML = innerHtml;
 
-        const activeElement = context.tooltip.dataPoints[0]?.element as BarElement & { width: number, x: number };
-        if (!activeElement) return;
-
-        const chartContainer = context.chart.canvas.parentNode as HTMLElement;
-        const barRightEdgeX = activeElement.x + (activeElement.width / 2);
-        const barLeftEdgeX = activeElement.x - (activeElement.width / 2);
-        const desiredOffset = 10;
-        
-        let newLeft = barRightEdgeX + desiredOffset;
-        if (newLeft + tooltipEl.offsetWidth > chartContainer.offsetWidth) {
-            newLeft = barLeftEdgeX - tooltipEl.offsetWidth - desiredOffset;
-        }
-
-        let newTop = tooltipModel.caretY - tooltipEl.offsetHeight / 2;
-        if (newTop < 0) newTop = 0;
-        if (newTop + tooltipEl.offsetHeight > chartContainer.offsetHeight) {
-            newTop = chartContainer.offsetHeight - tooltipEl.offsetHeight;
-        }
-
+        const { offsetLeft: positionX, offsetTop: positionY } = context.chart.canvas;
         tooltipEl.style.opacity = '1';
-        tooltipEl.style.pointerEvents = 'none';
-        tooltipEl.style.transform = `translate(${newLeft}px, ${newTop}px)`;
+        tooltipEl.style.left = positionX + tooltipModel.caretX + 'px';
+        tooltipEl.style.top = positionY + tooltipModel.caretY + 'px';
     };
 
     const options: ChartOptions<'bar'> = {
         responsive: true,
         maintainAspectRatio: false,
+        animation: {
+            duration: config.isInteractive ? 1000 : 0
+        },
+        events: config.isInteractive ? ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'] : [],
         interaction: {
             mode: 'index',
             intersect: false,
@@ -130,29 +111,35 @@ export function renderOrUpdateStackedBarChart(
             legend: { display: false },
             tooltip: {
                 enabled: false,
-                external: handleTooltip,
+                external: config.isInteractive ? handleTooltip : undefined,
             },
         },
         scales: {
             x: {
                 stacked: true,
-                ticks: { color: colors.text.subtle },
+                ticks: { 
+                    color: colors.text.subtle,
+                    font: {
+                        size: config.isInteractive ? 12 : 16 // Larger font for bento
+                    }
+                },
                 grid: { display: false }
             },
             y: {
                 stacked: true,
-                ticks: { color: colors.text.subtle, precision: 0 },
+                ticks: { 
+                    color: colors.text.subtle, 
+                    precision: 0,
+                    font: {
+                        size: config.isInteractive ? 12 : 16 // Larger font for bento
+                    }
+                },
                 grid: { display: false }
             },
         },
         elements: {
             bar: {
                 borderRadius: 5,
-                // @ts-ignore
-                shadowOffsetX: 0,
-                shadowOffsetY: 0,
-                shadowBlur: 0,
-                shadowColor: 'transparent',
             }
         }
     };

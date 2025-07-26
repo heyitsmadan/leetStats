@@ -1,10 +1,9 @@
 import { Chart, ChartConfiguration, TooltipModel, ChartOptions } from 'chart.js';
 import type { CumulativeChartStats, Difficulty, CumulativeView, TimeRange } from '../../types';
-import { colors } from '../theme/colors'; // Import the centralized colors
+import { colors } from '../theme/colors';
 
 export type CumulativeLineChartInstance = Chart<'line', number[], string>;
 
-// Helper function to get the ordinal suffix for a day (e.g., 1st, 2nd, 3rd)
 function getOrdinalSuffix(day: number): string {
     if (day > 3 && day < 21) return 'th';
     switch (day % 10) {
@@ -15,7 +14,6 @@ function getOrdinalSuffix(day: number): string {
     }
 }
 
-// Helper to create the custom HTML tooltip element
 function getOrCreateTooltip(chart: Chart): HTMLElement {
     let tooltipEl = chart.canvas.parentNode?.querySelector('div.chart-tooltip') as HTMLElement;
 
@@ -28,7 +26,6 @@ function getOrCreateTooltip(chart: Chart): HTMLElement {
             parent.appendChild(tooltipEl);
         }
 
-        // Use colors from the theme file to style the tooltip
         const style = document.createElement('style');
         style.textContent = `
             .chart-tooltip {
@@ -58,7 +55,8 @@ export function renderOrUpdateCumulativeLineChart(
     container: HTMLElement,
     chartData: CumulativeChartStats,
     filters: { difficulty: Difficulty; cumulativeView: CumulativeView; timeRange: TimeRange },
-    existingChart?: CumulativeLineChartInstance
+    existingChart?: CumulativeLineChartInstance,
+    config: { isInteractive?: boolean } = { isInteractive: true }
 ): CumulativeLineChartInstance {
     const canvas = container.querySelector('canvas') as HTMLCanvasElement;
     if (!canvas) throw new Error('Canvas element not found in the container.');
@@ -67,8 +65,9 @@ export function renderOrUpdateCumulativeLineChart(
         ...chartData,
         datasets: chartData.datasets.map(dataset => ({
             ...dataset,
-            pointRadius: 0,
-            pointHoverRadius: 4,
+            pointRadius: config.isInteractive ? 0 : 2,
+            pointHoverRadius: config.isInteractive ? 4 : 2,
+            borderWidth: config.isInteractive ? 2 : 3,
         }))
     };
 
@@ -109,7 +108,6 @@ export function renderOrUpdateCumulativeLineChart(
         });
         const totalProblems = easy + medium + hard;
 
-        // Build tooltip HTML using colors from the theme file
         let innerHtml = `<div class="tooltip-header">${formattedDate}</div>`;
         innerHtml += `<div class="tooltip-subheader">Total Problems Solved: <span class="tooltip-subheader-value">${totalProblems}</span></div>`;
         innerHtml += `<div class="tooltip-subheader">Total Submissions: <span class="tooltip-subheader-value">${totalSubmissions}</span></div>`;
@@ -135,31 +133,28 @@ export function renderOrUpdateCumulativeLineChart(
     const options: ChartOptions<'line'> = {
         responsive: true,
         maintainAspectRatio: false,
+        animation: {
+            duration: config.isInteractive ? 1000 : 0
+        },
+        events: config.isInteractive ? ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'] : [],
         scales: {
             x: { 
                 grid: { display: false }, 
                 ticks: { 
-                    color: colors.text.subtle, // Using color from theme
-                    maxTicksLimit: 5,
-                    // --- MODIFIED LOGIC ---
-                    // This callback now formats the x-axis labels based on the aggregation level (cumulativeView)
-                    // for a more intuitive and less confusing result.
+                    color: colors.text.subtle,
+                    maxTicksLimit: config.isInteractive ? 5 : 4,
                     callback: function(value, index, ticks) {
                         const label = this.getLabelForValue(value as number);
                         const date = new Date(label);
-                        const view = filters.cumulativeView; // Use the aggregation view directly
+                        const view = filters.cumulativeView;
 
-                        // Format the label based on the selected aggregation level
                         switch (view) {
                             case 'Yearly':
-                                // For a yearly view, the label should ONLY be the year.
                                 return date.toLocaleDateString(undefined, { year: 'numeric' });
                             case 'Monthly':
-                                // For a monthly view, show the short month and year.
                                 return date.toLocaleDateString(undefined, { month: 'short', year: 'numeric' });
                             case 'Daily':
                             default:
-                                // For a daily view, show the short month and day.
                                 return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
                         }
                     }
@@ -168,27 +163,35 @@ export function renderOrUpdateCumulativeLineChart(
             y: { 
                 beginAtZero: true, 
                 grid: { display: false }, 
-                ticks: { color: colors.text.subtle, precision: 0 } // Using color from theme
+                ticks: { color: colors.text.subtle, precision: 0 }
             },
         },
         plugins: {
             legend: { display: false },
-            tooltip: { enabled: false, external: handleTooltip, mode: 'index', intersect: false },
+            tooltip: { 
+                enabled: false, 
+                external: config.isInteractive ? handleTooltip : undefined, 
+                mode: 'index', 
+                intersect: false 
+            },
         },
-        interaction: { mode: 'index', intersect: false },
+        interaction: { 
+            mode: config.isInteractive ? 'index' : 'nearest', 
+            intersect: false 
+        },
     };
 
-    const config: ChartConfiguration<'line', number[], string> = {
+    const chartConfig: ChartConfiguration<'line', number[], string> = {
         type: 'line',
         data: processedChartData,
         options: options,
     };
 
     if (existingChart) {
-        existingChart.data = config.data;
-        existingChart.options = config.options!;
+        existingChart.data = chartConfig.data;
+        existingChart.options = chartConfig.options!;
         existingChart.update();
         return existingChart;
     }
-    return new Chart(canvas, config);
+    return new Chart(canvas, chartConfig);
 }

@@ -1,6 +1,6 @@
 import Chart from 'chart.js/auto';
 import type { ChartData, ChartOptions, TooltipModel } from 'chart.js';
-import { colors } from '../theme/colors'; // Import the centralized colors
+import { colors } from '../theme/colors';
 
 export type DoughnutChartInstance = Chart;
 
@@ -17,7 +17,6 @@ function getOrCreateTooltip(chart: Chart): HTMLElement {
             parent.appendChild(tooltipEl);
         }
 
-        // Inject styles using colors from the theme file
         const style = document.createElement('style');
         style.textContent = `
             .chart-tooltip {
@@ -58,7 +57,9 @@ export function renderOrUpdateDoughnutChart(
     container: HTMLElement,
     data: any,
     filters: { difficulty: string },
-    existingChart?: DoughnutChartInstance
+    existingChart?: DoughnutChartInstance,
+    // Add a config object to toggle features. Defaults to interactive.
+    config: { isInteractive?: boolean } = { isInteractive: true }
 ): DoughnutChartInstance {
     const canvas = container.querySelector('canvas') as HTMLCanvasElement;
     if (!canvas) throw new Error('Canvas element not found in the container.');
@@ -73,10 +74,10 @@ export function renderOrUpdateDoughnutChart(
         datasets: [{
             data: reversedData,
             backgroundColor: reversedColors,
-            borderColor: colors.background.section,
+            borderColor: config.isInteractive ? colors.background.section : 'transparent',
             borderWidth: 2,
-            hoverBackgroundColor: reversedColors, // Keep this line
-            hoverBorderColor: colors.background.section, // Set this to the same as borderColor
+            hoverBackgroundColor: reversedColors,
+            hoverBorderColor: colors.background.section,
         }],
     };
 
@@ -105,7 +106,6 @@ export function renderOrUpdateDoughnutChart(
             innerHtml += `<ul class="tooltip-breakdown-list">`;
             const breakdown = tooltipData.breakdown;
             
-            // Using colors from the theme file for the breakdown
             innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.easy};"></span> Easy</span><span class="tooltip-breakdown-value">${breakdown.E || 0}</span></li>`;
             innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.medium};"></span> Medium</span><span class="tooltip-breakdown-value">${breakdown.M || 0}</span></li>`;
             innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.hard};"></span> Hard</span><span class="tooltip-breakdown-value">${breakdown.H || 0}</span></li>`;
@@ -113,51 +113,36 @@ export function renderOrUpdateDoughnutChart(
         }
 
         tooltipEl.innerHTML = innerHtml;
-
-        const chartContainer = context.chart.canvas.parentNode as HTMLElement;
-        let newLeft = tooltipModel.caretX + 10;
-        let newTop = tooltipModel.caretY;
-
-        if (newLeft + tooltipEl.offsetWidth > chartContainer.offsetWidth) {
-            newLeft = tooltipModel.caretX - tooltipEl.offsetWidth - 10;
-        }
-        if (newTop + tooltipEl.offsetHeight > chartContainer.offsetHeight) {
-            newTop = chartContainer.offsetHeight - tooltipEl.offsetHeight;
-        }
-        if (newLeft < 0) newLeft = 0;
-        if (newTop < 0) newTop = 0;
-
+        const { offsetLeft: positionX, offsetTop: positionY } = context.chart.canvas;
         tooltipEl.style.opacity = '1';
-        tooltipEl.style.pointerEvents = 'none';
-        tooltipEl.style.transform = `translate(${newLeft}px, ${newTop}px)`;
+        tooltipEl.style.left = positionX + tooltipModel.caretX + 'px';
+        tooltipEl.style.top = positionY + tooltipModel.caretY + 'px';
     };
 
     const options: ChartOptions<'doughnut'> = {
         responsive: true,
         maintainAspectRatio: false,
-        interaction: {
-            intersect: true,
-            mode: 'point',
+        cutout: '60%',
+        // Conditionally set options based on the config
+        animation: {
+            duration: config.isInteractive ? 1000 : 0
         },
-        elements: {
-            arc: {
-                borderWidth: 2,
-            }
-        },
+        events: config.isInteractive ? ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'] : [],
         plugins: {
             legend: {
+                display: config.isInteractive, // Show legend only if interactive
                 position: 'right',
                 labels: {
-                    color: colors.text.subtle, // This color is not in colors.ts
+                    color: colors.text.subtle,
                     boxWidth: 15,
                     padding: 15,
                 }
             },
             tooltip: {
-                enabled: false,
-                external: handleTooltip,
+                enabled: false, // Always use external tooltip
+                external: config.isInteractive ? handleTooltip : undefined,
             },
-        }
+        },
     };
 
     if (existingChart) {

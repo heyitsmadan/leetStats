@@ -1,52 +1,192 @@
-/**
- * Returns the complete HTML and CSS for the bento generator modal.
- */
-/**
- * Returns the complete HTML and CSS for the bento generator modal.
- */
+import { colors } from '../theme/colors';
+
 /**
  * Returns the complete HTML and CSS for the bento generator modal.
  */
 export function createBentoModalHTML(): string {
+  // Using colors from the theme file for inline styles
+  const modalStyles = `
+    #bento-modal {
+      display: none;
+      background-color: rgba(26, 26, 26, 0.7); /* page background with alpha */
+      backdrop-filter: blur(8px);
+    }
+
+    /* --- Preview Area Styling --- */
+    #bento-preview-wrapper {
+        width: 100%;
+        height: 100%;
+        aspect-ratio: 9 / 16;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto; /* Center the wrapper horizontally */
+    }
+    #bento-preview-canvas {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        border-radius: 12px;
+    }
+
+    /* --- Styles for html2canvas Rendering --- */
+    .render-safe {
+        color: ${colors.text.primary};
+        font-family: 'Inter', sans-serif;
+    }
+    .render-safe #bento-header {
+        padding: 40px;
+        font-size: 48px;
+        font-weight: 700;
+        flex-shrink: 0;
+        text-align: left; /* Align header text to the left */
+    }
+    .render-safe #bento-grid-wrapper {
+        flex-grow: 1;
+        min-height: 0;
+        display: flex;
+        align-items: center; /* Vertical centering */
+        justify-content: center; /* Horizontal centering */
+        padding: 0 40px;
+        overflow: hidden; /* Hide anything that might overflow the grid area */
+    }
+    .render-safe #bento-grid {
+         display: inline-grid;
+         grid-template-columns: repeat(6, 1fr);
+         grid-auto-rows: min-content;
+         gap: 20px;
+         max-width: 100%;
+    }
+    .render-safe #bento-footer {
+        padding: 40px;
+        padding-top: 20px;
+        text-align: right; /* Align footer text to the right */
+        font-size: 16px;
+        color: ${colors.text.subtle};
+        font-family: monospace;
+        flex-shrink: 0;
+    }
+    .render-safe .bento-card {
+        background-color: rgba(40, 40, 40, 0.8);
+        border: 1px solid ${colors.background.secondarySection};
+        border-radius: 24px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+    .render-safe .bento-card-title {
+        font-size: 22px;
+        font-weight: 600;
+        color: ${colors.text.subtle};
+        margin-bottom: 16px;
+        flex-shrink: 0;
+    }
+    .render-safe .bento-card-content {
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        min-height: 0;
+    }
+    /* Record Item Styles */
+    .render-safe .record-item { display: flex; justify-content: space-between; align-items: baseline; font-size: 20px; border-bottom: 1px solid ${colors.background.secondarySection}; padding-bottom: 16px; gap: 32px; }
+    .render-safe .record-item:last-child { border-bottom: none; }
+    .render-safe .record-label { color: ${colors.text.subtle}; white-space: nowrap; }
+    .render-safe .record-value { text-align: right; font-weight: 600; font-size: 22px; color: ${colors.text.primary}; }
+    .render-safe .record-context { display: block; font-size: 16px; font-weight: 400; color: ${colors.text.subtle}; }
+    
+    /* Trophy Item Styles */
+    .render-safe .trophy-item { display: flex; align-items: center; gap: 20px; padding-bottom: 16px; border-bottom: 1px solid ${colors.background.secondarySection}; }
+    .render-safe .trophy-item:last-child { border-bottom: none; }
+    .render-safe .trophy-icon { width: 48px; height: 48px; flex-shrink: 0; }
+    .render-safe .trophy-details { display: flex; flex-direction: column; gap: 4px; }
+    .render-safe .trophy-title { font-size: 20px; font-weight: 600; color: ${colors.text.primary}; }
+    .render-safe .trophy-problem { font-size: 16px; color: #38bdf8; text-decoration: none; }
+    .render-safe .trophy-subtitle { font-size: 16px; color: ${colors.text.subtle}; }
+    .render-safe .trophy-note { font-size: 14px; font-style: italic; color: #888; }
+
+    /* Milestone Styles */
+    .render-safe .milestone-timeline { position: relative; }
+    .render-safe .timeline-line { position: absolute; left: 8px; top: 8px; bottom: 8px; width: 2px; background-color: ${colors.background.secondarySection}; }
+    .render-safe .milestone-list { display: flex; flex-direction: column; gap: 24px; }
+    .render-safe .milestone-item { position: relative; padding-left: 32px; }
+    .render-safe .milestone-dot { position: absolute; left: 0; top: 8px; width: 18px; height: 18px; border-radius: 50%; border: 3px solid ${colors.background.section}; }
+    .render-safe .milestone-event { font-size: 20px; font-weight: 600; }
+    .render-safe .milestone-date { font-size: 16px; color: ${colors.text.subtle}; }
+    .render-safe .milestone-problem { font-size: 16px; color: #888; text-decoration: none; }
+
+    /* Skills Table Styles */
+    .render-safe .skills-table { display: flex; flex-direction: column; width: 100%; }
+    .render-safe .skills-header, .render-safe .skill-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 16px; padding: 8px 0; border-bottom: 1px solid ${colors.background.secondarySection}; align-items: center; }
+    .render-safe .skills-header { font-size: 16px; color: ${colors.text.subtle}; font-weight: 600; }
+    .render-safe .skill-row:last-child { border-bottom: none; }
+    .render-safe .skill-cell { text-align: center; font-size: 18px; }
+    .render-safe .skill-cell:first-child { text-align: left; font-weight: 600; }
+
+    /* Progress Ring Styles */
+    .render-safe .progress-ring-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; min-height: 250px; }
+    .render-safe .progress-ring-solved { font-size: 48px; font-weight: 700; fill: ${colors.text.primary}; }
+    .render-safe .progress-ring-label { font-size: 20px; fill: ${colors.text.subtle}; }
+    .render-safe .progress-ring-submissions { font-size: 18px; fill: ${colors.text.subtle}; }
+
+    /* Chart Styles */
+    .render-safe .chart-container { position: relative; width: 100%; height: 100%; min-height: 250px; }
+  `;
+
   return `
-    <div id="bento-modal" style="display: none; background-color: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px);" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div id="bento-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="bg-dark-layer-1 rounded-xl w-full max-w-2xl h-full max-h-[90vh] shadow-2xl flex flex-row p-1.5 gap-1.5">
 
+            <!-- Left Panel: Customization -->
             <div class="w-1/3 max-w-xs bg-dark-layer-0 rounded-lg p-4 overflow-y-auto">
                 <h2 class="text-xl font-bold text-white mb-4">Customize Card</h2>
                 <div class="space-y-2">
-                    <div class="bg-dark-layer-1 rounded-lg">
-                        <div class="bento-accordion-header flex justify-between items-center p-3 cursor-pointer">
-                            <h3 class="font-semibold text-white">History</h3>
-                            <svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </div>
+                    <!-- History Section -->
+                     <div class="bg-dark-layer-1 rounded-lg">
+                        <div class="bento-accordion-header flex justify-between items-center p-3 cursor-pointer"><h3 class="font-semibold text-white">History</h3><svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
                         <div id="bento-history-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;">
-                            <p class="text-xs text-gray-500">History options coming soon.</p>
+                            <label class="flex items-center space-x-3 p-2 rounded-md hover:bg-white/10 cursor-pointer">
+                                <input type="checkbox" id="bento-checkbox-history" class="form-checkbox h-4 w-4 rounded bg-transparent border-gray-500 text-blue-500 focus:ring-blue-500">
+                                <span class="text-sm text-gray-300">Show History Chart</span>
+                            </label>
+                            <div id="history-date-pickers" class="space-y-2 mt-2 pl-8" style="display: none;">
+                                 <label for="bento-history-start-date" class="text-xs text-gray-400">Start Date</label>
+                                 <input type="date" id="bento-history-start-date" class="w-full bg-dark-layer-0 rounded p-1 text-sm text-gray-300 border border-dark-divider-3">
+                                 <label for="bento-history-end-date" class="text-xs text-gray-400">End Date</label>
+                                 <input type="date" id="bento-history-end-date" class="w-full bg-dark-layer-0 rounded p-1 text-sm text-gray-300 border border-dark-divider-3">
+                            </div>
                         </div>
                     </div>
+                    <!-- Milestones Section -->
                     <div class="bg-dark-layer-1 rounded-lg">
                         <div class="bento-accordion-header flex justify-between items-center p-3 cursor-pointer"><h3 class="font-semibold text-white">Milestones</h3><svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
-                        <div id="bento-milestones-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"><p class="text-xs text-gray-500">Milestone options coming soon.</p></div>
+                        <div id="bento-milestones-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
                     </div>
+                    <!-- Trophies Section -->
                     <div class="bg-dark-layer-1 rounded-lg">
                         <div class="bento-accordion-header flex justify-between items-center p-3 cursor-pointer"><h3 class="font-semibold text-white">Trophies</h3><svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
-                        <div id="bento-trophies-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"><p class="text-xs text-gray-500">Trophy options coming soon.</p></div>
+                        <div id="bento-trophies-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
                     </div>
+                    <!-- Records Section -->
                     <div class="bg-dark-layer-1 rounded-lg">
                         <div class="bento-accordion-header flex justify-between items-center p-3 cursor-pointer"><h3 class="font-semibold text-white">Records</h3><svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
                         <div id="bento-records-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
                     </div>
+                    <!-- Activity Section -->
                     <div class="bg-dark-layer-1 rounded-lg">
                         <div class="bento-accordion-header flex justify-between items-center p-3 cursor-pointer"><h3 class="font-semibold text-white">Activity</h3><svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
-                        <div id="bento-activity-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"><p class="text-xs text-gray-500">Activity options coming soon.</p></div>
+                        <div id="bento-activity-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
                     </div>
+                    <!-- Skills Section -->
                     <div class="bg-dark-layer-1 rounded-lg">
                         <div class="bento-accordion-header flex justify-between items-center p-3 cursor-pointer"><h3 class="font-semibold text-white">Skills</h3><svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
-                        <div id="bento-skills-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"><p class="text-xs text-gray-500">Skill options coming soon.</p></div>
+                        <div id="bento-skills-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
                     </div>
                 </div>
             </div>
 
+            <!-- Right Panel: Preview -->
             <div class="flex-1 flex flex-col min-w-0 bg-dark-layer-0 rounded-lg">
                 <div class="flex-shrink-0 flex justify-end p-2">
                     <button id="bento-modal-close-btn" class="text-gray-400 hover:text-white z-20 p-1 rounded-full hover:bg-white/10">
@@ -55,11 +195,11 @@ export function createBentoModalHTML(): string {
                 </div>
 
                 <div class="flex-grow flex items-center justify-center min-h-0 p-4">
-                    <div id="bento-preview-wrapper" class="w-full h-full flex items-center justify-center">
+                    <div id="bento-preview-wrapper">
                         <div id="bento-preview-loader" style="display: none;">
                             <p class="text-white animate-pulse">Generating Preview...</p>
                         </div>
-                        <canvas id="bento-preview-canvas" class="rounded-xl shadow-inner-heavy" style="display: none;"></canvas>
+                        <canvas id="bento-preview-canvas" style="display: none;"></canvas>
                     </div>
                 </div>
 
@@ -71,90 +211,6 @@ export function createBentoModalHTML(): string {
             </div>
         </div>
     </div>
-
-    <style>
-        #bento-preview-canvas {
-            max-width: 100%;
-            max-height: 100%;
-            width: auto;
-            height: auto;
-            object-fit: contain;
-        }
-
-        /* Styles for consistent rendering, using PX units */
-        .render-safe {
-            color: #EFEFEF;
-        }
-        .render-safe #bento-header {
-            padding: 24px;
-            font-size: 20px;
-            font-weight: 700;
-        }
-        .render-safe #bento-grid {
-             display: grid;
-             grid-template-columns: repeat(6, 1fr);
-             grid-template-rows: repeat(6, 1fr);
-             padding: 24px;
-             padding-top: 0;
-             gap: 16px;
-             height: 100%;
-             place-items: center;
-        }
-        .render-safe #bento-footer {
-            padding: 24px;
-            padding-top: 0;
-            text-align: right;
-            font-size: 10px;
-            color: #666;
-            font-family: monospace;
-        }
-        .render-safe .bento-card {
-            max-width: 100%;
-            background-color: rgba(30, 30, 30, 0.8);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
-            padding: 16px;
-            display: flex;
-            flex-direction: column;
-        }
-        .render-safe .bento-card-title {
-            font-size: 18px;
-            font-weight: 600;
-            color: #a0a0a0;
-            margin-bottom: 12px;
-        }
-        .render-safe .bento-card-content {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-        .render-safe .record-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            font-size: 14px;
-            border-bottom: 1px solid #333;
-            padding-bottom: 8px;
-            gap: 24px;
-        }
-        .render-safe .record-item:last-child {
-            border-bottom: none;
-        }
-        .render-safe .record-label {
-            color: #b0b0b0;
-            white-space: nowrap;
-        }
-        .render-safe .record-value {
-            text-align: right;
-            font-weight: 600;
-            color: #FFFFFF;
-        }
-        .render-safe .record-context {
-            display: block;
-            font-size: 11px;
-            font-weight: 400;
-            color: #888;
-        }
-    </style>
+    <style>${modalStyles}</style>
   `;
 }

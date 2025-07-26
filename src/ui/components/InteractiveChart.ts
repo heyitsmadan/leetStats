@@ -22,63 +22,48 @@ export function renderOrUpdateInteractiveChart(
   container: HTMLElement,
   processedData: ProcessedData,
   initialFilters: InteractiveChartFilters,
-  existingInstance?: InteractiveChartInstance
+  existingInstance?: InteractiveChartInstance,
+  config: { isBentoMode?: boolean } = {}
 ): InteractiveChartInstance {
 
   if (existingInstance) {
     existingInstance.destroy();
   }
 
-  // Create the HTML structure
-  container.innerHTML = `
-    <div class="interactive-chart-container">
-      <!-- Global Toggles -->
-      <div class="flex justify-between items-center mb-4">
-        <!-- Primary Toggle (Left) -->
-        <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
-          <button id="primary-problems" data-view="Problems Solved" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
-            Problems Solved
-          </button>
-          <button id="primary-submissions" data-view="Submissions" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
-            Submissions
-          </button>
+  // Conditionally create HTML structure based on mode
+  if (config.isBentoMode) {
+      container.innerHTML = `
+        <div class="interactive-chart-container" style="height: 100%; width: 100%;">
+          <div class="main-chart-container" style="height: 100%;">
+            <canvas id="main-chart"></canvas>
+          </div>
         </div>
-        
-        <!-- Secondary Toggle (Right) -->
-        <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
-          <button id="secondary-language" data-view="Language" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
-            Language
-          </button>
-          <button id="secondary-difficulty" data-view="Difficulty" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
-            Difficulty
-          </button>
-          <button id="secondary-status" data-view="Status" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">
-            Status
-          </button>
+      `;
+  } else {
+      container.innerHTML = `
+        <div class="interactive-chart-container">
+          <div class="flex justify-between items-center mb-4">
+            <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
+              <button id="primary-problems" data-view="Problems Solved" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Problems Solved</button>
+              <button id="primary-submissions" data-view="Submissions" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Submissions</button>
+            </div>
+            <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
+              <button id="secondary-language" data-view="Language" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Language</button>
+              <button id="secondary-difficulty" data-view="Difficulty" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Difficulty</button>
+              <button id="secondary-status" data-view="Status" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Status</button>
+            </div>
+          </div>
+          <div class="main-chart-container mb-4" style="height: 400px;"><canvas id="main-chart"></canvas></div>
+          <div class="navigator-container" style="height: 80px; width: 100%; min-width: 300px;"><svg id="brush-chart" width="100%" height="100%"></svg></div>
+          <div id="chart-tooltip" class="chart-tooltip"></div>
         </div>
-      </div>
-
-      <!-- Main Chart -->
-      <div class="main-chart-container mb-4" style="height: 400px;">
-        <canvas id="main-chart"></canvas>
-      </div>
-
-      <!-- Navigator -->
-      <div class="navigator-container" style="height: 80px; width: 100%; min-width: 300px;">
-        <svg id="brush-chart" width="100%" height="100%"></svg>
-      </div>
-
-      <!-- Tooltip -->
-      <div id="chart-tooltip" class="chart-tooltip"></div>
-    </div>
-  `;
+      `;
+  }
 
   // Add styles using colors from the theme file
   const style = document.createElement('style');
   style.textContent = `
-    .interactive-chart-container {
-      font-family: inherit;
-    }
+    .interactive-chart-container { font-family: inherit; }
     .chart-tooltip {
       position: absolute; top: 0; left: 0; background: ${colors.background.section}; border: 2px solid ${colors.background.empty};
       border-radius: 8px; padding: 12px; font-size: 13px; color: ${colors.text.primary};
@@ -104,21 +89,18 @@ export function renderOrUpdateInteractiveChart(
   document.head.appendChild(style);
 
   // Initialize state and helpers
-  let currentFilters: InteractiveChartFilters = { 
-    ...initialFilters,
-    primaryView: 'Problems Solved',
-    secondaryView: 'Difficulty',
-  };
+  let currentFilters: InteractiveChartFilters = { ...initialFilters };
   let mainChart: Chart | null = null;
-  let brushData: BrushChartData | null = null;
   let currentChartData: InteractiveChartData | null = null;
   
   let resizeObserver: ResizeObserver | null = null;
   let resizeTimeout: number;
 
   initializeMainChart();
-  setupEventListeners();
-  setupResizeObserver();
+  if (!config.isBentoMode) {
+    setupEventListeners();
+    setupResizeObserver();
+  }
 
   function initializeMainChart() {
     const canvas = container.querySelector('#main-chart') as HTMLCanvasElement;
@@ -132,7 +114,7 @@ export function renderOrUpdateInteractiveChart(
         (dataset as any).hoverBackgroundColor = dataset.backgroundColor;
     });
 
-    const showLegend = currentFilters.secondaryView === 'Language';
+    const showLegend = !config.isBentoMode && currentFilters.secondaryView === 'Language';
 
     mainChart = new Chart(ctx, {
       type: 'bar',
@@ -142,26 +124,26 @@ export function renderOrUpdateInteractiveChart(
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: true },
+        interaction: { mode: 'index', intersect: !config.isBentoMode },
         plugins: {
           legend: { 
             display: showLegend,
             labels: { boxWidth: 12, padding: 15, font: { size: 12 }, color: colors.text.subtle } 
           },
-          tooltip: { enabled: false, external: handleTooltip }
+          tooltip: { enabled: false, external: config.isBentoMode ? undefined : handleTooltip }
         },
         scales: {
           x: {
             stacked: true, grid: { display: false },
-            ticks: { color: colors.text.subtle, maxTicksLimit: 12, maxRotation: 45, minRotation: 0 }
+            ticks: { color: colors.text.subtle, maxTicksLimit: 12, maxRotation: 45, minRotation: 0, font: { size: config.isBentoMode ? 16 : 12 } }
           },
           y: {
             stacked: true, beginAtZero: true, grid: { display: false },
-            ticks: { color: colors.text.subtle, precision: 0 }
+            ticks: { color: colors.text.subtle, precision: 0, font: { size: config.isBentoMode ? 16 : 12 } }
           }
         },
         elements: { bar: { borderRadius: 4, borderSkipped: 'bottom' } },
-        animation: { duration: 500, easing: 'easeInOutQuart' }
+        animation: { duration: config.isBentoMode ? 0 : 500 }
       }
     });
   }
@@ -169,23 +151,19 @@ export function renderOrUpdateInteractiveChart(
   function setupResizeObserver() {
     const chartContainer = container.querySelector('.main-chart-container');
     if (!chartContainer) return;
-
     resizeObserver = new ResizeObserver(entries => {
         if (entries && entries.length > 0) {
             clearTimeout(resizeTimeout);
             resizeTimeout = window.setTimeout(() => {
-                if (entries[0].contentRect.width > 0) {
-                    initializeBrushChart();
-                }
+                if (entries[0].contentRect.width > 0) initializeBrushChart();
             }, 150);
         }
     });
-
     resizeObserver.observe(chartContainer);
   }
 
   function initializeBrushChart() {
-    brushData = getBrushChartData(processedData);
+    const brushData = getBrushChartData(processedData);
     if (!brushData || !mainChart) return;
 
     const svg = d3.select(container.querySelector('#brush-chart'));
@@ -210,7 +188,6 @@ export function renderOrUpdateInteractiveChart(
     dimmedClip.append("rect").attr("class", "dim-left-rect").attr("x", 0).attr("y", 0).attr("width", 0).attr("height", height);
     dimmedClip.append("rect").attr("class", "dim-right-rect").attr("x", width).attr("y", 0).attr("width", 0).attr("height", height);
 
-    // Instead of using formatted labels, use the actual date range
     const xScale = d3.scaleTime()
       .domain([brushData.fullTimeRange.start, brushData.fullTimeRange.end])
       .range([0, width]);
@@ -294,16 +271,11 @@ export function renderOrUpdateInteractiveChart(
         return;
     };
 
-    currentChartData.datasets.forEach(dataset => {
-        (dataset as any).hoverBackgroundColor = dataset.backgroundColor;
-    });
-
-
-
     mainChart.data.labels = currentChartData.labels;
     mainChart.data.datasets = currentChartData.datasets;
-    const showLegend = currentFilters.secondaryView === 'Language';
-    mainChart.options.plugins!.legend!.display = showLegend;
+    if (mainChart.options.plugins?.legend) {
+        mainChart.options.plugins.legend.display = !config.isBentoMode && currentFilters.secondaryView === 'Language';
+    }
     mainChart.update('none');
   }
 
@@ -311,7 +283,7 @@ export function renderOrUpdateInteractiveChart(
     const primaryButtons = container.querySelectorAll('[id^="primary-"]');
     primaryButtons.forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
+        const target = e.currentTarget as HTMLElement;
         const newView = target.dataset.view as 'Submissions' | 'Problems Solved';
         if (newView === currentFilters.primaryView) return;
         primaryButtons.forEach(b => b.setAttribute('data-state', 'inactive'));
@@ -324,7 +296,7 @@ export function renderOrUpdateInteractiveChart(
     const secondaryButtons = container.querySelectorAll('[id^="secondary-"]');
     secondaryButtons.forEach(btn => {
       btn.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
+        const target = e.currentTarget as HTMLElement;
         const newView = target.dataset.view as 'Difficulty' | 'Language' | 'Status';
         if (newView === currentFilters.secondaryView) return;
         secondaryButtons.forEach(b => b.setAttribute('data-state', 'inactive'));
@@ -429,18 +401,11 @@ export function renderOrUpdateInteractiveChart(
       updateMainChart();
     },
     destroy: () => {
-      if (resizeObserver) {
-        resizeObserver.disconnect();
-      }
+      if (resizeObserver) resizeObserver.disconnect();
       clearTimeout(resizeTimeout);
-      if (mainChart) {
-        mainChart.destroy();
-        mainChart = null;
-      }
+      if (mainChart) mainChart.destroy();
       d3.select(container.querySelector('#brush-chart')).selectAll("*").remove();
-      if (style.parentNode) {
-        style.parentNode.removeChild(style);
-      }
+      if (style.parentNode) style.parentNode.removeChild(style);
     }
   };
 }
