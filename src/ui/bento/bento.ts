@@ -87,13 +87,14 @@ async function renderBentoPreview() {
 
     try {
         // --- 1. GATHER SELECTIONS & DEFINE COMPONENT PERSONALITIES ---
+        // STYLE UPDATE: Use attribute selector [data-state="checked"] instead of :checked pseudo-class
         const selections = {
-            history: (document.getElementById('bento-checkbox-history') as HTMLInputElement)?.checked,
-            records: Array.from(document.querySelectorAll('.bento-record-checkbox:checked')).map(cb => (cb as HTMLElement).dataset.recordName),
-            trophies: Array.from(document.querySelectorAll('.bento-trophy-checkbox:checked')).map(cb => (cb as HTMLElement).dataset.trophyId),
-            milestones: Array.from(document.querySelectorAll('.bento-milestone-checkbox:checked')).map(cb => parseInt((cb as HTMLElement).dataset.milestoneIndex || '-1')),
-            skills: Array.from(document.querySelectorAll('.bento-skill-checkbox:checked')).map(cb => (cb as HTMLElement).dataset.skillName).filter((name): name is string => !!name),
-            activities: Array.from(document.querySelectorAll('.bento-activity-checkbox:checked')).map(cb => (cb as HTMLElement).dataset.activityName),
+            history: document.querySelector('#bento-checkbox-history[data-state="checked"]') !== null,
+            records: Array.from(document.querySelectorAll('.bento-record-checkbox[data-state="checked"]')).map(cb => (cb as HTMLElement).dataset.recordName),
+            trophies: Array.from(document.querySelectorAll('.bento-trophy-checkbox[data-state="checked"]')).map(cb => (cb as HTMLElement).dataset.trophyId),
+            milestones: Array.from(document.querySelectorAll('.bento-milestone-checkbox[data-state="checked"]')).map(cb => parseInt((cb as HTMLElement).dataset.milestoneIndex || '-1')),
+            skills: Array.from(document.querySelectorAll('.bento-skill-checkbox[data-state="checked"]')).map(cb => (cb as HTMLElement).dataset.skillName).filter((name): name is string => !!name),
+            activities: Array.from(document.querySelectorAll('.bento-activity-checkbox[data-state="checked"]')).map(cb => (cb as HTMLElement).dataset.activityName),
         };
 
         const componentDefinitions = {
@@ -384,9 +385,15 @@ export function initializeBentoGenerator(data: ProcessedData, username: string) 
     const generateCardBtn = document.getElementById('generate-card-btn');
     const modal = document.getElementById('bento-modal');
     const closeModalBtn = document.getElementById('bento-modal-close-btn');
-    const shareBtn = document.getElementById('share-bento-btn');
+    const shareBtn = document.getElementById('share-bento-btn') as HTMLButtonElement;
 
     if (!generateCardBtn || !modal || !closeModalBtn || !shareBtn) return;
+    
+    // STYLE UPDATE: Apply new classes to the Share button
+    shareBtn.className = 'bg-green-0 dark:bg-dark-green-0 text-green-s dark:text-dark-green-s hover:text-green-s dark:hover:text-dark-green-s w-48 rounded-lg py-[7px] text-center font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
+    // The text content is set in the modal HTML, but we ensure it's "Share" here.
+    shareBtn.textContent = 'Share';
+
 
     generateCardBtn.addEventListener('click', () => {
         modal.style.display = 'flex';
@@ -441,52 +448,79 @@ function populateAccordion() {
     const activityContent = document.getElementById('bento-activity-accordion-content');
 
     if (historyContent) {
-        const historyCheckbox = historyContent.querySelector('#bento-checkbox-history') as HTMLInputElement;
-        const datePickers = historyContent.querySelector('#history-date-pickers') as HTMLElement;
-        const startDateInput = historyContent.querySelector('#bento-history-start-date') as HTMLInputElement;
-        const endDateInput = historyContent.querySelector('#bento-history-end-date') as HTMLInputElement;
+        historyContent.innerHTML = ''; // Clear previous content
+
+        const datePickers = document.createElement('div');
+        datePickers.id = 'history-date-pickers';
+        datePickers.className = 'space-y-2 mt-2 pl-8';
+        datePickers.style.display = 'none'; // Initially hidden
+        datePickers.innerHTML = `
+            <label for="bento-history-start-date" class="text-xs text-gray-400">Start Date</label>
+            <input type="date" id="bento-history-start-date" class="w-full bg-dark-layer-0 rounded p-1 text-sm text-gray-300 border border-dark-divider-3">
+            <label for="bento-history-end-date" class="text-xs text-gray-400">End Date</label>
+            <input type="date" id="bento-history-end-date" class="w-full bg-dark-layer-0 rounded p-1 text-sm text-gray-300 border border-dark-divider-3">
+        `;
+
+        const historyCheckboxCallback = (isChecked: boolean) => {
+            datePickers.style.display = isChecked ? 'block' : 'none';
+        };
+
+        const checkboxContainer = createCheckbox('bento-checkbox-history', 'Show History Chart', 'historyToggle', 'true', 'bento-history-checkbox', historyCheckboxCallback);
+        
+        historyContent.appendChild(checkboxContainer);
+        historyContent.appendChild(datePickers);
+        
+        const startDateInput = datePickers.querySelector('#bento-history-start-date') as HTMLInputElement;
+        const endDateInput = datePickers.querySelector('#bento-history-end-date') as HTMLInputElement;
         const today = new Date();
         const oneYearAgo = new Date();
         oneYearAgo.setFullYear(today.getFullYear() - 1);
         endDateInput.valueAsDate = today;
         startDateInput.valueAsDate = oneYearAgo;
         
-        // Use the debounced function for all change events
-        historyCheckbox.addEventListener('change', (e) => { 
-            datePickers.style.display = (e.target as HTMLInputElement).checked ? 'block' : 'none'; 
-            debouncedRenderBentoPreview(); 
-        });
         startDateInput.addEventListener('change', debouncedRenderBentoPreview);
         endDateInput.addEventListener('change', debouncedRenderBentoPreview);
     }
 
     if (recordsContent && legacyStats?.records) {
         recordsContent.innerHTML = '';
-        recordsContent.appendChild(createCheckbox(`bento-checkbox-record-overall-progress`, "Overall Progress", 'record-name', "Overall Progress", 'bento-record-checkbox'));
+        recordsContent.appendChild(createCheckbox(`bento-checkbox-record-overall-progress`, "Overall Progress", 'recordName', "Overall Progress", 'bento-record-checkbox'));
         legacyStats.records.forEach(record => {
-            recordsContent.appendChild(createCheckbox(`bento-checkbox-record-${record.name.replace(/\s+/g, '-')}`, record.name, 'record-name', record.name, 'bento-record-checkbox'));
+            // Defensive check for record and record.name
+            if (record && record.name) {
+                recordsContent.appendChild(createCheckbox(`bento-checkbox-record-${record.name.replace(/\s+/g, '-')}`, record.name, 'recordName', record.name, 'bento-record-checkbox'));
+            }
         });
     }
 
     if (trophiesContent && legacyStats?.trophies) {
         trophiesContent.innerHTML = '';
         legacyStats.trophies.filter(t => t.achieved).forEach(trophy => {
-            trophiesContent.appendChild(createCheckbox(`bento-checkbox-trophy-${trophy.id}`, trophy.title, 'trophy-id', trophy.id, 'bento-trophy-checkbox'));
+            // Defensive check for trophy and its properties
+            if (trophy && trophy.id && trophy.title) {
+                trophiesContent.appendChild(createCheckbox(`bento-checkbox-trophy-${trophy.id}`, trophy.title, 'trophyId', trophy.id, 'bento-trophy-checkbox'));
+            }
         });
     }
 
     if (milestonesContent && legacyStats?.milestones) {
         milestonesContent.innerHTML = '';
         legacyStats.milestones.forEach((milestone, index) => {
-            const labelText = `${milestone.milestone}${getOrdinalSuffix(milestone.milestone)} ${formatMilestoneType(milestone.type)}`;
-            milestonesContent.appendChild(createCheckbox(`bento-checkbox-milestone-${index}`, labelText, 'milestone-index', index.toString(), 'bento-milestone-checkbox'));
+             // Defensive check for milestone
+            if (milestone) {
+                const labelText = `${milestone.milestone}${getOrdinalSuffix(milestone.milestone)} ${formatMilestoneType(milestone.type)}`;
+                milestonesContent.appendChild(createCheckbox(`bento-checkbox-milestone-${index}`, labelText, 'milestoneIndex', index.toString(), 'bento-milestone-checkbox'));
+            }
         });
     }
 
     if (skillsContent && skillMatrixData?.topics) {
         skillsContent.innerHTML = '';
         skillMatrixData.topics.forEach(topic => {
-            skillsContent.appendChild(createCheckbox(`bento-checkbox-skill-${topic}`, formatTopicName(topic), 'skill-name', topic, 'bento-skill-checkbox'));
+            // Topic is a string, so it's less likely to be null, but a check doesn't hurt
+            if (topic) {
+                skillsContent.appendChild(createCheckbox(`bento-checkbox-skill-${topic}`, formatTopicName(topic), 'skillName', topic, 'bento-skill-checkbox'));
+            }
         });
     }
 
@@ -494,16 +528,73 @@ function populateAccordion() {
         activityContent.innerHTML = '';
         const ACTIVITY_CHARTS = ["Submission Signature", "Language Stats", "Progress Tracker", "Coding Clock"];
         ACTIVITY_CHARTS.forEach(name => {
-            activityContent.appendChild(createCheckbox(`bento-checkbox-activity-${name.replace(/\s+/g, '-')}`, name, 'activity-name', name, 'bento-activity-checkbox'));
+            activityContent.appendChild(createCheckbox(`bento-checkbox-activity-${name.replace(/\s+/g, '-')}`, name, 'activityName', name, 'bento-activity-checkbox'));
         });
     }
 }
 
-function createCheckbox(id: string, text: string, dataAttribute: string, dataValue: string, customClass: string): HTMLLabelElement {
-    const label = document.createElement('label');
-    label.className = 'flex items-center space-x-3 p-2 rounded-md hover:bg-white/10 cursor-pointer';
-    label.innerHTML = `<input type="checkbox" id="${id}" data-${dataAttribute}="${dataValue}" class="${customClass} form-checkbox h-4 w-4 rounded bg-transparent border-gray-500 text-blue-500 focus:ring-blue-500"><span class="text-sm text-gray-300">${text}</span>`;
-    // Use the debounced function for all checkbox change events
-    label.querySelector('input')?.addEventListener('change', debouncedRenderBentoPreview);
-    return label;
+// STYLE UPDATE: This function now creates a modern-looking checkbox using divs and buttons.
+function createCheckbox(id: string, text: string, dataAttribute: string, dataValue: string, customClass: string, onClickCallback?: (isChecked: boolean) => void): HTMLElement {
+    const container = document.createElement('div');
+    container.className = 'flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-[5px] text-label-1 dark:text-dark-label-1 hover:bg-sd-accent';
+    
+    const leftSide = document.createElement('div');
+    leftSide.className = 'text-md flex w-full max-w-[192px] flex-1 items-center space-x-2 truncate';
+
+    const button = document.createElement('button');
+    button.id = id;
+    button.type = 'button';
+    button.className = `${customClass} border-sd-primary focus-visible:ring-sd-ring data-[state=checked]:bg-sd-primary data-[state=checked]:text-sd-primary-foreground rounded-sm peer h-4 w-4 shrink-0 border focus-visible:outline-none focus-visible:ring-1`;
+    button.setAttribute('role', 'checkbox');
+    button.setAttribute('aria-checked', 'false');
+    button.dataset.state = 'unchecked';
+    
+    // FIX: Use the camelCased dataAttribute directly with the dataset property
+    button.dataset[dataAttribute] = dataValue;
+
+    const checkmarkSpanHTML = `
+        <span data-state="checked" class="flex items-center justify-center text-current" style="pointer-events: none;">
+            <div class="relative before:block before:h-3 before:w-3 h-2 w-2 text-[8px]">
+                <svg aria-hidden="true" focusable="false" data-prefix="far" data-icon="check" class="svg-inline--fa fa-check absolute left-1/2 top-1/2 h-[1em] -translate-x-1/2 -translate-y-1/2 align-[-0.125em]" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
+                    <path fill="currentColor" d="M441 103c9.4 9.4 9.4 24.6 0 33.9L177 401c-9.4 9.4-24.6 9.4-33.9 0L7 265c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l119 119L407 103c9.4-9.4 24.6-9.4 33.9 0z"></path>
+                </svg>
+            </div>
+        </span>
+    `;
+
+    const textContainer = document.createElement('div');
+    textContainer.className = 'truncate';
+    const textSpan = document.createElement('span');
+    textSpan.className = '';
+    textSpan.textContent = text;
+    textContainer.appendChild(textSpan);
+
+    leftSide.appendChild(button);
+    leftSide.appendChild(textContainer);
+    container.appendChild(leftSide);
+
+    const toggleCheckbox = () => {
+        const isChecked = button.getAttribute('aria-checked') === 'true';
+        const newStateIsChecked = !isChecked;
+        
+        if (newStateIsChecked) {
+            button.setAttribute('aria-checked', 'true');
+            button.dataset.state = 'checked';
+            button.innerHTML = checkmarkSpanHTML;
+        } else {
+            button.setAttribute('aria-checked', 'false');
+            button.dataset.state = 'unchecked';
+            button.innerHTML = '';
+        }
+        
+        if (onClickCallback) {
+            onClickCallback(newStateIsChecked);
+        }
+
+        debouncedRenderBentoPreview();
+    };
+
+    container.addEventListener('click', toggleCheckbox);
+    
+    return container;
 }
