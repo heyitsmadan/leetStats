@@ -149,7 +149,7 @@ async function renderBentoPreview() {
             card.style.gridColumn = 'span 6';
             card.style.width = 'fit-content';
             card.style.justifySelf = 'center';
-            let html = `<h3 class="bento-card-title">Records</h3><div class="bento-card-content">`;
+            let html = `<div class="bento-card-content">`;
             selectedRecords.forEach(r => { html += `<div class="record-item"><span class="record-label">${r.name}</span><div class="record-value"><span>${r.mainStat || r.value}</span><span class="record-context">${r.dateStat || ''}</span></div></div>`; });
             html += `</div>`;
             card.innerHTML = html;
@@ -161,8 +161,8 @@ async function renderBentoPreview() {
             card.style.gridColumn = 'span 6';
             card.style.width = 'fit-content';
             card.style.justifySelf = 'center';
-            let html = `<h3 class="bento-card-title">Trophies</h3><div class="bento-card-content">`;
-            selectedTrophies.forEach(t => { html += `<div class="trophy-item"><img src="${chrome.runtime.getURL(t.icon)}" alt="${t.title}" class="trophy-icon" /><div class="trophy-details"><div class="trophy-title">${t.title}</div><div class="trophy-subtitle">${t.subtitle}</div>${t.problemSlug !== 'placeholder' ? `<a href="https://leetcode.com/problems/${t.problemSlug}/" class="trophy-problem">${t.problemTitle}</a>` : ''}${t.personalNote ? `<div class="trophy-note">${t.personalNote}</div>` : ''}</div></div>`; });
+            let html = `<div class="bento-card-content">`;
+            selectedTrophies.forEach(t => { html += `<div class="trophy-item"><img src="${chrome.runtime.getURL(t.icon)}" alt="${t.title}" class="trophy-icon" /><div class="trophy-details"><div class="trophy-title">${t.title}</div><div class="trophy-subtitle">${t.subtitle}</div>${t.problemSlug !== 'placeholder' ? `<a href="https://leetcode.com/problems/${t.problemSlug}/" class="trophy-problem">${t.problemTitle}</a>` : ''}</div></div>`; });
             html += `</div>`;
             card.innerHTML = html;
             grid.appendChild(card);
@@ -173,7 +173,7 @@ async function renderBentoPreview() {
             card.style.gridColumn = 'span 6';
             card.style.width = 'fit-content';
             card.style.justifySelf = 'center';
-            let html = `<h3 class="bento-card-title">Milestones</h3><div class="bento-card-content"><div class="milestone-timeline"><div class="timeline-line"></div><div class="milestone-list">`;
+            let html = `<div class="bento-card-content"><div class="milestone-timeline"><div class="timeline-line"></div><div class="milestone-list">`;
             selectedMilestones.forEach(m => {
                 const color = getMilestoneColor(m.type);
                 html += `<div class="milestone-item"><div class="milestone-dot" style="background-color: ${color};"></div><div class="milestone-event" style="color: ${color};">${m.milestone}${getOrdinalSuffix(m.milestone)} ${formatMilestoneType(m.type)}</div><div class="milestone-date">${m.date.toLocaleDateString('en-GB')}</div>${m.problemTitle ? `<a href="https://leetcode.com/problems/${m.problemSlug}/" class="milestone-problem">${m.problemTitle}</a>` : ''}</div>`;
@@ -186,7 +186,7 @@ async function renderBentoPreview() {
             const card = document.createElement('div');
             card.className = 'bento-card';
             card.style.gridColumn = 'span 6';
-            let html = `<h3 class="bento-card-title">Skills</h3><div class="bento-card-content"><div class="skills-table"><div class="skills-header"><div class="skill-cell" style="text-align: left;">Topic</div><div class="skill-cell">Solved</div><div class="skill-cell">Avg. Attempts</div><div class="skill-cell">First Ace</div></div>`;
+            let html = `<div class="bento-card-content"><div class="skills-table"><div class="skills-header"><div class="skill-cell" style="text-align: left;">Topic</div><div class="skill-cell">Solved</div><div class="skill-cell">Avg. Attempts</div><div class="skill-cell">First Ace</div></div>`;
             selectedSkillNames.forEach(skill => {
                 const metrics = currentSkillMatrixData.metrics;
                 const solved = metrics.problemsSolved[skill] || 0;
@@ -203,7 +203,7 @@ async function renderBentoPreview() {
             card.className = 'bento-card';
             card.style.gridColumn = 'span 6';
             card.style.gridRow = 'span 4';
-            card.innerHTML = `<h3 class="bento-card-title">Progress Tracker</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-progress-tracker-canvas"></canvas></div></div>`;
+            card.innerHTML = `<h3 class="bento-card-title">Problems Solved Over Time</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-progress-tracker-canvas"></canvas></div></div>`;
             grid.appendChild(card);
         }
         if (selectedActivityNames.includes("Coding Clock")) {
@@ -211,7 +211,7 @@ async function renderBentoPreview() {
             card.className = 'bento-card';
             card.style.gridColumn = 'span 6';
             card.style.gridRow = 'span 4';
-            card.innerHTML = `<h3 class="bento-card-title">Coding Clock</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-coding-clock-canvas"></canvas></div></div>`;
+            card.innerHTML = `<h3 class="bento-card-title">Submissions by Hour</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-coding-clock-canvas"></canvas></div></div>`;
             grid.appendChild(card);
         }
         if (selectedActivityNames.includes("Submission Signature")) {
@@ -219,7 +219,7 @@ async function renderBentoPreview() {
             card.className = 'bento-card';
             card.style.gridColumn = 'span 3';
             card.style.gridRow = 'span 4';
-            card.innerHTML = `<h3 class="bento-card-title">Submission Signature</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-submission-signature-canvas"></canvas></div></div>`;
+            card.innerHTML = `<div class="bento-card-content"><div class="chart-container"><canvas id="bento-submission-signature-canvas"></canvas></div></div>`;
             grid.appendChild(card);
         }
         if (selectedActivityNames.includes("Language Stats")) {
@@ -227,7 +227,7 @@ async function renderBentoPreview() {
             card.className = 'bento-card';
             card.style.gridColumn = 'span 3';
             card.style.gridRow = 'span 4';
-            card.innerHTML = `<h3 class="bento-card-title">Language Stats</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-language-stats-canvas"></canvas></div></div>`;
+            card.innerHTML = `<div class="bento-card-content"><div class="chart-container"><canvas id="bento-language-stats-canvas"></canvas></div></div>`;
             grid.appendChild(card);
         }
 
@@ -254,7 +254,7 @@ async function renderBentoPreview() {
             if (chartContainer) {
                 const cumulativeView = getSmartCumulativeView('All Time', processedDataCache);
                 const stats = getCumulativeStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All', cumulativeView });
-                if (stats) renderOrUpdateCumulativeLineChart(chartContainer as HTMLElement, stats, { timeRange: 'All Time', difficulty: 'All', cumulativeView }, undefined, { isInteractive: false });
+                if (stats) renderOrUpdateCumulativeLineChart(chartContainer as HTMLElement, stats, { timeRange: 'All Time', difficulty: 'All', cumulativeView }, undefined, { isInteractive: false, hidePoints: true });
             }
         }
         if (selectedActivityNames.includes("Coding Clock")) {
@@ -265,12 +265,16 @@ async function renderBentoPreview() {
             }
         }
         if (selectedActivityNames.includes("Submission Signature")) {
-            const chartContainer = offscreenContainer.querySelector('#bento-submission-signature-canvas')?.parentElement;
-            if (chartContainer) {
-                const stats = getSubmissionSignatureStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All' });
-                renderOrUpdateDoughnutChart(chartContainer as HTMLElement, stats, { difficulty: 'All' }, undefined, { isInteractive: false });
-            }
-        }
+    const chartContainer = offscreenContainer.querySelector('#bento-submission-signature-canvas')?.parentElement;
+    if (chartContainer) {
+        const stats = getSubmissionSignatureStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All' });
+        // Add the legendConfig property to the options object
+        renderOrUpdateDoughnutChart(chartContainer as HTMLElement, stats, { difficulty: 'All' }, undefined, { 
+            isInteractive: false, 
+            legendConfig: { display: true, position: 'bottom' } 
+        });
+    }
+}
         if (selectedActivityNames.includes("Language Stats")) {
             const chartContainer = offscreenContainer.querySelector('#bento-language-stats-canvas')?.parentElement;
             if (chartContainer) {

@@ -58,8 +58,11 @@ export function renderOrUpdateDoughnutChart(
     data: any,
     filters: { difficulty: string },
     existingChart?: DoughnutChartInstance,
-    // Add a config object to toggle features. Defaults to interactive.
-    config: { isInteractive?: boolean } = { isInteractive: true }
+    // Add legendConfig to the config type
+    config: { 
+        isInteractive?: boolean; 
+        legendConfig?: { display: boolean; position: 'right' | 'bottom' } 
+    } = { isInteractive: true }
 ): DoughnutChartInstance {
     const canvas = container.querySelector('canvas') as HTMLCanvasElement;
     if (!canvas) throw new Error('Canvas element not found in the container.');
@@ -70,16 +73,17 @@ export function renderOrUpdateDoughnutChart(
     const reversedTooltipsData = data.tooltipsData.slice().reverse();
 
     const chartData: ChartData<'doughnut'> = {
-        labels: reversedLabels,
-        datasets: [{
-            data: reversedData,
-            backgroundColor: reversedColors,
-            borderColor: config.isInteractive ? colors.background.section : 'transparent',
-            borderWidth: 2,
-            hoverBackgroundColor: reversedColors,
-            hoverBorderColor: colors.background.section,
-        }],
-    };
+    labels: reversedLabels,
+    datasets: [{
+        data: reversedData,
+        backgroundColor: reversedColors,
+        // This ensures the border from getSubmissionSignatureStats is used
+        borderColor: data.datasets[0].borderColor, 
+        borderWidth: 2,
+        hoverBackgroundColor: reversedColors,
+        hoverBorderColor: colors.background.section,
+    }],
+};
 
     const handleTooltip = (context: { chart: Chart, tooltip: TooltipModel<'doughnut'> }) => {
         const tooltipEl = getOrCreateTooltip(context.chart);
@@ -119,31 +123,38 @@ export function renderOrUpdateDoughnutChart(
         tooltipEl.style.top = positionY + tooltipModel.caretY + 'px';
     };
 
-    const options: ChartOptions<'doughnut'> = {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '60%',
-        // Conditionally set options based on the config
-        animation: {
-            duration: config.isInteractive ? 1000 : 0
-        },
-        events: config.isInteractive ? ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'] : [],
-        plugins: {
-            legend: {
-                display: config.isInteractive, // Show legend only if interactive
-                position: 'right',
-                labels: {
-                    color: colors.text.subtle,
-                    boxWidth: 15,
-                    padding: 15,
+    // --- Inside renderOrUpdateDoughnutChart function ---
+
+const options: ChartOptions<'doughnut'> = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '60%',
+    animation: {
+        duration: config.isInteractive ? 1000 : 0
+    },
+    events: config.isInteractive ? ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'] : [],
+    plugins: {
+        legend: {
+            display: config.legendConfig ? config.legendConfig.display : config.isInteractive,
+            position: config.legendConfig ? config.legendConfig.position : 'right',
+            // 2. Reverse the legend items to match the original data order
+            reverse: true, 
+            labels: {
+                color: colors.text.subtle,
+                boxWidth: config.legendConfig?.position === 'bottom' ? 10 : 15,
+                padding: 10,
+                font: {
+                    size: 11,
                 }
             },
-            tooltip: {
-                enabled: false, // Always use external tooltip
-                external: config.isInteractive ? handleTooltip : undefined,
-            },
+            align: 'center',
         },
-    };
+        tooltip: {
+            enabled: false,
+            external: config.isInteractive ? handleTooltip : undefined,
+        },
+    },
+};
 
     if (existingChart) {
         existingChart.data = chartData;
