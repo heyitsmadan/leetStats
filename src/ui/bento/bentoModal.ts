@@ -16,7 +16,6 @@ export function createBentoModalHTML(): string {
     #bento-preview-wrapper {
         width: 100%;
         height: 100%;
-        aspect-ratio: 9 / 16;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -27,6 +26,9 @@ export function createBentoModalHTML(): string {
         height: 100%;
         object-fit: contain;
         border-radius: 12px;
+        /* Provide a sensible max size for the preview in the UI */
+        max-width: 450px; /* RENDER_WIDTH / 2 */
+        max-height: 85vh;
     }
 
     /* --- Styles for html2canvas Rendering --- */
@@ -34,33 +36,36 @@ export function createBentoModalHTML(): string {
         color: ${colors.text.primary};
         font-family: 'Inter', sans-serif;
     }
+    #bento-render-node {
+        width: 900px;
+        height: auto; /* KEY CHANGE: Height is now dynamic */
+        background: radial-gradient(circle, #282828 0%, #1a1a1a 100%); 
+        display: flex; 
+        flex-direction: column;
+    }
     .render-safe #bento-header {
         padding: 40px;
         font-size: 48px;
         font-weight: 700;
         flex-shrink: 0;
-        text-align: left; /* Align header text to the left */
+        text-align: left;
     }
     .render-safe #bento-grid-wrapper {
         flex-grow: 1;
-        min-height: 0;
-        display: flex;
-        align-items: center; /* Vertical centering */
-        justify-content: center; /* Horizontal centering */
         padding: 0 40px;
-        overflow: hidden; /* Hide anything that might overflow the grid area */
+        width: 100%;
     }
     .render-safe #bento-grid {
-         display: inline-grid;
-         grid-template-columns: repeat(6, 1fr);
-         grid-auto-rows: min-content;
+         display: grid;
+         grid-template-columns: repeat(4, 1fr);
+         align-items: stretch; /* KEY CHANGE: Make cards in the same row equal height */
          gap: 20px;
-         max-width: 100%;
+         width: 100%;
     }
     .render-safe #bento-footer {
         padding: 40px;
         padding-top: 20px;
-        text-align: right; /* Align footer text to the right */
+        text-align: right;
         font-size: 16px;
         color: ${colors.text.subtle};
         font-family: monospace;
@@ -71,7 +76,7 @@ export function createBentoModalHTML(): string {
         border: 1px solid ${colors.background.secondarySection};
         border-radius: 24px;
         padding: 24px;
-        display: flex;
+        display: flex; /* Use flex to make card content area grow */
         flex-direction: column;
         overflow: hidden;
     }
@@ -83,28 +88,40 @@ export function createBentoModalHTML(): string {
         flex-shrink: 0;
     }
     .render-safe .bento-card-content {
-        flex-grow: 1;
+        flex-grow: 1; /* Allow content to fill available vertical space */
         display: flex;
         flex-direction: column;
-        gap: 16px;
         min-height: 0;
+        /* KEY CHANGE: Center content within cards */
+        align-items: center;
+        justify-content: center;
     }
+    
+    /* Styles for list-like content to ensure they take full width inside the centered flexbox */
+    .render-safe .record-list,
+    .render-safe .trophy-list,
+    .render-safe .milestone-timeline,
+    .render-safe .skills-table {
+        width: 100%;
+    }
+
     /* Record Item Styles */
-    .render-safe .record-item { display: flex; justify-content: space-between; align-items: baseline; font-size: 20px; border-bottom: 1px solid ${colors.background.secondarySection}; padding-bottom: 16px; gap: 32px; }
+    .render-safe .record-list { display: flex; flex-direction: column; gap: 16px; }
+    .render-safe .record-item { display: flex; justify-content: space-between; align-items: baseline; font-size: 20px; border-bottom: 1px solid ${colors.background.secondarySection}; padding-bottom: 16px; gap: 32px; width: 100%; }
     .render-safe .record-item:last-child { border-bottom: none; }
     .render-safe .record-label { color: ${colors.text.subtle}; white-space: nowrap; }
     .render-safe .record-value { text-align: right; font-weight: 600; font-size: 22px; color: ${colors.text.primary}; }
     .render-safe .record-context { display: block; font-size: 16px; font-weight: 400; color: ${colors.text.subtle}; }
     
     /* Trophy Item Styles */
-    .render-safe .trophy-item { display: flex; align-items: center; gap: 20px; padding-bottom: 16px; border-bottom: 1px solid ${colors.background.secondarySection}; }
+    .render-safe .trophy-list { display: flex; flex-direction: column; gap: 16px; }
+    .render-safe .trophy-item { display: flex; align-items: center; gap: 20px; padding-bottom: 16px; border-bottom: 1px solid ${colors.background.secondarySection}; width: 100%; }
     .render-safe .trophy-item:last-child { border-bottom: none; }
     .render-safe .trophy-icon { width: 48px; height: 48px; flex-shrink: 0; }
     .render-safe .trophy-details { display: flex; flex-direction: column; gap: 4px; }
     .render-safe .trophy-title { font-size: 20px; font-weight: 600; color: ${colors.text.primary}; }
     .render-safe .trophy-problem { font-size: 16px; color: #38bdf8; text-decoration: none; }
     .render-safe .trophy-subtitle { font-size: 16px; color: ${colors.text.subtle}; }
-    .render-safe .trophy-note { font-size: 14px; font-style: italic; color: #888; }
 
     /* Milestone Styles */
     .render-safe .milestone-timeline { position: relative; }
@@ -128,7 +145,7 @@ export function createBentoModalHTML(): string {
     .render-safe .progress-ring-container { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; min-height: 250px; }
     .render-safe .progress-ring-solved { font-size: 48px; font-weight: 700; fill: ${colors.text.primary}; }
     .render-safe .progress-ring-label { font-size: 20px; fill: ${colors.text.subtle}; }
-    .render-safe .progress-ring-submissions { font-size: 18px; fill: ${colors.text.subtle}; }
+    .render-safe .progress-ring-submissions { font-size: 22px; font-weight: 500; fill: ${colors.text.primary}; }
 
     /* Chart Styles */
     .render-safe .chart-container { position: relative; width: 100%; height: 100%; min-height: 250px; }
@@ -136,7 +153,7 @@ export function createBentoModalHTML(): string {
 
   return `
     <div id="bento-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="bg-dark-layer-1 rounded-xl w-full max-w-2xl h-full max-h-[90vh] shadow-2xl flex flex-row p-1.5 gap-1.5">
+        <div class="bg-dark-layer-1 rounded-xl w-full max-w-2xl h-full max-h-[95vh] shadow-2xl flex flex-row p-1.5 gap-1.5">
 
             <!-- Left Panel: Customization -->
             <div class="w-1/3 max-w-xs bg-dark-layer-0 rounded-lg p-4 overflow-y-auto">
@@ -204,7 +221,7 @@ export function createBentoModalHTML(): string {
                 </div>
 
                 <div class="flex-shrink-0 flex justify-end p-4">
-                    <button id="share-bento-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-5 rounded-lg transition-colors duration-200 disabled:bg-gray-500">
+                    <button id="share-bento-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-5 rounded-lg transition-colors duration-200 disabled:bg-gray-500 disabled:cursor-not-allowed">
                         Share
                     </button>
                 </div>
