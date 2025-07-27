@@ -1101,7 +1101,7 @@ function updateCumulativeViewToggle(activeView: CumulativeView) {
 /**
  * Calculates the best cumulative view (Daily, Monthly, Yearly) based on the selected time range and data span.
  */
-function getSmartCumulativeView(timeRange: TimeRange, processedData: ProcessedData): CumulativeView {
+export function getSmartCumulativeView(timeRange: TimeRange, processedData: ProcessedData): CumulativeView {
     if (timeRange === 'Last 30 Days' || timeRange === 'Last 90 Days') {
         return 'Daily';
     }

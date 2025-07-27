@@ -13,6 +13,7 @@ import { renderOrUpdateCumulativeLineChart } from '../components/CumulativeLineC
 import { renderOrUpdateStackedBarChart } from '../components/StackedBarChart';
 import { renderOrUpdateInteractiveChart } from '../components/InteractiveChart';
 import { renderProgressRing } from '../components/ProgressRing';
+import { getSmartCumulativeView } from '../layout';
 import { colors } from '../theme/colors';
 import html2canvas from 'html2canvas';
 
@@ -23,14 +24,6 @@ let processedDataCache: ProcessedData | null = null;
 let currentPreviewBlob: Blob | null = null;
 let isRendering = false;
 let usernameCache = '';
-
-// Define the available activity charts
-const ACTIVITY_CHARTS = [
-    "Submission Signature",
-    "Language Stats",
-    "Progress Tracker",
-    "Coding Clock",
-];
 
 // Define fixed dimensions for high-resolution 9:16 rendering
 const RENDER_WIDTH = 900;
@@ -57,19 +50,6 @@ function formatTopicName(slug: string): string {
     return slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 }
 
-function getSmartCumulativeView(timeRange: TimeRange, processedData: ProcessedData): CumulativeView {
-    if (timeRange === 'Last 30 Days' || timeRange === 'Last 90 Days') return 'Daily';
-    if (timeRange === 'Last 365 Days') return 'Monthly';
-    if (processedData.submissions.length > 1) {
-        const firstSub = processedData.submissions.reduce((a, b) => a.date < b.date ? a : b);
-        const lastSub = processedData.submissions.reduce((a, b) => a.date > b.date ? a : b);
-        const dayDifference = (lastSub.date.getTime() - firstSub.date.getTime()) / (1000 * 3600 * 24);
-        if (dayDifference > 365 * 4) return 'Yearly';
-        if (dayDifference > 90) return 'Monthly';
-    }
-    return 'Daily';
-}
-
 async function renderBentoPreview() {
     if (isRendering || !legacyStats || !processedDataCache || !skillMatrixData) return;
     const currentSkillMatrixData = skillMatrixData;
@@ -85,31 +65,39 @@ async function renderBentoPreview() {
     currentPreviewBlob = null;
 
     try {
-        // --- 1. GATHER SELECTIONS ---
-        const historyCheckbox = document.getElementById('bento-checkbox-history') as HTMLInputElement;
-        const showHistory = historyCheckbox?.checked;
-        const startDateInput = document.getElementById('bento-history-start-date') as HTMLInputElement;
-        const endDateInput = document.getElementById('bento-history-end-date') as HTMLInputElement;
-        const historyStartDate = startDateInput?.valueAsDate;
-        const historyEndDate = endDateInput?.valueAsDate;
+        // --- 1. GATHER SELECTIONS & DEFINE COMPONENT PERSONALITIES ---
+        const selections = {
+            history: (document.getElementById('bento-checkbox-history') as HTMLInputElement)?.checked,
+            records: Array.from(document.querySelectorAll('.bento-record-checkbox:checked')).map(cb => (cb as HTMLElement).dataset.recordName),
+            trophies: Array.from(document.querySelectorAll('.bento-trophy-checkbox:checked')).map(cb => (cb as HTMLElement).dataset.trophyId),
+            milestones: Array.from(document.querySelectorAll('.bento-milestone-checkbox:checked')).map(cb => parseInt((cb as HTMLElement).dataset.milestoneIndex || '-1')),
+            skills: Array.from(document.querySelectorAll('.bento-skill-checkbox:checked')).map(cb => (cb as HTMLElement).dataset.skillName).filter((name): name is string => !!name),
+            activities: Array.from(document.querySelectorAll('.bento-activity-checkbox:checked')).map(cb => (cb as HTMLElement).dataset.activityName),
+        };
 
-        const selectedRecordNames = Array.from(document.querySelectorAll('.bento-record-checkbox:checked')).map(cb => (cb as HTMLElement).dataset.recordName);
-        const showOverallProgress = selectedRecordNames.includes("Overall Progress");
-        const selectedRecords = legacyStats.records.filter(r => selectedRecordNames.includes(r.name) && r.name !== "Overall Progress");
+        const componentDefinitions = {
+            history: { type: 'large', span: 4, condition: selections.history },
+            skills: { type: 'large', span: 4, condition: selections.skills.length > 0 },
+            progressTracker: { type: 'large', span: 4, condition: selections.activities.includes('Progress Tracker') },
+            
+            records: { type: 'medium', span: 2, condition: selections.records.filter(r => r !== "Overall Progress").length > 0 },
+            trophies: { type: 'medium', span: 2, condition: selections.trophies.length > 0 },
 
-        const selectedTrophyIds = Array.from(document.querySelectorAll('.bento-trophy-checkbox:checked')).map(cb => (cb as HTMLElement).dataset.trophyId);
-        const selectedTrophies = legacyStats.trophies.filter(t => t.achieved && selectedTrophyIds.includes(t.id));
+            milestones: { type: 'small', span: 2, condition: selections.milestones.length > 0 },
 
-        const selectedMilestoneIndices = Array.from(document.querySelectorAll('.bento-milestone-checkbox:checked')).map(cb => parseInt((cb as HTMLElement).dataset.milestoneIndex || '-1'));
-        const selectedMilestones = legacyStats.milestones.filter((m, index) => selectedMilestoneIndices.includes(index));
+            overallProgress: { type: 'square', span: 2, condition: selections.records.includes("Overall Progress") },
+            submissionSignature: { type: 'square', span: 2, condition: selections.activities.includes('Submission Signature') },
+            languageStats: { type: 'square', span: 2, condition: selections.activities.includes('Language Stats') },
+            codingClock: { type: 'square', span: 2, condition: selections.activities.includes('Coding Clock') },
+        };
 
-        const selectedSkillNames = Array.from(document.querySelectorAll('.bento-skill-checkbox:checked'))
-            .map(cb => (cb as HTMLElement).dataset.skillName)
-            .filter((name): name is string => !!name);
-        
-        const selectedActivityNames = Array.from(document.querySelectorAll('.bento-activity-checkbox:checked')).map(cb => (cb as HTMLElement).dataset.activityName);
+        // --- 2. LAYOUT ENGINE: Categorize selected components ---
+        const largeItems = Object.keys(componentDefinitions).filter(key => componentDefinitions[key as keyof typeof componentDefinitions].type === 'large' && componentDefinitions[key as keyof typeof componentDefinitions].condition);
+        const mediumItems = Object.keys(componentDefinitions).filter(key => componentDefinitions[key as keyof typeof componentDefinitions].type === 'medium' && componentDefinitions[key as keyof typeof componentDefinitions].condition);
+        const smallItems = Object.keys(componentDefinitions).filter(key => componentDefinitions[key as keyof typeof componentDefinitions].type === 'small' && componentDefinitions[key as keyof typeof componentDefinitions].condition);
+        const squareItems = Object.keys(componentDefinitions).filter(key => componentDefinitions[key as keyof typeof componentDefinitions].type === 'square' && componentDefinitions[key as keyof typeof componentDefinitions].condition);
 
-        // --- 2. CREATE HTML STRUCTURE OFF-SCREEN ---
+        // --- 3. CREATE HTML STRUCTURE OFF-SCREEN ---
         const offscreenContainer = document.createElement('div');
         offscreenContainer.style.position = 'absolute';
         offscreenContainer.style.left = '-9999px';
@@ -120,168 +108,65 @@ async function renderBentoPreview() {
         offscreenContainer.innerHTML = `
             <div id="bento-render-node" class="render-safe" style="width: 100%; height: 100%; background: radial-gradient(circle, #282828 0%, #1a1a1a 100%); display: flex; flex-direction: column;">
                 <div id="bento-header">${usernameCache}'s LeetStats</div>
-                <div id="bento-grid-wrapper"><div id="bento-grid"></div></div>
+                <div id="bento-grid-wrapper"><div id="bento-grid" style="grid-template-columns: repeat(4, 1fr);"></div></div>
                 <div id="bento-footer">Generated by LeetStats Extension</div>
             </div>`;
         
         const grid = offscreenContainer.querySelector('#bento-grid')!;
         
-        // --- ADD CARDS TO GRID ---
-        if (showHistory && historyStartDate && historyEndDate) {
-            const card = document.createElement('div');
-            card.className = 'bento-card';
-            card.style.gridColumn = 'span 6';
-            card.style.gridRow = 'span 5';
-            card.innerHTML = `<h3 class="bento-card-title">History</h3><div class="bento-card-content"><div class="chart-container" style="height: 100%;"><canvas id="bento-history-chart-canvas"></canvas></div></div>`;
+        // --- 4. LAYOUT ENGINE: Place components onto the grid ---
+        
+        // Rule 1: Place all large items first, each in its own row
+        largeItems.forEach(key => {
+            const card = createCardElement(key, 4);
             grid.appendChild(card);
+        });
+        
+        // Rule 2: Pack the remaining items into rows
+        const remainingItems = [...mediumItems, ...smallItems, ...squareItems];
+        let currentRowColumns = 0;
+
+        while (remainingItems.length > 0) {
+            let itemPlacedInRow = false;
+            // Create a prioritized list of item types to try and place
+            const placementOrder = ['medium', 'small', 'square'];
+            
+            for (const itemType of placementOrder) {
+                const itemIndex = remainingItems.findIndex(key => componentDefinitions[key as keyof typeof componentDefinitions].type === itemType);
+                if (itemIndex !== -1) {
+                    const itemKey = remainingItems[itemIndex];
+                    const itemDef = componentDefinitions[itemKey as keyof typeof componentDefinitions];
+                    if (currentRowColumns + itemDef.span <= 4) {
+                        const card = createCardElement(itemKey, itemDef.span);
+                        grid.appendChild(card);
+                        currentRowColumns += itemDef.span;
+                        remainingItems.splice(itemIndex, 1);
+                        itemPlacedInRow = true;
+                    }
+                }
+            }
+
+            // If we've filled the row, or if we can't fit any more items, start a new row
+            if (currentRowColumns >= 4 || !itemPlacedInRow) {
+                currentRowColumns = 0;
+            }
+            
+            // Failsafe: if no item was placed but items remain, force the largest remaining item into a new row
+            if (!itemPlacedInRow && remainingItems.length > 0) {
+                 const nextItemKey = remainingItems.shift()!;
+                 const nextItemDef = componentDefinitions[nextItemKey as keyof typeof componentDefinitions];
+                 const card = createCardElement(nextItemKey, 4); // Place it in a full row
+                 grid.appendChild(card);
+                 currentRowColumns = 0;
+            }
         }
-        if (showOverallProgress) {
-            const card = document.createElement('div');
-            card.className = 'bento-card';
-            card.style.gridColumn = 'span 3';
-            card.style.gridRow = 'span 4';
-            card.innerHTML = `<div class="bento-card-content progress-ring-container" id="bento-progress-ring-container"></div>`;
-            grid.appendChild(card);
-        }
-        if (selectedRecords.length > 0) {
-            const card = document.createElement('div');
-            card.className = 'bento-card';
-            card.style.gridColumn = 'span 6';
-            card.style.width = 'fit-content';
-            card.style.justifySelf = 'center';
-            let html = `<div class="bento-card-content">`;
-            selectedRecords.forEach(r => { html += `<div class="record-item"><span class="record-label">${r.name}</span><div class="record-value"><span>${r.mainStat || r.value}</span><span class="record-context">${r.dateStat || ''}</span></div></div>`; });
-            html += `</div>`;
-            card.innerHTML = html;
-            grid.appendChild(card);
-        }
-        if (selectedTrophies.length > 0) {
-            const card = document.createElement('div');
-            card.className = 'bento-card';
-            card.style.gridColumn = 'span 6';
-            card.style.width = 'fit-content';
-            card.style.justifySelf = 'center';
-            let html = `<div class="bento-card-content">`;
-            selectedTrophies.forEach(t => { html += `<div class="trophy-item"><img src="${chrome.runtime.getURL(t.icon)}" alt="${t.title}" class="trophy-icon" /><div class="trophy-details"><div class="trophy-title">${t.title}</div><div class="trophy-subtitle">${t.subtitle}</div>${t.problemSlug !== 'placeholder' ? `<a href="https://leetcode.com/problems/${t.problemSlug}/" class="trophy-problem">${t.problemTitle}</a>` : ''}</div></div>`; });
-            html += `</div>`;
-            card.innerHTML = html;
-            grid.appendChild(card);
-        }
-        if (selectedMilestones.length > 0) {
-            const card = document.createElement('div');
-            card.className = 'bento-card';
-            card.style.gridColumn = 'span 6';
-            card.style.width = 'fit-content';
-            card.style.justifySelf = 'center';
-            let html = `<div class="bento-card-content"><div class="milestone-timeline"><div class="timeline-line"></div><div class="milestone-list">`;
-            selectedMilestones.forEach(m => {
-                const color = getMilestoneColor(m.type);
-                html += `<div class="milestone-item"><div class="milestone-dot" style="background-color: ${color};"></div><div class="milestone-event" style="color: ${color};">${m.milestone}${getOrdinalSuffix(m.milestone)} ${formatMilestoneType(m.type)}</div><div class="milestone-date">${m.date.toLocaleDateString('en-GB')}</div>${m.problemTitle ? `<a href="https://leetcode.com/problems/${m.problemSlug}/" class="milestone-problem">${m.problemTitle}</a>` : ''}</div>`;
-            });
-            html += `</div></div></div>`;
-            card.innerHTML = html;
-            grid.appendChild(card);
-        }
-        if (selectedSkillNames.length > 0) {
-            const card = document.createElement('div');
-            card.className = 'bento-card';
-            card.style.gridColumn = 'span 6';
-            let html = `<div class="bento-card-content"><div class="skills-table"><div class="skills-header"><div class="skill-cell" style="text-align: left;">Topic</div><div class="skill-cell">Solved</div><div class="skill-cell">Avg. Attempts</div><div class="skill-cell">First Ace</div></div>`;
-            selectedSkillNames.forEach(skill => {
-                const metrics = currentSkillMatrixData.metrics;
-                const solved = metrics.problemsSolved[skill] || 0;
-                const avgTries = metrics.avgTries[skill];
-                const firstAce = metrics.firstAceRate[skill] || 0;
-                html += `<div class="skill-row"><div class="skill-cell" style="text-align: left;">${formatTopicName(skill)}</div><div class="skill-cell">${solved}</div><div class="skill-cell">${avgTries === Infinity ? '∞' : avgTries.toFixed(1)}</div><div class="skill-cell">${firstAce.toFixed(0)}%</div></div>`;
-            });
-            html += `</div></div>`;
-            card.innerHTML = html;
-            grid.appendChild(card);
-        }
-        if (selectedActivityNames.includes("Progress Tracker")) {
-            const card = document.createElement('div');
-            card.className = 'bento-card';
-            card.style.gridColumn = 'span 6';
-            card.style.gridRow = 'span 4';
-            card.innerHTML = `<h3 class="bento-card-title">Problems Solved Over Time</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-progress-tracker-canvas"></canvas></div></div>`;
-            grid.appendChild(card);
-        }
-        if (selectedActivityNames.includes("Coding Clock")) {
-            const card = document.createElement('div');
-            card.className = 'bento-card';
-            card.style.gridColumn = 'span 6';
-            card.style.gridRow = 'span 4';
-            card.innerHTML = `<h3 class="bento-card-title">Submissions by Hour</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-coding-clock-canvas"></canvas></div></div>`;
-            grid.appendChild(card);
-        }
-        if (selectedActivityNames.includes("Submission Signature")) {
-            const card = document.createElement('div');
-            card.className = 'bento-card';
-            card.style.gridColumn = 'span 3';
-            card.style.gridRow = 'span 4';
-            card.innerHTML = `<div class="bento-card-content"><div class="chart-container"><canvas id="bento-submission-signature-canvas"></canvas></div></div>`;
-            grid.appendChild(card);
-        }
-        if (selectedActivityNames.includes("Language Stats")) {
-            const card = document.createElement('div');
-            card.className = 'bento-card';
-            card.style.gridColumn = 'span 3';
-            card.style.gridRow = 'span 4';
-            card.innerHTML = `<div class="bento-card-content"><div class="chart-container"><canvas id="bento-language-stats-canvas"></canvas></div></div>`;
-            grid.appendChild(card);
-        }
+
 
         document.body.appendChild(offscreenContainer);
         const renderNode = document.getElementById('bento-render-node') as HTMLElement;
 
-        // --- 3. RENDER CHARTS & COMPONENTS ---
-        if (showHistory && historyStartDate && historyEndDate) {
-            const chartContainer = offscreenContainer.querySelector('#bento-history-chart-canvas')?.parentElement;
-            if (chartContainer) {
-                const bentoInteractiveFilters: InteractiveChartFilters = { primaryView: 'Problems Solved', secondaryView: 'Difficulty', timeRange: 'All Time', difficulty: 'All', brushWindow: [historyStartDate, historyEndDate] };
-                renderOrUpdateInteractiveChart(chartContainer as HTMLElement, processedDataCache, bentoInteractiveFilters, undefined, { isBentoMode: true });
-            }
-        }
-        if (showOverallProgress) {
-            const ringContainer = offscreenContainer.querySelector('#bento-progress-ring-container');
-            if (ringContainer) {
-                const stats = getSolvedStats(processedDataCache);
-                renderProgressRing(ringContainer as HTMLElement, stats);
-            }
-        }
-        if (selectedActivityNames.includes("Progress Tracker")) {
-            const chartContainer = offscreenContainer.querySelector('#bento-progress-tracker-canvas')?.parentElement;
-            if (chartContainer) {
-                const cumulativeView = getSmartCumulativeView('All Time', processedDataCache);
-                const stats = getCumulativeStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All', cumulativeView });
-                if (stats) renderOrUpdateCumulativeLineChart(chartContainer as HTMLElement, stats, { timeRange: 'All Time', difficulty: 'All', cumulativeView }, undefined, { isInteractive: false, hidePoints: true });
-            }
-        }
-        if (selectedActivityNames.includes("Coding Clock")) {
-            const chartContainer = offscreenContainer.querySelector('#bento-coding-clock-canvas')?.parentElement;
-            if (chartContainer) {
-                const stats = getCodingClockStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All', clockView: 'HourOfDay' });
-                renderOrUpdateStackedBarChart(chartContainer as HTMLElement, stats, undefined, { isInteractive: false });
-            }
-        }
-        if (selectedActivityNames.includes("Submission Signature")) {
-    const chartContainer = offscreenContainer.querySelector('#bento-submission-signature-canvas')?.parentElement;
-    if (chartContainer) {
-        const stats = getSubmissionSignatureStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All' });
-        // Add the legendConfig property to the options object
-        renderOrUpdateDoughnutChart(chartContainer as HTMLElement, stats, { difficulty: 'All' }, undefined, { 
-            isInteractive: false, 
-            legendConfig: { display: true, position: 'bottom' } 
-        });
-    }
-}
-        if (selectedActivityNames.includes("Language Stats")) {
-            const chartContainer = offscreenContainer.querySelector('#bento-language-stats-canvas')?.parentElement;
-            if (chartContainer) {
-                const stats = getLanguageStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All' });
-                renderOrUpdateHorizontalBarChart(chartContainer as HTMLElement, stats, { difficulty: 'All' }, undefined, { isInteractive: false });
-            }
-        }
+        // --- 5. RENDER CHARTS & COMPONENTS ---
+        await renderComponentContent(offscreenContainer, selections, currentSkillMatrixData);
         
         await new Promise(resolve => setTimeout(resolve, 50));
         const generatedCanvas = await html2canvas(renderNode, { backgroundColor: null, useCORS: true, width: RENDER_WIDTH, height: RENDER_HEIGHT, scale: 1 });
@@ -308,6 +193,152 @@ async function renderBentoPreview() {
         isRendering = false;
     }
 }
+
+// Helper to create the basic card structure
+function createCardElement(key: string, span: number): HTMLElement {
+    const card = document.createElement('div');
+    card.className = 'bento-card';
+    card.style.gridColumn = `span ${span}`;
+    card.id = `bento-card-${key}`; // Assign a unique ID for content rendering
+    return card;
+}
+
+// Helper to populate cards with their specific content
+async function renderComponentContent(container: HTMLElement, selections: any, skillData: SkillMatrixData) {
+    if (!legacyStats || !processedDataCache) return;
+
+    const { history, records, trophies, milestones, skills, activities } = selections;
+    const historyStartDate = (document.getElementById('bento-history-start-date') as HTMLInputElement)?.valueAsDate;
+    const historyEndDate = (document.getElementById('bento-history-end-date') as HTMLInputElement)?.valueAsDate;
+    
+    // Render History
+    if (history && historyStartDate && historyEndDate) {
+        const card = container.querySelector('#bento-card-history');
+        if (card) {
+            card.innerHTML = `<h3 class="bento-card-title">Activity: ${historyStartDate.toLocaleDateString()} - ${historyEndDate.toLocaleDateString()}</h3><div class="bento-card-content"><div class="chart-container" style="height: 100%;"><canvas id="bento-history-chart-canvas"></canvas></div></div>`;
+            const chartContainer = card.querySelector('.chart-container');
+            const bentoInteractiveFilters: InteractiveChartFilters = { primaryView: 'Problems Solved', secondaryView: 'Difficulty', timeRange: 'All Time', difficulty: 'All', brushWindow: [historyStartDate, historyEndDate] };
+            renderOrUpdateInteractiveChart(chartContainer as HTMLElement, processedDataCache, bentoInteractiveFilters, undefined, { isBentoMode: true });
+        }
+    }
+
+    // Render Overall Progress
+    if (records.includes("Overall Progress")) {
+        const card = container.querySelector('#bento-card-overallProgress');
+        if (card) {
+            card.innerHTML = `<div class="bento-card-content progress-ring-container" id="bento-progress-ring-container"></div>`;
+            const ringContainer = card.querySelector('#bento-progress-ring-container');
+            if (ringContainer) {
+                const stats = getSolvedStats(processedDataCache);
+                renderProgressRing(ringContainer as HTMLElement, stats);
+            }
+        }
+    }
+
+    // Render Records
+    const selectedRecords = legacyStats.records.filter(r => records.includes(r.name) && r.name !== "Overall Progress");
+    if (selectedRecords.length > 0) {
+        const card = container.querySelector('#bento-card-records');
+        if (card) {
+            let html = `<div class="bento-card-content">`;
+            selectedRecords.forEach(r => { html += `<div class="record-item"><span class="record-label">${r.name}</span><div class="record-value"><span>${r.mainStat || r.value}</span><span class="record-context">${r.dateStat || ''}</span></div></div>`; });
+            html += `</div>`;
+            card.innerHTML = html;
+        }
+    }
+
+    // Render Trophies
+    const selectedTrophies = legacyStats.trophies.filter(t => t.achieved && trophies.includes(t.id));
+    if (selectedTrophies.length > 0) {
+        const card = container.querySelector('#bento-card-trophies');
+        if (card) {
+            let html = `<div class="bento-card-content">`;
+            selectedTrophies.forEach(t => { html += `<div class="trophy-item"><img src="${chrome.runtime.getURL(t.icon)}" alt="${t.title}" class="trophy-icon" /><div class="trophy-details"><div class="trophy-title">${t.title}</div><div class="trophy-subtitle">${t.subtitle}</div>${t.problemSlug !== 'placeholder' ? `<a href="https://leetcode.com/problems/${t.problemSlug}/" class="trophy-problem">${t.problemTitle}</a>` : ''}</div></div>`; });
+            html += `</div>`;
+            card.innerHTML = html;
+        }
+    }
+    
+    // Render Milestones
+    const selectedMilestones = legacyStats.milestones.filter((m, index) => milestones.includes(index));
+    if (selectedMilestones.length > 0) {
+        const card = container.querySelector('#bento-card-milestones');
+        if (card) {
+            let html = `<div class="bento-card-content"><div class="milestone-timeline"><div class="timeline-line"></div><div class="milestone-list">`;
+            selectedMilestones.forEach(m => {
+                const color = getMilestoneColor(m.type);
+                html += `<div class="milestone-item"><div class="milestone-dot" style="background-color: ${color};"></div><div class="milestone-event" style="color: ${color};">${m.milestone}${getOrdinalSuffix(m.milestone)} ${formatMilestoneType(m.type)}</div><div class="milestone-date">${m.date.toLocaleDateString('en-GB')}</div>${m.problemTitle ? `<a href="https://leetcode.com/problems/${m.problemSlug}/" class="milestone-problem">${m.problemTitle}</a>` : ''}</div>`;
+            });
+            html += `</div></div></div>`;
+            card.innerHTML = html;
+        }
+    }
+
+    // Render Skills
+    if (skills.length > 0) {
+        const card = container.querySelector('#bento-card-skills');
+        if (card) {
+            let html = `<div class="bento-card-content"><div class="skills-table"><div class="skills-header"><div class="skill-cell" style="text-align: left;">Topic</div><div class="skill-cell">Solved</div><div class="skill-cell">Avg. Attempts</div><div class="skill-cell">First Ace</div></div>`;
+            skills.forEach((skill: string) => {
+                const metrics = skillData.metrics;
+                const solved = metrics.problemsSolved[skill] || 0;
+                const avgTries = metrics.avgTries[skill];
+                const firstAce = metrics.firstAceRate[skill] || 0;
+                html += `<div class="skill-row"><div class="skill-cell" style="text-align: left;">${formatTopicName(skill)}</div><div class="skill-cell">${solved}</div><div class="skill-cell">${avgTries === Infinity ? '∞' : avgTries.toFixed(1)}</div><div class="skill-cell">${firstAce.toFixed(0)}%</div></div>`;
+            });
+            html += `</div></div>`;
+            card.innerHTML = html;
+        }
+    }
+
+    // Render Activity Charts
+    if (activities.includes("Progress Tracker")) {
+        const card = container.querySelector('#bento-card-progressTracker');
+        if (card) {
+            card.innerHTML = `<h3 class="bento-card-title">Problems Solved Over Time</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-progress-tracker-canvas"></canvas></div></div>`;
+            const chartContainer = card.querySelector('.chart-container');
+            if (chartContainer) {
+                const cumulativeView = getSmartCumulativeView('All Time', processedDataCache);
+                const stats = getCumulativeStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All', cumulativeView });
+                if (stats) renderOrUpdateCumulativeLineChart(chartContainer as HTMLElement, stats, { timeRange: 'All Time', difficulty: 'All', cumulativeView }, undefined, { isInteractive: false });
+            }
+        }
+    }
+    if (activities.includes("Coding Clock")) {
+        const card = container.querySelector('#bento-card-codingClock');
+        if (card) {
+            card.innerHTML = `<h3 class="bento-card-title">Submissions by Hour</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-coding-clock-canvas"></canvas></div></div>`;
+            const chartContainer = card.querySelector('.chart-container');
+            if (chartContainer) {
+                const stats = getCodingClockStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All', clockView: 'HourOfDay' });
+                renderOrUpdateStackedBarChart(chartContainer as HTMLElement, stats, undefined, { isInteractive: false });
+            }
+        }
+    }
+    if (activities.includes("Submission Signature")) {
+        const card = container.querySelector('#bento-card-submissionSignature');
+        if (card) {
+            card.innerHTML = `<div class="bento-card-content"><div class="chart-container"><canvas id="bento-submission-signature-canvas"></canvas></div></div>`;
+            const chartContainer = card.querySelector('.chart-container');
+            if (chartContainer) {
+                const stats = getSubmissionSignatureStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All' });
+                renderOrUpdateDoughnutChart(chartContainer as HTMLElement, stats, { difficulty: 'All' }, undefined, { isInteractive: false, legendConfig: { display: true, position: 'bottom' } });
+            }
+        }
+    }
+    if (activities.includes("Language Stats")) {
+        const card = container.querySelector('#bento-card-languageStats');
+        if (card) {
+            card.innerHTML = `<div class="bento-card-content"><div class="chart-container"><canvas id="bento-language-stats-canvas"></canvas></div></div>`;
+            const chartContainer = card.querySelector('.chart-container');
+            if (chartContainer) {
+                const stats = getLanguageStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All' });
+                renderOrUpdateHorizontalBarChart(chartContainer as HTMLElement, stats, { difficulty: 'All' }, undefined, { isInteractive: false });
+            }
+        }
+    }
+}
+
 
 export function initializeBentoGenerator(data: ProcessedData, username: string) {
     processedDataCache = data;
@@ -415,6 +446,7 @@ function populateAccordion() {
 
     if (activityContent) {
         activityContent.innerHTML = '';
+        const ACTIVITY_CHARTS = ["Submission Signature", "Language Stats", "Progress Tracker", "Coding Clock"];
         ACTIVITY_CHARTS.forEach(name => {
             activityContent.appendChild(createCheckbox(`bento-checkbox-activity-${name.replace(/\s+/g, '-')}`, name, 'activity-name', name, 'bento-activity-checkbox'));
         });
