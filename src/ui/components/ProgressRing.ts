@@ -50,8 +50,8 @@ export function renderProgressRing(container: HTMLElement, data: SolvedStats): v
   const { totalSolved, easySolved, mediumSolved, hardSolved, totalSubmissions } = data;
 
   // The viewBox is made smaller to "hug" the content and reduce padding.
-  const viewBoxWidth = 200;
-  const viewBoxHeight = 200;
+  const viewBoxWidth = 220;
+  const viewBoxHeight = 220;
   const radius = 70; // Radius is reduced to shrink the ring
   const strokeWidth = 5;
   const centerX = viewBoxWidth / 2;
@@ -102,7 +102,7 @@ export function renderProgressRing(container: HTMLElement, data: SolvedStats): v
       <text x="${centerX}" y="${centerY + 35}" fill="${colors.text.primary}" text-anchor="middle" dominant-baseline="middle" style="font-size: 1rem;">${"Solved"}</text>
       
       <!-- Submissions text at the bottom of the SVG canvas -->
-      <text x="${centerX}" y="${viewBoxHeight - 20}" fill="${colors.text.primary}" text-anchor="middle" style="font-size: 1.25rem;">${totalSubmissions} Submissions</text>
+      <text x="${centerX}" y="${viewBoxHeight - 15}" fill="${colors.text.primary}" text-anchor="middle" style="font-size: 1.5rem;">${totalSubmissions} Submissions</text>
     </svg>
   `;
 }
