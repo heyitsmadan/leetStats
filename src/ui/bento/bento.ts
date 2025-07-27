@@ -300,7 +300,7 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (skills.length > 0) {
         const card = container.querySelector('#bento-card-skills');
         if (card) {
-            let html = `<h3 class="bento-card-title">Skills Analysis</h3><div class="bento-card-content"><div class="skills-table"><div class="skills-header"><div class="skill-cell" style="text-align: left;">Topic</div><div class="skill-cell">Solved</div><div class="skill-cell">Avg. Attempts</div><div class="skill-cell">First Ace</div></div>`;
+            let html = `<h3 class="bento-card-title">Skills</h3><div class="bento-card-content"><div class="skills-table"><div class="skills-header"><div class="skill-cell" style="text-align: left;">Topic</div><div class="skill-cell">Solved</div><div class="skill-cell">Avg. Attempts</div><div class="skill-cell">First Ace</div></div>`;
             skills.forEach((skill: string) => {
                 const metrics = skillData.metrics;
                 const solved = metrics.problemsSolved[skill] || 0;

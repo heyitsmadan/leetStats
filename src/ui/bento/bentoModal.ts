@@ -92,15 +92,14 @@ export function createBentoModalHTML(): string {
         display: flex;
         flex-direction: column;
         min-height: 0;
-        /* KEY CHANGE: Center content within cards */
+        /* Center content within cards */
         align-items: center;
         justify-content: center;
     }
     
-    /* Styles for list-like content to ensure they take full width inside the centered flexbox */
-    .render-safe .record-list,
-    .render-safe .trophy-list,
-    .render-safe .milestone-timeline,
+    /* KEY CHANGE:
+       Skills table should always be full width. Other lists will shrink to fit their content.
+       This allows them to be properly centered inside a full-width card, instead of stretching. */
     .render-safe .skills-table {
         width: 100%;
     }
@@ -153,7 +152,7 @@ export function createBentoModalHTML(): string {
 
   return `
     <div id="bento-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="bg-dark-layer-1 rounded-xl w-full max-w-2xl h-full max-h-[95vh] shadow-2xl flex flex-row p-1.5 gap-1.5">
+        <div class="bg-dark-layer-1 rounded-xl w-full max-w-7xl h-full max-h-[95vh] shadow-2xl flex flex-row p-1.5 gap-1.5">
 
             <!-- Left Panel: Customization -->
             <div class="w-1/3 max-w-xs bg-dark-layer-0 rounded-lg p-4 overflow-y-auto">
