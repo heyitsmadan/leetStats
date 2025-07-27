@@ -15,7 +15,8 @@ import { renderOrUpdateInteractiveChart } from '../components/InteractiveChart';
 import { renderProgressRing } from '../components/ProgressRing';
 import { getSmartCumulativeView } from '../layout';
 import { colors } from '../theme/colors';
-import html2canvas from 'html2canvas';
+// CHANGE 1: Import 'toBlob' from the new, faster library 'html-to-image'.
+import { toBlob } from 'html-to-image';
 
 // --- Module-level state ---
 let legacyStats: LegacyStats | null = null;
@@ -26,10 +27,30 @@ let isRendering = false;
 let usernameCache = '';
 
 // --- Configuration ---
-// Define a fixed width for rendering; height will be dynamic.
 const RENDER_WIDTH = 900;
 
 // --- Helper functions ---
+
+/**
+ * A debounce function to prevent a function from being called too frequently.
+ * This is crucial for performance with expensive operations like image generation.
+ * @param func The function to debounce.
+ * @param delay The delay in milliseconds.
+ * @returns A debounced version of the function.
+ */
+function debounce(func: (...args: any[]) => void, delay: number) {
+    let timeoutId: number;
+    return (...args: any[]) => {
+        clearTimeout(timeoutId);
+        timeoutId = window.setTimeout(() => {
+            // FIX: Call the function directly. The 'this' context is not needed
+            // for the callback function and was causing the implicit 'any' error.
+            func(...args);
+        }, delay);
+    };
+}
+
+
 function getMilestoneColor(type: string): string {
   const colorMap: { [key: string]: string } = { 'easy': colors.problems.easy, 'medium': colors.problems.medium, 'hard': colors.problems.hard, 'problems_solved': colors.status.accepted, 'submissions': '#64b5f6' };
   return colorMap[type] || colors.text.primary;
@@ -92,7 +113,6 @@ async function renderBentoPreview() {
         };
 
         // --- 2. LAYOUT ENGINE: Categorize selected components ---
-        // CHANGE: Separate 'skills' to be placed last.
         const skillsSelected = componentDefinitions.skills.condition;
         const largeItems = Object.keys(componentDefinitions).filter(key => key !== 'skills' && componentDefinitions[key as keyof typeof componentDefinitions].type === 'large' && componentDefinitions[key as keyof typeof componentDefinitions].condition);
         const mediumItems = Object.keys(componentDefinitions).filter(key => componentDefinitions[key as keyof typeof componentDefinitions].type === 'medium' && componentDefinitions[key as keyof typeof componentDefinitions].condition);
@@ -105,7 +125,6 @@ async function renderBentoPreview() {
         offscreenContainer.style.left = '-9999px';
         offscreenContainer.style.top = '0px';
         offscreenContainer.style.width = `${RENDER_WIDTH}px`;
-        // CHANGE: Height is now dynamic.
         offscreenContainer.style.height = 'auto';
 
         offscreenContainer.innerHTML = `
@@ -118,32 +137,24 @@ async function renderBentoPreview() {
         const grid = offscreenContainer.querySelector('#bento-grid')!;
         
         // --- 4. LAYOUT ENGINE: Place components onto the grid ---
-        
-        // Rule 1: Place all non-skill large items first, each in its own row.
         largeItems.forEach(key => {
-            const card = createCardElement(key, 4);
-            grid.appendChild(card);
+            grid.appendChild(createCardElement(key, 4));
         });
         
-        // Rule 2: Pack the medium, small, and square items into rows.
         const remainingItems = [...mediumItems, ...smallItems, ...squareItems];
         let currentRowColumns = 0;
 
         while (remainingItems.length > 0) {
-            // CHANGE: If only one non-full-width item remains and we're starting a new row,
-            // make it full-width to avoid a lonely, uncentered card.
             if (remainingItems.length === 1 && currentRowColumns === 0) {
                 const lastItemKey = remainingItems.shift()!;
-                const card = createCardElement(lastItemKey, 4);
-                grid.appendChild(card);
-                continue; // End the loop
+                grid.appendChild(createCardElement(lastItemKey, 4));
+                continue;
             }
             
             let itemPlacedInRow = false;
             const placementOrder = ['medium', 'small', 'square'];
             
             for (const itemType of placementOrder) {
-                // Find an item of the current type that can fit in the current row
                 const itemIndex = remainingItems.findIndex(key => {
                     const def = componentDefinitions[key as keyof typeof componentDefinitions];
                     return def.type === itemType && (currentRowColumns + def.span <= 4);
@@ -153,25 +164,21 @@ async function renderBentoPreview() {
                     const itemKey = remainingItems[itemIndex];
                     const itemDef = componentDefinitions[itemKey as keyof typeof componentDefinitions];
                     
-                    const card = createCardElement(itemKey, itemDef.span);
-                    grid.appendChild(card);
+                    grid.appendChild(createCardElement(itemKey, itemDef.span));
                     currentRowColumns += itemDef.span;
                     remainingItems.splice(itemIndex, 1);
                     itemPlacedInRow = true;
-                    break; // Item placed, restart inner loop to find next best fit for the row
+                    break;
                 }
             }
 
-            // If the row is full or no item could be placed, start a new row.
             if (currentRowColumns >= 4 || !itemPlacedInRow) {
                 currentRowColumns = 0;
             }
         }
 
-        // CHANGE: Rule 3: Place the skills card at the very end of the grid.
         if (skillsSelected) {
-            const card = createCardElement('skills', 4);
-            grid.appendChild(card);
+            grid.appendChild(createCardElement('skills', 4));
         }
 
         document.body.appendChild(offscreenContainer);
@@ -180,29 +187,37 @@ async function renderBentoPreview() {
         // --- 5. RENDER CHARTS & COMPONENTS ---
         await renderComponentContent(renderNode, selections, currentSkillMatrixData);
         
-        // Wait for any final rendering updates (e.g., charts initializing)
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        // CHANGE: Use the actual scrollHeight of the rendered content for dynamic height.
         const renderHeight = renderNode.scrollHeight;
-        const generatedCanvas = await html2canvas(renderNode, { 
-            backgroundColor: null, 
-            useCORS: true, 
-            width: RENDER_WIDTH, 
-            height: renderHeight, 
-            scale: 1 
+        
+        // CHANGE 2: Replace the slow 'html2canvas' with the much faster 'toBlob'.
+        const blob = await toBlob(renderNode, {
+            width: RENDER_WIDTH,
+            height: renderHeight,
+            backgroundColor: 'transparent',
         });
 
+        if (!blob) {
+            throw new Error("Failed to generate image blob.");
+        }
+        
+        currentPreviewBlob = blob;
+        if (shareBtn) shareBtn.removeAttribute('disabled');
+
+        // Draw the generated blob onto our preview canvas
         const ctx = previewCanvas.getContext('2d');
         if (ctx) {
-            previewCanvas.width = generatedCanvas.width;
-            previewCanvas.height = generatedCanvas.height;
-            ctx.drawImage(generatedCanvas, 0, 0);
+            const img = new Image();
+            const url = URL.createObjectURL(blob);
+            img.onload = () => {
+                previewCanvas.width = img.width;
+                previewCanvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                URL.revokeObjectURL(url); // Clean up the object URL
+            };
+            img.src = url;
         }
-        generatedCanvas.toBlob((blob) => {
-            currentPreviewBlob = blob;
-            if (shareBtn) shareBtn.removeAttribute('disabled');
-        }, 'image/png');
 
         if (loader) loader.style.display = 'none';
         if (previewCanvas) previewCanvas.style.display = 'block';
@@ -216,18 +231,14 @@ async function renderBentoPreview() {
     }
 }
 
-// Helper to create the basic card structure.
-// It now also creates the inner content wrapper.
 function createCardElement(key: string, span: number): HTMLElement {
     const card = document.createElement('div');
     card.className = 'bento-card';
     card.style.gridColumn = `span ${span}`;
     card.id = `bento-card-${key}`;
-    // The content will be added later by renderComponentContent
     return card;
 }
 
-// Helper to populate cards with their specific content
 async function renderComponentContent(container: HTMLElement, selections: any, skillData: SkillMatrixData) {
     if (!legacyStats || !processedDataCache) return;
 
@@ -361,6 +372,8 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     }
 }
 
+// CHANGE 3: Create a debounced version of the render function for better performance.
+const debouncedRenderBentoPreview = debounce(renderBentoPreview, 400);
 
 export function initializeBentoGenerator(data: ProcessedData, username: string) {
     processedDataCache = data;
@@ -380,6 +393,7 @@ export function initializeBentoGenerator(data: ProcessedData, username: string) 
         if (!document.getElementById('bento-records-accordion-content')?.hasChildNodes()) {
             populateAccordion();
         }
+        // Call the render function directly when first opening the modal.
         renderBentoPreview();
     });
 
@@ -436,9 +450,14 @@ function populateAccordion() {
         oneYearAgo.setFullYear(today.getFullYear() - 1);
         endDateInput.valueAsDate = today;
         startDateInput.valueAsDate = oneYearAgo;
-        historyCheckbox.addEventListener('change', (e) => { datePickers.style.display = (e.target as HTMLInputElement).checked ? 'block' : 'none'; renderBentoPreview(); });
-        startDateInput.addEventListener('change', renderBentoPreview);
-        endDateInput.addEventListener('change', renderBentoPreview);
+        
+        // Use the debounced function for all change events
+        historyCheckbox.addEventListener('change', (e) => { 
+            datePickers.style.display = (e.target as HTMLInputElement).checked ? 'block' : 'none'; 
+            debouncedRenderBentoPreview(); 
+        });
+        startDateInput.addEventListener('change', debouncedRenderBentoPreview);
+        endDateInput.addEventListener('change', debouncedRenderBentoPreview);
     }
 
     if (recordsContent && legacyStats?.records) {
@@ -484,6 +503,7 @@ function createCheckbox(id: string, text: string, dataAttribute: string, dataVal
     const label = document.createElement('label');
     label.className = 'flex items-center space-x-3 p-2 rounded-md hover:bg-white/10 cursor-pointer';
     label.innerHTML = `<input type="checkbox" id="${id}" data-${dataAttribute}="${dataValue}" class="${customClass} form-checkbox h-4 w-4 rounded bg-transparent border-gray-500 text-blue-500 focus:ring-blue-500"><span class="text-sm text-gray-300">${text}</span>`;
-    label.querySelector('input')?.addEventListener('change', renderBentoPreview);
+    // Use the debounced function for all checkbox change events
+    label.querySelector('input')?.addEventListener('change', debouncedRenderBentoPreview);
     return label;
 }
