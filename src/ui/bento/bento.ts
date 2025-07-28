@@ -251,9 +251,20 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (history && historyStartDate && historyEndDate) {
         const card = container.querySelector('#bento-card-history');
         if (card) {
+            const primaryView = (document.querySelector('#bento-history-primary-toggle button[data-state="active"]') as HTMLElement)?.dataset.view || 'Problems Solved';
+            const secondaryView = (document.querySelector('#bento-history-secondary-toggle button[data-state="active"]') as HTMLElement)?.dataset.view || 'Difficulty';
+
             card.innerHTML = `<h3 class="bento-card-title">Activity: ${historyStartDate.toLocaleDateString()} - ${historyEndDate.toLocaleDateString()}</h3><div class="bento-card-content"><div class="chart-container" style="height: 100%;"><canvas id="bento-history-chart-canvas"></canvas></div></div>`;
             const chartContainer = card.querySelector('.chart-container');
-            const bentoInteractiveFilters: InteractiveChartFilters = { primaryView: 'Problems Solved', secondaryView: 'Difficulty', timeRange: 'All Time', difficulty: 'All', brushWindow: [historyStartDate, historyEndDate] };
+            
+            const bentoInteractiveFilters: InteractiveChartFilters = {
+                primaryView: primaryView as 'Problems Solved' | 'Submissions',
+                secondaryView: secondaryView as 'Difficulty' | 'Language' | 'Status',
+                timeRange: 'All Time', // This is effectively ignored because we provide a brushWindow
+                difficulty: 'All', // This is a top-level filter, not used by the bento chart itself
+                brushWindow: [historyStartDate, historyEndDate]
+            };
+
             renderOrUpdateInteractiveChart(chartContainer as HTMLElement, processedDataCache, bentoInteractiveFilters, undefined, { isBentoMode: true });
         }
     }
@@ -450,26 +461,76 @@ function populateAccordion() {
     if (historyContent) {
         historyContent.innerHTML = ''; // Clear previous content
 
+        const controlsContainer = document.createElement('div');
+        controlsContainer.id = 'history-controls-container';
+        controlsContainer.className = 'space-y-2 mt-2 pl-8';
+        controlsContainer.style.display = 'none'; // Initially hidden
+
+        const togglesWrapper = document.createElement('div');
+        togglesWrapper.className = 'flex gap-2 items-center';
+
+        // Primary View Toggle
+        const primaryToggleContainer = document.createElement('div');
+        primaryToggleContainer.id = 'bento-history-primary-toggle';
+        primaryToggleContainer.className = 'text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]';
+        primaryToggleContainer.innerHTML = `
+            <button data-view="Problems Solved" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Problems Solved</button>
+            <button data-view="Submissions" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Submissions</button>
+        `;
+        togglesWrapper.appendChild(primaryToggleContainer);
+        
+        // Secondary View Toggle
+        const secondaryToggleContainer = document.createElement('div');
+        secondaryToggleContainer.id = 'bento-history-secondary-toggle';
+        secondaryToggleContainer.className = 'text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]';
+        secondaryToggleContainer.innerHTML = `
+            <button data-view="Language" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Language</button>
+            <button data-view="Difficulty" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Difficulty</button>
+            <button data-view="Status" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Status</button>
+        `;
+        togglesWrapper.appendChild(secondaryToggleContainer);
+        controlsContainer.appendChild(togglesWrapper);
+
+        // Date Pickers
         const datePickers = document.createElement('div');
         datePickers.id = 'history-date-pickers';
-        datePickers.className = 'space-y-2 mt-2 pl-8';
-        datePickers.style.display = 'none'; // Initially hidden
+        datePickers.className = 'flex gap-2 items-center mt-2';
         datePickers.innerHTML = `
-            <label for="bento-history-start-date" class="text-xs text-gray-400">Start Date</label>
-            <input type="date" id="bento-history-start-date" class="w-full bg-dark-layer-0 rounded p-1 text-sm text-gray-300 border border-dark-divider-3">
-            <label for="bento-history-end-date" class="text-xs text-gray-400">End Date</label>
-            <input type="date" id="bento-history-end-date" class="w-full bg-dark-layer-0 rounded p-1 text-sm text-gray-300 border border-dark-divider-3">
+            <input type="date" id="bento-history-start-date" class="bg-dark-layer-0 rounded p-1 text-sm text-gray-300 border border-dark-divider-3">
+            <span class="text-gray-400">-</span>
+            <input type="date" id="bento-history-end-date" class="bg-dark-layer-0 rounded p-1 text-sm text-gray-300 border border-dark-divider-3">
         `;
+        controlsContainer.appendChild(datePickers);
 
+        // Main Checkbox
         const historyCheckboxCallback = (isChecked: boolean) => {
-            datePickers.style.display = isChecked ? 'block' : 'none';
+            controlsContainer.style.display = isChecked ? 'block' : 'none';
         };
-
         const checkboxContainer = createCheckbox('bento-checkbox-history', 'Show History Chart', 'historyToggle', 'true', 'bento-history-checkbox', historyCheckboxCallback);
         
         historyContent.appendChild(checkboxContainer);
-        historyContent.appendChild(datePickers);
-        
+        historyContent.appendChild(controlsContainer);
+
+        // Set up event listeners for toggles
+        document.querySelectorAll('#bento-history-primary-toggle button').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.currentTarget as HTMLElement;
+                document.querySelectorAll('#bento-history-primary-toggle button').forEach(b => b.setAttribute('data-state', 'inactive'));
+                target.setAttribute('data-state', 'active');
+                debouncedRenderBentoPreview();
+            });
+        });
+
+        document.querySelectorAll('#bento-history-secondary-toggle button').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.currentTarget as HTMLElement;
+                document.querySelectorAll('#bento-history-secondary-toggle button').forEach(b => b.setAttribute('data-state', 'inactive'));
+                target.setAttribute('data-state', 'active');
+                debouncedRenderBentoPreview();
+            });
+        });
+
+        // Set up date pickers
         const startDateInput = datePickers.querySelector('#bento-history-start-date') as HTMLInputElement;
         const endDateInput = datePickers.querySelector('#bento-history-end-date') as HTMLInputElement;
         const today = new Date();
@@ -482,9 +543,17 @@ function populateAccordion() {
         endDateInput.addEventListener('change', debouncedRenderBentoPreview);
     }
 
-    if (recordsContent && legacyStats?.records) {
+    if (recordsContent && legacyStats?.records && processedDataCache) {
         recordsContent.innerHTML = '';
-        recordsContent.appendChild(createCheckbox(`bento-checkbox-record-overall-progress`, "Overall Progress", 'recordName', "Overall Progress", 'bento-record-checkbox'));
+        const solvedStats = getSolvedStats(processedDataCache);
+        const overallProgressCheckbox = createCheckbox(`bento-checkbox-record-overall-progress`, "Overall Progress", 'recordName', "Overall Progress", 'bento-record-checkbox');
+        const overallProgressStat = document.createElement('div');
+        overallProgressStat.className = 'text-sm text-label-3 dark:text-dark-label-3 pl-4';
+        overallProgressStat.textContent = `${solvedStats.totalSolved} Solved`;
+        overallProgressStat.style.pointerEvents = 'none';
+        overallProgressCheckbox.appendChild(overallProgressStat);
+        recordsContent.appendChild(overallProgressCheckbox);
+
         legacyStats.records.forEach(record => {
             if (record && record.name) {
                 const checkboxRow = createCheckbox(
@@ -519,9 +588,22 @@ function populateAccordion() {
     if (trophiesContent && legacyStats?.trophies) {
         trophiesContent.innerHTML = '';
         legacyStats.trophies.filter(t => t.achieved).forEach(trophy => {
-            // Defensive check for trophy and its properties
             if (trophy && trophy.id && trophy.title) {
-                trophiesContent.appendChild(createCheckbox(`bento-checkbox-trophy-${trophy.id}`, trophy.title, 'trophyId', trophy.id, 'bento-trophy-checkbox'));
+                const checkboxRow = createCheckbox(`bento-checkbox-trophy-${trophy.id}`, trophy.title, 'trophyId', trophy.id, 'bento-trophy-checkbox');
+                
+                const leftSide = checkboxRow.firstElementChild as HTMLElement;
+                if (leftSide) {
+                    leftSide.classList.remove('w-full', 'max-w-[192px]', 'flex-1');
+                    leftSide.classList.add('flex-grow');
+                }
+
+                const subtitleContainer = document.createElement('div');
+                subtitleContainer.className = 'text-sm text-label-3 dark:text-dark-label-3 pl-4 truncate';
+                subtitleContainer.textContent = trophy.subtitle;
+                subtitleContainer.style.pointerEvents = 'none';
+                checkboxRow.appendChild(subtitleContainer);
+                
+                trophiesContent.appendChild(checkboxRow);
             }
         });
     }
@@ -529,10 +611,17 @@ function populateAccordion() {
     if (milestonesContent && legacyStats?.milestones) {
         milestonesContent.innerHTML = '';
         legacyStats.milestones.forEach((milestone, index) => {
-             // Defensive check for milestone
             if (milestone) {
                 const labelText = `${milestone.milestone}${getOrdinalSuffix(milestone.milestone)} ${formatMilestoneType(milestone.type)}`;
-                milestonesContent.appendChild(createCheckbox(`bento-checkbox-milestone-${index}`, labelText, 'milestoneIndex', index.toString(), 'bento-milestone-checkbox'));
+                const checkboxRow = createCheckbox(`bento-checkbox-milestone-${index}`, labelText, 'milestoneIndex', index.toString(), 'bento-milestone-checkbox');
+                
+                const dateContainer = document.createElement('div');
+                dateContainer.className = 'text-sm text-label-3 dark:text-dark-label-3 pl-4';
+                dateContainer.textContent = milestone.date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                dateContainer.style.pointerEvents = 'none';
+                checkboxRow.appendChild(dateContainer);
+
+                milestonesContent.appendChild(checkboxRow);
             }
         });
     }

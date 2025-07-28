@@ -152,51 +152,70 @@ export function createBentoModalHTML(): string {
 
   return `
     <div id="bento-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="bg-dark-layer-1 rounded-xl w-full max-w-4xl h-full max-h-[95vh] shadow-2xl flex flex-row p-1.5 gap-1.5">
+        <div class="bg-dark-layer-1 rounded-xl w-full max-w-6xl h-full max-h-[95vh] shadow-2xl flex flex-row p-1.5 gap-1.5">
 
             <!-- Left Panel: Customization -->
-            <div class="w-2/5 max-w-md bg-dark-layer-0 rounded-lg p-4 overflow-y-auto">
+            <div class="w-1/2 max-w-2xl bg-dark-layer-0 rounded-lg p-4 overflow-y-auto">
                 <h2 class="text-xl font-bold text-white mb-4">Customize Card</h2>
                 <div class="space-y-2">
                     <!-- History Section -->
                      <div class="bg-dark-layer-1 rounded-lg">
-                        <div class="bento-accordion-header flex justify-between items-center p-3 cursor-pointer"><h3 class="font-semibold text-white">History</h3><svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
-                        <div id="bento-history-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;">
-                            <label class="flex items-center space-x-3 p-2 rounded-md hover:bg-white/10 cursor-pointer">
-                                <input type="checkbox" id="bento-checkbox-history" class="form-checkbox h-4 w-4 rounded bg-transparent border-gray-500 text-blue-500 focus:ring-blue-500">
-                                <span class="text-sm text-gray-300">Show History Chart</span>
-                            </label>
-                            <div id="history-date-pickers" class="space-y-2 mt-2 pl-8" style="display: none;">
-                                 <label for="bento-history-start-date" class="text-xs text-gray-400">Start Date</label>
-                                 <input type="date" id="bento-history-start-date" class="w-full bg-dark-layer-0 rounded p-1 text-sm text-gray-300 border border-dark-divider-3">
-                                 <label for="bento-history-end-date" class="text-xs text-gray-400">End Date</label>
-                                 <input type="date" id="bento-history-end-date" class="w-full bg-dark-layer-0 rounded p-1 text-sm text-gray-300 border border-dark-divider-3">
+                        <div class="bento-accordion-header p-3 cursor-pointer">
+                            <div class="flex justify-between items-center">
+                                <h3 class="font-semibold text-white">History</h3>
+                                <svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </div>
                         </div>
+                        <div id="bento-history-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
                     </div>
                     <!-- Milestones Section -->
                     <div class="bg-dark-layer-1 rounded-lg">
-                        <div class="bento-accordion-header flex justify-between items-center p-3 cursor-pointer"><h3 class="font-semibold text-white">Milestones</h3><svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
+                        <div class="bento-accordion-header p-3 cursor-pointer">
+                            <div class="flex justify-between items-center">
+                                <h3 class="font-semibold text-white">Milestones</h3>
+                                <svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
                         <div id="bento-milestones-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
                     </div>
                     <!-- Trophies Section -->
                     <div class="bg-dark-layer-1 rounded-lg">
-                        <div class="bento-accordion-header flex justify-between items-center p-3 cursor-pointer"><h3 class="font-semibold text-white">Trophies</h3><svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
+                        <div class="bento-accordion-header p-3 cursor-pointer">
+                            <div class="flex justify-between items-center">
+                                <h3 class="font-semibold text-white">Trophies</h3>
+                                <svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
                         <div id="bento-trophies-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
                     </div>
                     <!-- Records Section -->
                     <div class="bg-dark-layer-1 rounded-lg">
-                        <div class="bento-accordion-header flex justify-between items-center p-3 cursor-pointer"><h3 class="font-semibold text-white">Records</h3><svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
+                        <div class="bento-accordion-header p-3 cursor-pointer">
+                            <div class="flex justify-between items-center">
+                                <h3 class="font-semibold text-white">Records</h3>
+                                <svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
                         <div id="bento-records-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
                     </div>
                     <!-- Activity Section -->
                     <div class="bg-dark-layer-1 rounded-lg">
-                        <div class="bento-accordion-header flex justify-between items-center p-3 cursor-pointer"><h3 class="font-semibold text-white">Activity</h3><svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
+                        <div class="bento-accordion-header p-3 cursor-pointer">
+                            <div class="flex justify-between items-center">
+                                <h3 class="font-semibold text-white">Activity</h3>
+                                <svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
                         <div id="bento-activity-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
                     </div>
                     <!-- Skills Section -->
                     <div class="bg-dark-layer-1 rounded-lg">
-                        <div class="bento-accordion-header flex justify-between items-center p-3 cursor-pointer"><h3 class="font-semibold text-white">Skills</h3><svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg></div>
+                        <div class="bento-accordion-header p-3 cursor-pointer">
+                            <div class="flex justify-between items-center">
+                                <h3 class="font-semibold text-white">Skills</h3>
+                                <svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
                         <div id="bento-skills-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
                     </div>
                 </div>
