@@ -135,7 +135,14 @@ export function renderOrUpdateInteractiveChart(
         scales: {
           x: {
             stacked: true, grid: { display: false },
-            ticks: { color: colors.text.subtle, maxTicksLimit: 12, maxRotation: 45, minRotation: 0, font: { size: config.isBentoMode ? 16 : 12 } }
+            ticks: { 
+  color: colors.text.subtle, 
+  maxTicksLimit: config.isBentoMode ? 8 : 12, 
+  maxRotation: config.isBentoMode ? 0 : 45, 
+  minRotation: 0, 
+  font: { size: config.isBentoMode ? 16 : 12 } 
+}
+
           },
           y: {
             stacked: true, beginAtZero: true, grid: { display: false },

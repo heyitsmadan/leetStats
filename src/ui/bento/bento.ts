@@ -259,8 +259,6 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
                 brushWindow: [historyStartDate, historyEndDate]
             };
 
-            // The 'scales' option below is the correct configuration for Chart.js to limit ticks and prevent label rotation.
-            // If it's not taking effect, the `renderOrUpdateInteractiveChart` function might be overriding it internally.
             renderOrUpdateInteractiveChart(chartContainer as HTMLElement, processedDataCache, bentoInteractiveFilters, undefined, { 
                 isBentoMode: true,
                 scales: {
@@ -359,11 +357,23 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (activities.includes("Coding Clock")) {
         const card = container.querySelector('#bento-card-codingClock');
         if (card) {
-            card.innerHTML = `<h3 class="bento-card-title">Submissions by Hour</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-coding-clock-canvas"></canvas></div></div>`;
+            const clockView = (document.querySelector('#bento-coding-clock-toggle button[data-state="active"]') as HTMLElement)?.dataset.view || 'HourOfDay';
+            const title = clockView === 'HourOfDay' ? 'Submissions by Hour' : 'Submissions by Day';
+            
+            card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">${title}</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-coding-clock-canvas"></canvas></div></div>`;
             const chartContainer = card.querySelector('.chart-container');
+            
             if (chartContainer) {
-                const stats = getCodingClockStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All', clockView: 'HourOfDay' });
-                renderOrUpdateStackedBarChart(chartContainer as HTMLElement, stats, undefined, { isInteractive: false });
+                const stats = getCodingClockStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All', clockView: clockView as 'HourOfDay' | 'DayOfWeek' });
+                
+                const bentoOptions = {
+                    maxTicksLimit: clockView === 'HourOfDay' ? 12 : 7
+                };
+
+                renderOrUpdateStackedBarChart(chartContainer as HTMLElement, stats, undefined, { 
+                    isInteractive: false, 
+                    bentoOptions: bentoOptions 
+                });
             }
         }
     }
@@ -631,7 +641,6 @@ function populateAccordion() {
     if (skillsContent && skillMatrixData?.topics) {
         skillsContent.innerHTML = ''; // Clear previous content
 
-        // Add a header for the skills list
         const header = document.createElement('div');
         header.className = 'flex w-full items-center justify-between rounded-lg px-2 py-[5px] text-xs text-label-3 dark:text-dark-label-3';
         header.innerHTML = `
@@ -687,10 +696,46 @@ function populateAccordion() {
         activityContent.innerHTML = '';
         const ACTIVITY_CHARTS = ["Submission Signature", "Language Stats", "Progress Tracker", "Coding Clock"];
         ACTIVITY_CHARTS.forEach(name => {
-            activityContent.appendChild(createCheckbox(`bento-checkbox-activity-${name.replace(/\s+/g, '-')}`, name, 'activityName', name, 'bento-activity-checkbox'));
+            if (name === "Coding Clock") {
+                const controlsContainer = document.createElement('div');
+                controlsContainer.id = 'coding-clock-controls-container';
+                controlsContainer.className = 'space-y-2 mt-1 pl-8';
+                controlsContainer.style.display = 'none'; // Initially hidden
+
+                const toggleContainer = document.createElement('div');
+                toggleContainer.id = 'bento-coding-clock-toggle';
+                toggleContainer.className = 'text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]';
+                toggleContainer.innerHTML = `
+                    <button data-view="HourOfDay" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Hourly</button>
+                    <button data-view="DayOfWeek" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Weekly</button>
+                `;
+                controlsContainer.appendChild(toggleContainer);
+
+                const checkboxCallback = (isChecked: boolean) => {
+                    controlsContainer.style.display = isChecked ? 'block' : 'none';
+                };
+
+                const checkboxContainer = createCheckbox(`bento-checkbox-activity-${name.replace(/\s+/g, '-')}`, name, 'activityName', name, 'bento-activity-checkbox', checkboxCallback);
+                
+                activityContent.appendChild(checkboxContainer);
+                activityContent.appendChild(controlsContainer);
+
+                // Add event listeners for the new toggle
+                document.querySelectorAll('#bento-coding-clock-toggle button').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const target = e.currentTarget as HTMLElement;
+                        document.querySelectorAll('#bento-coding-clock-toggle button').forEach(b => b.setAttribute('data-state', 'inactive'));
+                        target.setAttribute('data-state', 'active');
+                        debouncedRenderBentoPreview();
+                    });
+                });
+            } else {
+                activityContent.appendChild(createCheckbox(`bento-checkbox-activity-${name.replace(/\s+/g, '-')}`, name, 'activityName', name, 'bento-activity-checkbox'));
+            }
         });
     }
 }
+
 
 function createCheckbox(id: string, text: string, dataAttribute: string, dataValue: string, customClass: string, onClickCallback?: (isChecked: boolean) => void): HTMLElement {
     const container = document.createElement('div');

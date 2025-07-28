@@ -51,7 +51,12 @@ export function renderOrUpdateStackedBarChart(
     container: HTMLElement,
     data: any,
     existingChart?: CodingClockChartInstance,
-    config: { isInteractive?: boolean } = { isInteractive: true }
+    config: { 
+        isInteractive?: boolean;
+        bentoOptions?: {
+            maxTicksLimit?: number;
+        }
+    } = { isInteractive: true }
 ): CodingClockChartInstance {
     const canvas = container.querySelector('canvas') as HTMLCanvasElement;
     if (!canvas) throw new Error('Canvas element not found in the container.');
@@ -143,6 +148,14 @@ export function renderOrUpdateStackedBarChart(
             }
         }
     };
+
+    // Apply bento-specific overrides for horizontal, non-cramped labels
+    if (config.bentoOptions && options.scales?.x?.ticks) {
+        options.scales.x.ticks.maxRotation = 0;
+        options.scales.x.ticks.minRotation = 0;
+        options.scales.x.ticks.autoSkip = true;
+        options.scales.x.ticks.maxTicksLimit = config.bentoOptions.maxTicksLimit;
+    }
 
     if (existingChart) {
         existingChart.data = chartData;
