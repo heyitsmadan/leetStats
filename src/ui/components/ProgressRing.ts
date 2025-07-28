@@ -49,13 +49,13 @@ function describeArc(x: number, y: number, radius: number, startAngle: number, e
 export function renderProgressRing(container: HTMLElement, data: SolvedStats): void {
   const { totalSolved, easySolved, mediumSolved, hardSolved, totalSubmissions } = data;
 
-  // The viewBox defines the coordinate system of the SVG.
-  const viewBoxWidth = 220;
-  const viewBoxHeight = 220;
-  const radius = 70; 
-  const strokeWidth = 5;
+  // The viewBox defines the coordinate system of the SVG. A smaller viewBox makes the content appear smaller.
+  const viewBoxWidth = 180;
+  const viewBoxHeight = 180;
+  const radius = 58; 
+  const strokeWidth = 8;
   const centerX = viewBoxWidth / 2;
-  const centerY = 95; 
+  const centerY = 80; 
 
   const totalAngle = 270;
   const startAngle = -135;
@@ -70,7 +70,7 @@ export function renderProgressRing(container: HTMLElement, data: SolvedStats): v
 
   let currentAngle = startAngle;
 
-  const overlap = 1;
+  const overlap = 1.5; // Slightly increased overlap for thicker stroke
 
   const easyPath = describeArc(centerX, centerY, radius, currentAngle, currentAngle + easyAngle);
   currentAngle += easyAngle;
@@ -80,10 +80,10 @@ export function renderProgressRing(container: HTMLElement, data: SolvedStats): v
 
   // The SVG will fill its container, and preserveAspectRatio will scale it without distortion.
   container.innerHTML = `
-    <svg viewBox="0 0 ${viewBoxWidth} ${viewBoxHeight}" preserveAspectRatio="xMidYMid meet" style="width: 100%; height: 100%;">
+    <svg viewBox="0 0 ${viewBoxWidth} ${viewBoxHeight}" preserveAspectRatio="xMidYMid meet" style="width: 100%; height: 100%; max-width: 350px; margin: auto;">
       <defs>
         <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-          <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="rgba(0,0,0,0.2)" />
+          <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="rgba(0,0,0,0.2)" />
         </filter>
       </defs>
       
@@ -93,10 +93,10 @@ export function renderProgressRing(container: HTMLElement, data: SolvedStats): v
       <path d="${mediumPath}" fill="none" stroke="${colors.problems.medium}" stroke-width="${strokeWidth}" stroke-linecap="round" filter="url(#shadow)" />
       <path d="${easyPath}" fill="none" stroke="${colors.problems.easy}" stroke-width="${strokeWidth}" stroke-linecap="round" filter="url(#shadow)" />
       
-      <text x="${centerX}" y="${centerY}" fill="${colors.text.primary}" text-anchor="middle" dominant-baseline="middle" style="font-size: 2.5rem; font-weight: 600;">${totalSolved}</text>
-      <text x="${centerX}" y="${centerY + 35}" fill="${colors.text.primary}" text-anchor="middle" dominant-baseline="middle" style="color: #9ca3af; font-size: 1rem;">${"solved"}</text>
+      <text x="${centerX}" y="${centerY}" fill="${colors.text.primary}" text-anchor="middle" dominant-baseline="middle" style="font-size: 2rem; font-weight: 600;">${totalSolved}</text>
+      <text x="${centerX}" y="${centerY + 28}" fill="${colors.text.primary}" text-anchor="middle" dominant-baseline="middle" style="color: #9ca3af; font-size: 0.9rem;">${"solved"}</text>
       
-      <text x="${centerX}" y="${viewBoxHeight - 15}" fill="${colors.text.primary}" text-anchor="middle" style="font-size: 1.25rem;">${totalSubmissions} submissions</text>
+      <text x="${centerX}" y="${viewBoxHeight - 10}" fill="${colors.text.primary}" text-anchor="middle" style="font-size: 1rem;">${totalSubmissions} submissions</text>
     </svg>
   `;
 }

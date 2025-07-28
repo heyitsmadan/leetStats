@@ -148,7 +148,7 @@ export function renderOrUpdateDoughnutChart(
                 labels: {
                     color: colors.text.subtle,
                     boxWidth: config.legendConfig?.position === 'bottom' ? 10 : 15,
-                    padding: 10,
+                    padding: 10, // Increased padding
                     font: {
                         size: config.legendConfig?.fontSize || 11,
                     }

@@ -241,6 +241,9 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     const historyStartDate = (document.getElementById('bento-history-start-date') as HTMLInputElement)?.valueAsDate;
     const historyEndDate = (document.getElementById('bento-history-end-date') as HTMLInputElement)?.valueAsDate;
     
+    // Helper to check if a card is full-width
+    const isFullWidth = (card: Element | null) => card ? (card as HTMLElement).style.gridColumn.includes('4') : false;
+
     // Render History
     if (history && historyStartDate && historyEndDate) {
         const card = container.querySelector('#bento-card-history');
@@ -278,7 +281,7 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (records.includes("Overall Progress")) {
         const card = container.querySelector('#bento-card-overallProgress');
         if (card) {
-            card.innerHTML = `<div class="bento-card-content progress-ring-container" id="bento-progress-ring-container" style="display: flex; align-items: center; justify-content: center; height: 100%;"></div>`;
+            card.innerHTML = `<div class="bento-card-content progress-ring-container" id="bento-progress-ring-container" style="display: flex; align-items: center; justify-content: center; height: 100%; width: 100%; padding: 1rem;"></div>`;
             const ringContainer = card.querySelector('#bento-progress-ring-container');
             if (ringContainer) {
                 const stats = getSolvedStats(processedDataCache);
@@ -303,9 +306,10 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (selectedTrophies.length > 0) {
         const card = container.querySelector('#bento-card-trophies');
         if (card) {
+            const titleAlign = isFullWidth(card) ? 'text-align: center;' : '';
             let listHtml = '';
             selectedTrophies.forEach(t => { listHtml += `<div class="trophy-item"><img src="${chrome.runtime.getURL(t.icon)}" alt="${t.title}" class="trophy-icon" /><div class="trophy-details"><div class="trophy-title">${t.title}</div><div class="trophy-subtitle">${t.subtitle}</div>${t.problemSlug !== 'placeholder' ? `<a href="https://leetcode.com/problems/${t.problemSlug}/" target="_blank" class="trophy-problem">${t.problemTitle}</a>` : ''}</div></div>`; });
-            card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">Trophies</h3><div class="bento-card-content"><div class="trophy-list">${listHtml}</div></div>`;
+            card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary}; ${titleAlign}">Trophies</h3><div class="bento-card-content" style="display: grid; place-items: center; height: 100%;"><div class="trophy-list">${listHtml}</div></div>`;
         }
     }
     
@@ -314,7 +318,8 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (selectedMilestones.length > 0) {
         const card = container.querySelector('#bento-card-milestones');
         if (card) {
-            let html = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">Milestones</h3><div class="bento-card-content" style="display: grid; place-items: center; height: 100%;"><div class="milestone-timeline"><div class="timeline-line"></div><div class="milestone-list">`;
+            const titleAlign = isFullWidth(card) ? 'text-align: center;' : '';
+            let html = `<h3 class="bento-card-title" style="color: ${colors.text.primary}; ${titleAlign}">Milestones</h3><div class="bento-card-content" style="display: grid; place-items: center; height: 100%;"><div class="milestone-timeline"><div class="timeline-line"></div><div class="milestone-list">`;
             selectedMilestones.forEach(m => {
                 const color = getMilestoneColor(m.type);
                 html += `<div class="milestone-item"><div class="milestone-dot" style="background-color: ${color};"></div><div class="milestone-event" style="color: ${color};">${m.milestone}${getOrdinalSuffix(m.milestone)} ${formatMilestoneType(m.type)}</div><div class="milestone-date">${m.date.toLocaleDateString('en-GB')}</div>${m.problemTitle ? `<a href="https://leetcode.com/problems/${m.problemSlug}/" target="_blank" class="${styles.milestoneProblem}milestone-problem">${m.problemTitle}</a>` : ''}</div>`;
@@ -380,7 +385,8 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (activities.includes("Submission Signature")) {
         const card = container.querySelector('#bento-card-submissionSignature');
         if (card) {
-            card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary}; text-align: center;">Submission Signature</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-submission-signature-canvas"></canvas></div></div>`;
+            const titleAlign = isFullWidth(card) ? 'text-align: center;' : 'text-align: center;'; // Always center for this one
+            card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary}; ${titleAlign}">Submission Signature</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-submission-signature-canvas"></canvas></div></div>`;
             const chartContainer = card.querySelector('.chart-container');
             if (chartContainer) {
                 const stats = getSubmissionSignatureStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All' });
@@ -388,7 +394,7 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
                     isInteractive: false, 
                     legendConfig: { display: true, position: 'bottom', fontSize: 13 },
                     cutout: '65%',
-                    layout: { padding: 30 }
+                    layout: { padding: { top: 15, right: 20, bottom: 20, left: 20 } }
                 });
             }
         }
