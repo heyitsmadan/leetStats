@@ -314,7 +314,7 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (selectedMilestones.length > 0) {
         const card = container.querySelector('#bento-card-milestones');
         if (card) {
-            let html = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">Milestones</h3><div class="bento-card-content"><div class="milestone-timeline"><div class="timeline-line"></div><div class="milestone-list">`;
+            let html = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">Milestones</h3><div class="bento-card-content" style="display: flex; align-items: center; justify-content: center;"><div class="milestone-timeline"><div class="timeline-line"></div><div class="milestone-list">`;
             selectedMilestones.forEach(m => {
                 const color = getMilestoneColor(m.type);
                 html += `<div class="milestone-item"><div class="milestone-dot" style="background-color: ${color};"></div><div class="milestone-event" style="color: ${color};">${m.milestone}${getOrdinalSuffix(m.milestone)} ${formatMilestoneType(m.type)}</div><div class="milestone-date">${m.date.toLocaleDateString('en-GB')}</div>${m.problemTitle ? `<a href="https://leetcode.com/problems/${m.problemSlug}/" target="_blank" class="${styles.milestoneProblem}milestone-problem">${m.problemTitle}</a>` : ''}</div>`;
@@ -328,7 +328,7 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (skills.length > 0) {
         const card = container.querySelector('#bento-card-skills');
         if (card) {
-            let html = `<h3 class="bento-card-title">Skills</h3><div class="bento-card-content"><div class="skills-table"><div class="skills-header"><div class="skill-cell" style="text-align: left;">Topic</div><div class="skill-cell">Solved</div><div class="skill-cell">Avg. Attempts</div><div class="skill-cell">First Ace</div></div>`;
+            let html = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">Skills</h3><div class="bento-card-content"><div class="skills-table"><div class="skills-header"><div class="skill-cell" style="text-align: left;">Topic</div><div class="skill-cell">Solved</div><div class="skill-cell">Avg. Attempts</div><div class="skill-cell">First Ace</div></div>`;
             skills.forEach((skill: string) => {
                 const metrics = skillData.metrics;
                 const solved = metrics.problemsSolved[skill] || 0;
@@ -345,12 +345,12 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (activities.includes("Progress Tracker")) {
         const card = container.querySelector('#bento-card-progressTracker');
         if (card) {
-            card.innerHTML = `<h3 class="bento-card-title">Problems Solved Over Time</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-progress-tracker-canvas"></canvas></div></div>`;
+            card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">Problems Solved Over Time</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-progress-tracker-canvas"></canvas></div></div>`;
             const chartContainer = card.querySelector('.chart-container');
             if (chartContainer) {
                 const cumulativeView = getSmartCumulativeView('All Time', processedDataCache);
                 const stats = getCumulativeStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All', cumulativeView });
-                if (stats) renderOrUpdateCumulativeLineChart(chartContainer as HTMLElement, stats, { timeRange: 'All Time', difficulty: 'All', cumulativeView }, undefined, { isInteractive: false });
+                if (stats) renderOrUpdateCumulativeLineChart(chartContainer as HTMLElement, stats, { timeRange: 'All Time', difficulty: 'All', cumulativeView }, undefined, { isInteractive: false, hidePoints: true });
             }
         }
     }
@@ -380,18 +380,22 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (activities.includes("Submission Signature")) {
         const card = container.querySelector('#bento-card-submissionSignature');
         if (card) {
-            card.innerHTML = `<h3 class="bento-card-title">Submission Signature</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-submission-signature-canvas"></canvas></div></div>`;
+            card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary}; text-align: center;">Submission Signature</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-submission-signature-canvas"></canvas></div></div>`;
             const chartContainer = card.querySelector('.chart-container');
             if (chartContainer) {
                 const stats = getSubmissionSignatureStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All' });
-                renderOrUpdateDoughnutChart(chartContainer as HTMLElement, stats, { difficulty: 'All' }, undefined, { isInteractive: false, legendConfig: { display: true, position: 'bottom' } });
+                renderOrUpdateDoughnutChart(chartContainer as HTMLElement, stats, { difficulty: 'All' }, undefined, { 
+                    isInteractive: false, 
+                    legendConfig: { display: true, position: 'bottom', fontSize: 13 },
+                    cutout: '65%'
+                });
             }
         }
     }
     if (activities.includes("Language Stats")) {
         const card = container.querySelector('#bento-card-languageStats');
         if (card) {
-            card.innerHTML = `<h3 class="bento-card-title">Language Stats</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-language-stats-canvas"></canvas></div></div>`;
+            card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">Language Stats</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-language-stats-canvas"></canvas></div></div>`;
             const chartContainer = card.querySelector('.chart-container');
             if (chartContainer) {
                 const stats = getLanguageStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All' });

@@ -56,7 +56,6 @@ export function renderOrUpdateCumulativeLineChart(
     chartData: CumulativeChartStats,
     filters: { difficulty: Difficulty; cumulativeView: CumulativeView; timeRange: TimeRange },
     existingChart?: CumulativeLineChartInstance,
-    // 1. Added `hidePoints` to the config type definition
     config: { isInteractive?: boolean; hidePoints?: boolean } = { isInteractive: true }
 ): CumulativeLineChartInstance {
     const canvas = container.querySelector('canvas') as HTMLCanvasElement;
@@ -66,7 +65,6 @@ export function renderOrUpdateCumulativeLineChart(
         ...chartData,
         datasets: chartData.datasets.map(dataset => ({
             ...dataset,
-            // 2. Updated pointRadius and pointHoverRadius to respect the `hidePoints` flag
             pointRadius: config.hidePoints ? 0 : (config.isInteractive ? 0 : 2),
             pointHoverRadius: config.hidePoints ? 0 : (config.isInteractive ? 4 : 2),
             borderWidth: config.isInteractive ? 2 : 3,

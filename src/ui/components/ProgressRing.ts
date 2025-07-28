@@ -99,10 +99,10 @@ export function renderProgressRing(container: HTMLElement, data: SolvedStats): v
       
       <!-- Centered Text Block -->
       <text x="${centerX}" y="${centerY}" fill="${colors.text.primary}" text-anchor="middle" dominant-baseline="middle" style="font-size: 2.5rem; font-weight: 600;">${totalSolved}</text>
-      <text x="${centerX}" y="${centerY + 35}" fill="${colors.text.primary}" text-anchor="middle" dominant-baseline="middle" style="font-size: 1rem;">${"Solved"}</text>
+      <text x="${centerX}" y="${centerY + 35}" fill="${colors.text.primary}" text-anchor="middle" dominant-baseline="middle" style="color: #9ca3af; font-size: 1rem;">${"solved"}</text>
       
       <!-- Submissions text at the bottom of the SVG canvas -->
-      <text x="${centerX}" y="${viewBoxHeight - 15}" fill="${colors.text.primary}" text-anchor="middle" style="font-size: 1.5rem;">${totalSubmissions} Submissions</text>
+      <text x="${centerX}" y="${viewBoxHeight - 15}" fill="${colors.text.primary}" text-anchor="middle" style="font-size: 1.25rem;">${totalSubmissions} submissions</text>
     </svg>
   `;
 }
