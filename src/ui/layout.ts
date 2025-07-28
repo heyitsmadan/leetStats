@@ -69,113 +69,111 @@ const RETRY_DELAY = 300;
 
 /** Main function to inject stats UI */
 export function renderPageLayout(processedData: ProcessedData, username: string) {
-  // 1. Find the main container (A)
-  const contentContainer = document.querySelector('.space-y-\\[18px\\]') || 
-                          document.querySelector('[class*="space-y-["]');
-  
-  if (!contentContainer) {
-    console.error('Content container not found');
-    return;
-  }
-
-  // 2. Create and insert stats tab immediately
-  const tabBar = contentContainer.firstElementChild as HTMLElement;
-  if (!tabBar || !tabBar.classList.contains('flex')) {
-    console.error('Tab bar not found');
-    return;
-  }
-
-  const statsTab = createStatsTab();
-  const discussTab = Array.from(tabBar.children).find(el => 
-    el.textContent?.includes('Discuss')
-  );
-  
-  if (discussTab) {
-    discussTab.after(statsTab);
-  } else {
-    tabBar.append(statsTab);
-  }
-
-  // 3. Create stats content pane based on whether data exists
-  const statsPane = document.createElement('div');
-  statsPane.id = 'lc-stats-pane';
-  statsPane.style.display = 'none'; // Start hidden
-  statsPane.className = 'w-full';
-
-  if (processedData.submissions.length === 0) {
-    // If no data, fill pane with the empty state message
-    const imageUrl = chrome.runtime.getURL('assets/images/null_dark.png');
-    statsPane.innerHTML = `
-      <div class="mb-[70px] mt-[57px] flex-1">
-        <div class="flex h-full flex-col items-center justify-center">
-          <img class="w-[200px]" src="${imageUrl}" alt="No data available">
-          <span class="mt-3 text-sm font-medium text-label-4 dark:text-dark-label-4">
-            No stats
-          </span>
-        </div>
-      </div>
-    `;
-  } else {
-    // If there's data, fill it with the charts grid
-    const grid = createStatsPaneWithGrid(username);
-    // Move children from the created grid element to the pane
-    while (grid.firstChild) {
-      statsPane.appendChild(grid.firstChild);
+    // 1. Find the main container (A)
+    const contentContainer = document.querySelector('.space-y-\\[18px\\]') ||
+        document.querySelector('[class*="space-y-["]');
+    if (!contentContainer) {
+        console.error('Content container not found');
+        return;
     }
-  }
-  contentContainer.append(statsPane);
 
-  // 4. Setup content observer
-  let contentObserver: MutationObserver | null = null;
-  
-  const startContentObservation = () => {
-    if (contentObserver) contentObserver.disconnect();
-    
-    contentObserver = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        const leetcodeContent = Array.from(contentContainer.children).find(
-          child => child !== tabBar && child !== statsPane
-        );
-        
-        if (leetcodeContent) {
-          setupTabLogic(statsTab, tabBar, contentContainer, statsPane, processedData, username);
-          contentObserver?.disconnect();
-          contentObserver = null;
-          return;
+    // 2. Create and insert stats tab immediately
+    const tabBar = contentContainer.firstElementChild as HTMLElement;
+    if (!tabBar || !tabBar.classList.contains('flex')) {
+        console.error('Tab bar not found');
+        return;
+    }
+
+    const statsTab = createStatsTab();
+    const discussTab = Array.from(tabBar.children).find(el =>
+        el.textContent?.includes('Discuss')
+    );
+    if (discussTab) {
+        discussTab.after(statsTab);
+    } else {
+        tabBar.append(statsTab);
+    }
+
+    // 2.5. Create and insert Generate Card button
+    const generateCardBtn = createGenerateCardButton();
+    tabBar.appendChild(generateCardBtn);
+
+    // 3. Create stats content pane based on whether data exists
+    const statsPane = document.createElement('div');
+    statsPane.id = 'lc-stats-pane';
+    statsPane.style.display = 'none'; // Start hidden
+    statsPane.className = 'w-full';
+
+    if (processedData.submissions.length === 0) {
+        // If no data, fill pane with the empty state message
+        const imageUrl = chrome.runtime.getURL('assets/images/null_dark.png');
+        statsPane.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-24 text-center">
+                <img src="${imageUrl}" alt="No data" class="mb-6 w-32 h-32 opacity-50" />
+                <h3 class="text-xl font-semibold text-label-1 dark:text-dark-label-1 mb-2">No stats</h3>
+                <p class="text-label-2 dark:text-dark-label-2 max-w-md">
+                    No submission data found. Start solving problems to see your statistics!
+                </p>
+            </div>
+        `;
+    } else {
+        // If there's data, fill it with the charts grid
+        const grid = createStatsPaneWithGrid(username);
+        // Move children from the created grid element to the pane
+        while (grid.firstChild) {
+            statsPane.appendChild(grid.firstChild);
         }
-      }
-    });
-    
-    contentObserver.observe(contentContainer, { childList: true, subtree: false });
-    
-    setTimeout(() => {
-      if (contentObserver) {
-        console.warn('Content not detected, forcing setup');
-        setupTabLogic(statsTab, tabBar, contentContainer, statsPane, processedData, username);
-        contentObserver.disconnect();
-        contentObserver = null;
-      }
-    }, 5000);
-  };
-
-  // 5. Check if content already exists
-  const initialContent = Array.from(contentContainer.children).find(
-    child => child !== tabBar && child !== statsPane
-  );
-  
-  if (initialContent) {
-    setupTabLogic(statsTab, tabBar, contentContainer, statsPane, processedData, username);
-    // First-time chart rendering (only if there is data)
-    if (!window.statsRendered && processedData.submissions.length > 0) {
-      requestAnimationFrame(() => {
-        renderAllCharts(processedData, username);
-        window.statsRendered = true;
-      });
     }
-  } else {
-    console.log('Waiting for LeetCode content to load...');
-    startContentObservation();
-  }
+
+    contentContainer.append(statsPane);
+
+    // Rest of the function remains the same...
+    // 4. Setup content observer
+    let contentObserver: MutationObserver | null = null;
+    const startContentObservation = () => {
+        if (contentObserver) contentObserver.disconnect();
+        contentObserver = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+                const leetcodeContent = Array.from(contentContainer.children).find(
+                    child => child !== tabBar && child !== statsPane
+                );
+                if (leetcodeContent) {
+                    setupTabLogic(statsTab, tabBar, contentContainer, statsPane, processedData, username, generateCardBtn);
+                    contentObserver?.disconnect();
+                    contentObserver = null;
+                    return;
+                }
+            }
+        });
+        contentObserver.observe(contentContainer, { childList: true, subtree: false });
+        setTimeout(() => {
+            if (contentObserver) {
+                console.warn('Content not detected, forcing setup');
+                setupTabLogic(statsTab, tabBar, contentContainer, statsPane, processedData, username, generateCardBtn);
+                contentObserver.disconnect();
+                contentObserver = null;
+            }
+        }, 5000);
+    };
+
+    // 5. Check if content already exists
+    const initialContent = Array.from(contentContainer.children).find(
+        child => child !== tabBar && child !== statsPane
+    );
+
+    if (initialContent) {
+        setupTabLogic(statsTab, tabBar, contentContainer, statsPane, processedData, username, generateCardBtn);
+        // First-time chart rendering (only if there is data)
+        if (!window.statsRendered && processedData.submissions.length > 0) {
+            requestAnimationFrame(() => {
+                renderAllCharts(processedData, username);
+                window.statsRendered = true;
+            });
+        }
+    } else {
+        console.log('Waiting for LeetCode content to load...');
+        startContentObservation();
+    }
 }
 
 
@@ -636,27 +634,6 @@ function createStatsPaneWithGrid(username: string): HTMLElement {
     statsPane.style.display = 'none';
     statsPane.className = 'w-full';
     statsPane.innerHTML = `
-    <!-- FIX: REMOVED the CDN script tag for html2canvas -->
-
-    <!-- =================================================================== -->
-    <!-- =================== NEW: SHAREABLE CARD SECTION =================== -->
-    <!-- =================================================================== -->
-    <div class="space-y-4">
-        <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="${styles.sectionHeader}">Shareable Card</h2>
-                    <p class="text-sm text-gray-400 mt-1">
-                        Create a custom, shareable bento grid of your LeetCode stats.
-                    </p>
-                </div>
-                <button id="generate-card-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200">
-                    Generate Card
-                </button>
-            </div>
-        </div>
-        <div class="border-divider-3 dark:border-dark-divider-3 my-4 h-px w-full border-b"></div>
-    
     <div class="space-y-4">
         <!-- INTERACTIVE CHART SECTION -->
         <div class="rounded-lg p-4">
@@ -850,170 +827,174 @@ ${createBentoModalHTML()}
 // (The rest of the helper functions: setupTabLogic, createStatsTab, etc. remain the same)
 // ... all other helper functions from the previous version go here ...
 function setupTabLogic(
-  statsTab: HTMLElement,
-  tabBar: Element,
-  contentSection: Element,
-  statsPane: HTMLElement,
-  processedData: ProcessedData,
-  username: string
+    statsTab: HTMLElement,
+    tabBar: Element,
+    contentSection: Element,
+    statsPane: HTMLElement,
+    processedData: ProcessedData,
+    username: string,
+    generateCardBtn: HTMLElement  // Add this parameter
 ) {
-  const ACTIVE_CLASSES = 'text-label-1 dark:text-dark-label-1 bg-fill-3 dark:bg-dark-fill-3'.split(' ');
-  let isStatsActive = false;
-  let lastActiveTab: Element | null = null;
-  
-  // Create MutationObserver to monitor content changes
-  let contentObserver: MutationObserver | null = null;
+    const ACTIVE_CLASSES = 'text-label-1 dark:text-dark-label-1 bg-fill-3 dark:bg-dark-fill-3'.split(' ');
+    let isStatsActive = false;
+    let lastActiveTab: Element | null = null;
 
-  // Initialize: Find which tab is currently active
-  const initActiveTab = () => {
-    const tabs = Array.from(tabBar.querySelectorAll('.cursor-pointer'));
-    for (const tab of tabs) {
-      const innerDiv = tab.querySelector('div');
-      if (innerDiv && ACTIVE_CLASSES.every(c => innerDiv.classList.contains(c))) {
-        lastActiveTab = tab;
-        return;
-      }
-    }
-    // Fallback to first tab if none active
-    lastActiveTab = tabs[0] || null;
-  };
-  initActiveTab();
+    // Create MutationObserver to monitor content changes
+    let contentObserver: MutationObserver | null = null;
 
-  // Function to hide non-stats content
-  const hideNonStatsContent = () => {
-    Array.from(contentSection.children).forEach(child => {
-      if (child !== statsPane && child !== tabBar) {
-        (child as HTMLElement).style.display = 'none';
-      }
-    });
-  };
-
-  // Start observing content changes
-  const startContentObservation = () => {
-    if (contentObserver) contentObserver.disconnect();
-    
-    contentObserver = new MutationObserver((mutations) => {
-      mutations.forEach((mutation) => {
-        mutation.addedNodes.forEach((node) => {
-          if (node.nodeType === Node.ELEMENT_NODE) {
-            const element = node as HTMLElement;
-            // Hide any new non-stats content
-            if (element !== tabBar && element !== statsPane && isStatsActive) {
-              element.style.display = 'none';
-              console.log('Automatically hid new content element:', element);
+    // Initialize: Find which tab is currently active
+    const initActiveTab = () => {
+        const tabs = Array.from(tabBar.querySelectorAll('.cursor-pointer'));
+        for (const tab of tabs) {
+            const innerDiv = tab.querySelector('div');
+            if (innerDiv && ACTIVE_CLASSES.every(c => innerDiv.classList.contains(c))) {
+                lastActiveTab = tab;
+                return;
             }
-          }
+        }
+        // Fallback to first tab if none active
+        lastActiveTab = tabs[0] || null;
+    };
+
+    initActiveTab();
+
+    // Function to hide non-stats content
+    const hideNonStatsContent = () => {
+        Array.from(contentSection.children).forEach(child => {
+            if (child !== statsPane && child !== tabBar) {
+                (child as HTMLElement).style.display = 'none';
+            }
         });
-      });
+    };
+
+    // Start observing content changes
+    const startContentObservation = () => {
+        if (contentObserver) contentObserver.disconnect();
+        contentObserver = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === Node.ELEMENT_NODE) {
+                        const element = node as HTMLElement;
+                        // Hide any new non-stats content
+                        if (element !== tabBar && element !== statsPane && isStatsActive) {
+                            element.style.display = 'none';
+                            console.log('Automatically hid new content element:', element);
+                        }
+                    }
+                });
+            });
+        });
+        contentObserver.observe(contentSection, {
+            childList: true,
+            subtree: false
+        });
+    };
+
+    // Stop observing content changes
+    const stopContentObservation = () => {
+        if (contentObserver) {
+            contentObserver.disconnect();
+            contentObserver = null;
+        }
+    };
+
+    // Initial hide of non-stats content if needed
+    if (isStatsActive) hideNonStatsContent();
+
+    // Stats tab click handler
+    statsTab.addEventListener('click', () => {
+        if (isStatsActive) return;
+        isStatsActive = true;
+
+        // Deactivate previously active tab
+        if (lastActiveTab && lastActiveTab !== statsTab) {
+            const activeInner = lastActiveTab.querySelector('div');
+            if (activeInner) activeInner.classList.remove(...ACTIVE_CLASSES);
+        }
+
+        // Activate stats tab
+        const statsInner = statsTab.querySelector('div');
+        if (statsInner) statsInner.classList.add(...ACTIVE_CLASSES);
+        lastActiveTab = statsTab;
+
+        // Hide all non-stats content
+        hideNonStatsContent();
+
+        // Show stats content
+        statsPane.style.display = 'block';
+
+        // Hide right-aligned elements and show Generate Card button
+        const rightElements = tabBar.querySelectorAll(`
+            .ml-auto:not(#generate-card-btn),
+            a[href*="/submissions/"],
+            a[href*="/problem-list/"]
+        `);
+        rightElements.forEach(el => (el as HTMLElement).style.display = 'none');
+        
+        // Show Generate Card button
+        generateCardBtn.style.display = 'inline-flex';
+
+        // Start observing for new content
+        startContentObservation();
+
+        // First-time chart rendering
+        if (!window.statsRendered && processedData.submissions.length > 0) {
+            requestAnimationFrame(() => {
+                renderAllCharts(processedData, username);
+                window.statsRendered = true;
+            });
+        }
     });
 
-    contentObserver.observe(contentSection, {
-      childList: true,
-      subtree: false
+    // LeetCode tab click handler
+    const leetcodeTabs = Array.from(tabBar.querySelectorAll('.cursor-pointer')).filter(t => t !== statsTab);
+    leetcodeTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            isStatsActive = false;
+
+            // Deactivate stats tab
+            const statsInner = statsTab.querySelector('div');
+            if (statsInner) statsInner.classList.remove(...ACTIVE_CLASSES);
+
+            // Activate clicked tab
+            const tabInner = tab.querySelector('div');
+            if (tabInner) tabInner.classList.add(...ACTIVE_CLASSES);
+            lastActiveTab = tab;
+
+            // Hide stats content
+            statsPane.style.display = 'none';
+
+            // Stop observing content changes
+            stopContentObservation();
+
+            // Hide Generate Card button and restore right-aligned elements
+            generateCardBtn.style.display = 'none';
+            const rightElements = tabBar.querySelectorAll(`
+                .ml-auto:not(#generate-card-btn),
+                a[href*="/submissions/"],
+                a[href*="/problem-list/"]
+            `);
+            rightElements.forEach(el => (el as HTMLElement).style.display = '');
+
+            // Show content for this tab
+            const content = Array.from(contentSection.children).find(
+                c => c !== tabBar && c !== statsPane
+            );
+            if (content) {
+                (content as HTMLElement).style.display = 'block';
+            } else {
+                console.warn('Content not found for tab', tab.textContent);
+            }
+        });
     });
-  };
 
-  // Stop observing content changes
-  const stopContentObservation = () => {
-    if (contentObserver) {
-      contentObserver.disconnect();
-      contentObserver = null;
-    }
-  };
+    // Initialize tab bar as visible
+    (tabBar as HTMLElement).style.display = 'flex';
 
-  // Initial hide of non-stats content if needed
-  if (isStatsActive) hideNonStatsContent();
-
-  // Stats tab click handler
-  statsTab.addEventListener('click', () => {
-    if (isStatsActive) return;
-    isStatsActive = true;
-    
-    // Deactivate previously active tab
-    if (lastActiveTab && lastActiveTab !== statsTab) {
-      const activeInner = lastActiveTab.querySelector('div');
-      if (activeInner) activeInner.classList.remove(...ACTIVE_CLASSES);
-    }
-    
-    // Activate stats tab
-    const statsInner = statsTab.querySelector('div');
-    if (statsInner) statsInner.classList.add(...ACTIVE_CLASSES);
-    lastActiveTab = statsTab;
-    
-    // Hide all non-stats content
-    hideNonStatsContent();
-    
-    // Show stats content
-    statsPane.style.display = 'block';
-    
-    // Hide right-aligned elements
-    const rightElements = tabBar.querySelectorAll(`
-      .ml-auto,
-      a[href*="/submissions/"],
-      a[href*="/problem-list/"]
-    `);
-    rightElements.forEach(el => (el as HTMLElement).style.display = 'none');
-    
-    // Start observing for new content
+    // Start observing immediately to catch initial changes
     startContentObservation();
-    
-    // First-time chart rendering
-    if (!window.statsRendered && processedData.submissions.length > 0) {
-      requestAnimationFrame(() => {
-        renderAllCharts(processedData, username);
-        window.statsRendered = true;
-      });
-    }
-  });
-
-  // LeetCode tab click handler
-  const leetcodeTabs = Array.from(tabBar.querySelectorAll('.cursor-pointer')).filter(t => t !== statsTab);
-  leetcodeTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      isStatsActive = false;
-      
-      // Deactivate stats tab
-      const statsInner = statsTab.querySelector('div');
-      if (statsInner) statsInner.classList.remove(...ACTIVE_CLASSES);
-      
-      // Activate clicked tab
-      const tabInner = tab.querySelector('div');
-      if (tabInner) tabInner.classList.add(...ACTIVE_CLASSES);
-      lastActiveTab = tab;
-      
-      // Hide stats content
-      statsPane.style.display = 'none';
-      
-      // Stop observing content changes
-      stopContentObservation();
-      
-      // Restore right-aligned elements
-      const rightElements = tabBar.querySelectorAll(`
-        .ml-auto,
-        a[href*="/submissions/"],
-        a[href*="/problem-list/"]
-      `);
-      rightElements.forEach(el => (el as HTMLElement).style.display = '');
-      
-      // Show content for this tab
-      const content = Array.from(contentSection.children).find(
-        c => c !== tabBar && c !== statsPane
-      );
-      
-      if (content) {
-        (content as HTMLElement).style.display = 'block';
-      } else {
-        console.warn('Content not found for tab', tab.textContent);
-      }
-    });
-  });
-  
-  // Initialize tab bar as visible
-  (tabBar as HTMLElement).style.display = 'flex';
-  
-  // Start observing immediately to catch initial changes
-  startContentObservation();
 }
+
 
 /** Creates stats tab element */
 function createStatsTab(): HTMLElement {
@@ -1130,4 +1111,20 @@ export function getSmartCumulativeView(timeRange: TimeRange, processedData: Proc
 
     // Default to 'Daily' for short histories or if there's no data.
     return 'Daily';
+}
+
+/** Creates the Generate Card button for the tab bar */
+function createGenerateCardButton(): HTMLElement {
+    const button = document.createElement('button');
+    button.id = 'generate-card-btn';
+    button.className = 'ml-auto inline-flex items-center px-3 py-1.5 text-sm font-medium text-label-2 dark:text-dark-label-2 bg-fill-3 dark:bg-dark-fill-3 border border-divider-border-2 dark:border-dark-divider-border-2 rounded-lg hover:bg-fill-2 dark:hover:bg-dark-fill-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors';
+    button.style.display = 'none'; // Initially hidden
+    
+    const iconUrl = chrome.runtime.getURL('assets/icons/sparkles.svg');
+    button.innerHTML = `
+        <img src="${iconUrl}" alt="Generate" class="w-4 h-4 mr-2" />
+        Generate Card
+    `;
+    
+    return button;
 }
