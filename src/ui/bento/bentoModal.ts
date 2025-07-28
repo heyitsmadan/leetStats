@@ -39,7 +39,7 @@ export function createBentoModalHTML(): string {
     #bento-render-node {
         width: 900px;
         height: auto; /* KEY CHANGE: Height is now dynamic */
-        background: radial-gradient(circle, #282828 0%, #1a1a1a 100%); 
+        background: #1a1a1a; /* CHANGE: Set a solid background color as a fallback */
         display: flex; 
         flex-direction: column;
     }
@@ -63,12 +63,11 @@ export function createBentoModalHTML(): string {
          width: 100%;
     }
     .render-safe #bento-footer {
-        padding: 40px;
-        padding-top: 20px;
+        padding: 40px 30px 30px; /* top, horizontal, bottom */
         text-align: right;
         font-size: 16px;
         color: ${colors.text.subtle};
-        font-family: monospace;
+        font-family: 'Inter', sans-serif;
         flex-shrink: 0;
     }
     .render-safe .bento-card {
@@ -97,40 +96,39 @@ export function createBentoModalHTML(): string {
         justify-content: center;
     }
     
-    /* KEY CHANGE:
-       Skills table should always be full width. Other lists will shrink to fit their content.
-       This allows them to be properly centered inside a full-width card, instead of stretching. */
     .render-safe .skills-table {
         width: 100%;
     }
 
     /* Record Item Styles */
-    .render-safe .record-list { display: flex; flex-direction: column; gap: 16px; }
+    .render-safe .record-list { display: flex; flex-direction: column; gap: 16px; width: 100%;}
     .render-safe .record-item { display: flex; justify-content: space-between; align-items: baseline; font-size: 20px; border-bottom: 1px solid ${colors.background.secondarySection}; padding-bottom: 16px; gap: 32px; width: 100%; }
     .render-safe .record-item:last-child { border-bottom: none; }
-    .render-safe .record-label { color: ${colors.text.subtle}; white-space: nowrap; }
+    .render-safe .record-label { color: ${colors.text.primary}; white-space: nowrap; } /* CHANGE: Use primary text color */
     .render-safe .record-value { text-align: right; font-weight: 600; font-size: 22px; color: ${colors.text.primary}; }
     .render-safe .record-context { display: block; font-size: 16px; font-weight: 400; color: ${colors.text.subtle}; }
     
     /* Trophy Item Styles */
-    .render-safe .trophy-list { display: flex; flex-direction: column; gap: 16px; }
+    .render-safe .trophy-list { display: flex; flex-direction: column; gap: 16px; width: 100%; }
     .render-safe .trophy-item { display: flex; align-items: center; gap: 20px; padding-bottom: 16px; border-bottom: 1px solid ${colors.background.secondarySection}; width: 100%; }
     .render-safe .trophy-item:last-child { border-bottom: none; }
     .render-safe .trophy-icon { width: 48px; height: 48px; flex-shrink: 0; }
     .render-safe .trophy-details { display: flex; flex-direction: column; gap: 4px; }
     .render-safe .trophy-title { font-size: 20px; font-weight: 600; color: ${colors.text.primary}; }
-    .render-safe .trophy-problem { font-size: 16px; color: #38bdf8; text-decoration: none; }
+    .render-safe .trophy-problem { font-size: 16px; color: #64b5f6; text-decoration: none; } /* CHANGE: Updated link color */
     .render-safe .trophy-subtitle { font-size: 16px; color: ${colors.text.subtle}; }
 
     /* Milestone Styles */
-    .render-safe .milestone-timeline { position: relative; }
+    .render-safe .milestone-timeline { position: relative; width: 100%; }
     .render-safe .timeline-line { position: absolute; left: 8px; top: 8px; bottom: 8px; width: 2px; background-color: ${colors.background.secondarySection}; }
     .render-safe .milestone-list { display: flex; flex-direction: column; gap: 24px; }
     .render-safe .milestone-item { position: relative; padding-left: 32px; }
     .render-safe .milestone-dot { position: absolute; left: 0; top: 8px; width: 18px; height: 18px; border-radius: 50%; border: 3px solid ${colors.background.section}; }
     .render-safe .milestone-event { font-size: 20px; font-weight: 600; }
     .render-safe .milestone-date { font-size: 16px; color: ${colors.text.subtle}; }
-    .render-safe .milestone-problem { font-size: 16px; color: #888; text-decoration: none; }
+    .render-safe .milestone-problem { font-size: 14px; color: #6b7280; text-decoration: none; } /* CHANGE: Updated problem link style */
+    .render-safe .milestone-problem:hover { text-decoration: underline; }
+
 
     /* Skills Table Styles */
     .render-safe .skills-table { display: flex; flex-direction: column; width: 100%; }
