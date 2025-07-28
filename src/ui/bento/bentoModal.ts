@@ -152,10 +152,10 @@ export function createBentoModalHTML(): string {
 
   return `
     <div id="bento-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="bg-dark-layer-1 rounded-xl w-full max-w-3xl h-full max-h-[95vh] shadow-2xl flex flex-row p-1.5 gap-1.5">
+        <div class="bg-dark-layer-1 rounded-xl w-full max-w-4xl h-full max-h-[95vh] shadow-2xl flex flex-row p-1.5 gap-1.5">
 
             <!-- Left Panel: Customization -->
-            <div class="w-1/3 max-w-xs bg-dark-layer-0 rounded-lg p-4 overflow-y-auto">
+            <div class="w-2/5 max-w-md bg-dark-layer-0 rounded-lg p-4 overflow-y-auto">
                 <h2 class="text-xl font-bold text-white mb-4">Customize Card</h2>
                 <div class="space-y-2">
                     <!-- History Section -->

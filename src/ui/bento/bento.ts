@@ -486,9 +486,32 @@ function populateAccordion() {
         recordsContent.innerHTML = '';
         recordsContent.appendChild(createCheckbox(`bento-checkbox-record-overall-progress`, "Overall Progress", 'recordName', "Overall Progress", 'bento-record-checkbox'));
         legacyStats.records.forEach(record => {
-            // Defensive check for record and record.name
             if (record && record.name) {
-                recordsContent.appendChild(createCheckbox(`bento-checkbox-record-${record.name.replace(/\s+/g, '-')}`, record.name, 'recordName', record.name, 'bento-record-checkbox'));
+                const checkboxRow = createCheckbox(
+                    `bento-checkbox-record-${record.name.replace(/\s+/g, '-')}`, 
+                    record.name, 
+                    'recordName', 
+                    record.name, 
+                    'bento-record-checkbox'
+                );
+
+                const leftSide = checkboxRow.firstElementChild as HTMLElement;
+                if (leftSide) {
+                    leftSide.classList.remove('w-full', 'max-w-[192px]', 'flex-1');
+                    leftSide.classList.add('flex-grow');
+                }
+
+                const statValue = record.mainStat || record.value?.toString() || '';
+                
+                if (statValue) {
+                    const statContainer = document.createElement('div');
+                    statContainer.className = 'text-sm text-label-3 dark:text-dark-label-3 pl-4';
+                    statContainer.textContent = statValue;
+                    statContainer.style.pointerEvents = 'none';
+                    checkboxRow.appendChild(statContainer);
+                }
+                
+                recordsContent.appendChild(checkboxRow);
             }
         });
     }
@@ -515,11 +538,65 @@ function populateAccordion() {
     }
 
     if (skillsContent && skillMatrixData?.topics) {
-        skillsContent.innerHTML = '';
+        skillsContent.innerHTML = ''; // Clear previous content
+
+        // Add a header for the skills list
+        const header = document.createElement('div');
+        // Styling for the header to align with the rows
+        header.className = 'flex w-full items-center justify-between rounded-lg px-2 py-[5px] text-xs text-label-3 dark:text-dark-label-3';
+        header.innerHTML = `
+            <div class="w-3/5 pl-8 font-medium">Topic</div>
+            <div class="flex w-2/5 justify-end text-center font-medium">
+                <span class="w-1/3" title="Problems Solved">Solved</span>
+                <span class="w-1/3" title="Average Attempts">Avg. Attempts</span>
+                <span class="w-1/3" title="First Ace Rate">First Ace %</span>
+            </div>
+        `;
+        skillsContent.appendChild(header);
+
+        const metrics = skillMatrixData.metrics;
         skillMatrixData.topics.forEach(topic => {
-            // Topic is a string, so it's less likely to be null, but a check doesn't hurt
             if (topic) {
-                skillsContent.appendChild(createCheckbox(`bento-checkbox-skill-${topic}`, formatTopicName(topic), 'skillName', topic, 'bento-skill-checkbox'));
+                // Create the standard checkbox row
+                const checkboxRow = createCheckbox(
+                    `bento-checkbox-skill-${topic}`, 
+                    formatTopicName(topic), 
+                    'skillName', 
+                    topic, 
+                    'bento-skill-checkbox'
+                );
+
+                // Find the part that contains the text and checkbox (the first child)
+                const leftSide = checkboxRow.firstElementChild as HTMLElement;
+                if (leftSide) {
+                    // Adjust its width so it doesn't take up the whole row and remove truncation
+                    leftSide.classList.remove('w-full', 'max-w-[192px]', 'flex-1', 'truncate');
+                    leftSide.classList.add('w-3/5');
+                    const textContainer = leftSide.querySelector('.truncate');
+                    textContainer?.classList.remove('truncate');
+                }
+                
+                // Get metrics for the current topic
+                const solved = metrics.problemsSolved[topic] || 0;
+                const avgTries = metrics.avgTries[topic];
+                const firstAce = metrics.firstAceRate[topic] || 0;
+
+                // Create a container for the metrics
+                const metricsContainer = document.createElement('div');
+                metricsContainer.className = 'flex w-2/5 justify-end text-center text-sm items-center';
+                // Make metrics non-interactive so the click event is passed to the row
+                metricsContainer.style.pointerEvents = 'none'; 
+                metricsContainer.innerHTML = `
+                    <span class="w-1/3">${solved}</span>
+                    <span class="w-1/3">${avgTries === Infinity ? '∞' : avgTries.toFixed(1)}</span>
+                    <span class="w-1/3">${firstAce.toFixed(0)}%</span>
+                `;
+
+                // Append the metrics container to the row
+                checkboxRow.appendChild(metricsContainer);
+                
+                // Append the complete row to the accordion content
+                skillsContent.appendChild(checkboxRow);
             }
         });
     }
