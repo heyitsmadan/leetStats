@@ -66,6 +66,9 @@ export function renderOrUpdateDoughnutChart(
             fontSize?: number;
         };
         cutout?: string;
+        layout?: {
+            padding?: number | { top?: number, right?: number, bottom?: number, left?: number };
+        };
     } = { isInteractive: true }
 ): DoughnutChartInstance {
     const canvas = container.querySelector('canvas') as HTMLCanvasElement;
@@ -130,6 +133,9 @@ export function renderOrUpdateDoughnutChart(
         responsive: true,
         maintainAspectRatio: false,
         cutout: config.cutout || '60%',
+        layout: {
+            padding: config.layout?.padding ?? 0
+        },
         animation: {
             duration: config.isInteractive ? 1000 : 0
         },

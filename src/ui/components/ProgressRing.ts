@@ -49,13 +49,13 @@ function describeArc(x: number, y: number, radius: number, startAngle: number, e
 export function renderProgressRing(container: HTMLElement, data: SolvedStats): void {
   const { totalSolved, easySolved, mediumSolved, hardSolved, totalSubmissions } = data;
 
-  // The viewBox is made smaller to "hug" the content and reduce padding.
+  // The viewBox defines the coordinate system of the SVG.
   const viewBoxWidth = 220;
   const viewBoxHeight = 220;
-  const radius = 70; // Radius is reduced to shrink the ring
+  const radius = 70; 
   const strokeWidth = 5;
   const centerX = viewBoxWidth / 2;
-  const centerY = 95; // Center point is adjusted for the new viewBox
+  const centerY = 95; 
 
   const totalAngle = 270;
   const startAngle = -135;
@@ -70,38 +70,32 @@ export function renderProgressRing(container: HTMLElement, data: SolvedStats): v
 
   let currentAngle = startAngle;
 
-  // Overlap by a small degree to blend the rounded caps smoothly
   const overlap = 1;
 
-  // Calculate the path for each difficulty segment
   const easyPath = describeArc(centerX, centerY, radius, currentAngle, currentAngle + easyAngle);
   currentAngle += easyAngle;
   const mediumPath = describeArc(centerX, centerY, radius, currentAngle - overlap, currentAngle + mediumAngle);
   currentAngle += mediumAngle;
   const hardPath = describeArc(centerX, centerY, radius, currentAngle - overlap, currentAngle + hardAngle);
 
-  // Inject the complete SVG into the container
+  // The SVG will fill its container, and preserveAspectRatio will scale it without distortion.
   container.innerHTML = `
-    <svg viewBox="0 0 ${viewBoxWidth} ${viewBoxHeight}" style="width: 100%; height: auto; max-width: ${viewBoxWidth}px;">
+    <svg viewBox="0 0 ${viewBoxWidth} ${viewBoxHeight}" preserveAspectRatio="xMidYMid meet" style="width: 100%; height: 100%;">
       <defs>
         <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
           <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="rgba(0,0,0,0.2)" />
         </filter>
       </defs>
       
-      <!-- Background Ring (optional, for context) -->
       <path d="${describeArc(centerX, centerY, radius, startAngle, startAngle + totalAngle)}" fill="none" stroke="${colors.background.secondarySection}" stroke-width="${strokeWidth}" />
 
-      <!-- Draw paths in reverse order so overlaps look correct with rounded caps -->
       <path d="${hardPath}" fill="none" stroke="${colors.problems.hard}" stroke-width="${strokeWidth}" stroke-linecap="round" filter="url(#shadow)" />
       <path d="${mediumPath}" fill="none" stroke="${colors.problems.medium}" stroke-width="${strokeWidth}" stroke-linecap="round" filter="url(#shadow)" />
       <path d="${easyPath}" fill="none" stroke="${colors.problems.easy}" stroke-width="${strokeWidth}" stroke-linecap="round" filter="url(#shadow)" />
       
-      <!-- Centered Text Block -->
       <text x="${centerX}" y="${centerY}" fill="${colors.text.primary}" text-anchor="middle" dominant-baseline="middle" style="font-size: 2.5rem; font-weight: 600;">${totalSolved}</text>
       <text x="${centerX}" y="${centerY + 35}" fill="${colors.text.primary}" text-anchor="middle" dominant-baseline="middle" style="color: #9ca3af; font-size: 1rem;">${"solved"}</text>
       
-      <!-- Submissions text at the bottom of the SVG canvas -->
       <text x="${centerX}" y="${viewBoxHeight - 15}" fill="${colors.text.primary}" text-anchor="middle" style="font-size: 1.25rem;">${totalSubmissions} submissions</text>
     </svg>
   `;

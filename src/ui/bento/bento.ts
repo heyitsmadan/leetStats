@@ -278,7 +278,7 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (records.includes("Overall Progress")) {
         const card = container.querySelector('#bento-card-overallProgress');
         if (card) {
-            card.innerHTML = `<div class="bento-card-content progress-ring-container" id="bento-progress-ring-container"></div>`;
+            card.innerHTML = `<div class="bento-card-content progress-ring-container" id="bento-progress-ring-container" style="display: flex; align-items: center; justify-content: center; height: 100%;"></div>`;
             const ringContainer = card.querySelector('#bento-progress-ring-container');
             if (ringContainer) {
                 const stats = getSolvedStats(processedDataCache);
@@ -314,7 +314,7 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (selectedMilestones.length > 0) {
         const card = container.querySelector('#bento-card-milestones');
         if (card) {
-            let html = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">Milestones</h3><div class="bento-card-content" style="display: flex; align-items: center; justify-content: center;"><div class="milestone-timeline"><div class="timeline-line"></div><div class="milestone-list">`;
+            let html = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">Milestones</h3><div class="bento-card-content" style="display: grid; place-items: center; height: 100%;"><div class="milestone-timeline"><div class="timeline-line"></div><div class="milestone-list">`;
             selectedMilestones.forEach(m => {
                 const color = getMilestoneColor(m.type);
                 html += `<div class="milestone-item"><div class="milestone-dot" style="background-color: ${color};"></div><div class="milestone-event" style="color: ${color};">${m.milestone}${getOrdinalSuffix(m.milestone)} ${formatMilestoneType(m.type)}</div><div class="milestone-date">${m.date.toLocaleDateString('en-GB')}</div>${m.problemTitle ? `<a href="https://leetcode.com/problems/${m.problemSlug}/" target="_blank" class="${styles.milestoneProblem}milestone-problem">${m.problemTitle}</a>` : ''}</div>`;
@@ -387,7 +387,8 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
                 renderOrUpdateDoughnutChart(chartContainer as HTMLElement, stats, { difficulty: 'All' }, undefined, { 
                     isInteractive: false, 
                     legendConfig: { display: true, position: 'bottom', fontSize: 13 },
-                    cutout: '65%'
+                    cutout: '65%',
+                    layout: { padding: 30 }
                 });
             }
         }
