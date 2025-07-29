@@ -407,6 +407,10 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
             if (chartContainer) {
                 const stats = getCodingClockStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All', clockView: clockView as 'HourOfDay' | 'DayOfWeek' });
                 
+                stats.datasets.forEach(dataset => {
+                    (dataset as any).maxBarThickness = 40;
+                });
+
                 const bentoOptions = {
                     maxTicksLimit: clockView === 'HourOfDay' ? 5 : 7
                 };
