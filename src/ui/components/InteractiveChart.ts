@@ -90,7 +90,7 @@ export function renderOrUpdateInteractiveChart(
 
   // Initialize state and helpers
   // Force default view to "Problems Solved" to match the default active button.
-  let currentFilters: InteractiveChartFilters = { ...initialFilters, primaryView: 'Problems Solved' };
+  let currentFilters: InteractiveChartFilters = { ...initialFilters, primaryView: initialFilters.primaryView || 'Problems Solved' };
   let mainChart: Chart | null = null;
   let currentChartData: InteractiveChartData | null = null;
   

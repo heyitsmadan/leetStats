@@ -1006,7 +1006,7 @@ function createStatsTab(): HTMLElement {
 
   tab.innerHTML = `
     <div class="lc-md:space-x-2 flex items-center rounded-[5px] px-5 py-[10px] font-medium hover:text-label-1 dark:hover:text-dark-label-1">
-      <img src="${iconUrl}" alt="Stats Icon" class="lc-md:inline hidden w-6 h-6" style="image-rendering: -webkit-optimize-contrast;" />
+      <img src="${iconUrl}" alt="Stats Icon" class="lc-md:inline hidden w-6 h-6" />
       <span class="whitespace-nowrap">Stats</span>
     </div>
   `;
