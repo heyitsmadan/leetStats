@@ -119,6 +119,7 @@ export function renderOrUpdateCumulativeLineChart(
         innerHtml += `</ul>`;
         tooltipEl.innerHTML = innerHtml;
 
+        // FIXED: Reverted to original transform-based positioning for animation
         const parentContainer = context.chart.canvas.parentNode as HTMLElement;
         let newLeft = tooltipModel.caretX + 15;
         let newTop = tooltipModel.caretY;

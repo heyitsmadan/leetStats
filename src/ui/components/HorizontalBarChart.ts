@@ -110,10 +110,76 @@ export function renderOrUpdateHorizontalBarChart(
         innerHtml += `</ul>`;
 
         tooltipEl.innerHTML = innerHtml;
-        const { offsetLeft: positionX, offsetTop: positionY } = context.chart.canvas;
+
+        // FIXED: Reverted to original complex transform-based positioning for animation
+        const activeElement = context.tooltip.dataPoints[0]?.element as BarElement;
+        if (!activeElement) return;
+
+        const wasHidden = tooltipEl.style.opacity !== '1';
+        if (wasHidden) {
+            tooltipEl.style.visibility = 'hidden';
+            tooltipEl.style.opacity = '1';
+        }
+        const tooltipWidth = tooltipEl.offsetWidth;
+        const tooltipHeight = tooltipEl.offsetHeight;
+        if (wasHidden) {
+            tooltipEl.style.visibility = 'visible';
+            tooltipEl.style.opacity = '0';
+        }
+
+        const chartContainer = context.chart.canvas.parentNode as HTMLElement;
+        const containerRect = chartContainer.getBoundingClientRect();
+        const desiredOffset = 15;
+
+        let newLeft: number;
+        let newTop: number;
+
+        const totalValue = context.chart.data.datasets.reduce((sum, dataset) => sum + (Number(dataset.data[dataIndex]) || 0), 0);
+        const barEndPixelPosition = context.chart.scales.x.getPixelForValue(totalValue);
+        const barStartPixelPosition = context.chart.scales.x.getPixelForValue(0);
+
+        const posRight = {
+            left: barEndPixelPosition + desiredOffset,
+            top: activeElement.y - tooltipHeight / 2
+        };
+
+        const posBelow = {
+            left: barStartPixelPosition + (barEndPixelPosition - barStartPixelPosition) / 2 - tooltipWidth / 2,
+            top: activeElement.y + (activeElement as any).height / 2 + desiredOffset
+        };
+
+        const posAbove = {
+            left: posBelow.left,
+            top: activeElement.y - (activeElement as any).height / 2 - tooltipHeight - desiredOffset
+        };
+
+        newLeft = posRight.left;
+        newTop = posRight.top;
+
+        if (containerRect.left + newLeft + tooltipWidth > window.innerWidth) {
+            newLeft = posAbove.left;
+            newTop = posAbove.top;
+
+            if (containerRect.top + newTop < 0) {
+                newLeft = posBelow.left;
+                newTop = posBelow.top;
+            }
+        }
+
+        if (containerRect.left + newLeft < 0) {
+            newLeft = -containerRect.left;
+        } else if (containerRect.left + newLeft + tooltipWidth > window.innerWidth) {
+            newLeft = window.innerWidth - tooltipWidth - containerRect.left;
+        }
+
+        if (containerRect.top + newTop < 0) {
+            newTop = -containerRect.top;
+        } else if (containerRect.top + newTop + tooltipHeight > window.innerHeight) {
+            newTop = window.innerHeight - tooltipHeight - containerRect.top;
+        }
+        
         tooltipEl.style.opacity = '1';
-        tooltipEl.style.left = positionX + tooltipModel.caretX + 'px';
-        tooltipEl.style.top = positionY + tooltipModel.caretY + 'px';
+        tooltipEl.style.transform = `translate(${newLeft}px, ${newTop}px)`;
     };
 
     const options: ChartOptions<'bar'> = {

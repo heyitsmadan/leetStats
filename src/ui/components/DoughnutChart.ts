@@ -123,10 +123,24 @@ export function renderOrUpdateDoughnutChart(
         }
 
         tooltipEl.innerHTML = innerHtml;
-        const { offsetLeft: positionX, offsetTop: positionY } = context.chart.canvas;
+        
+        // FIXED: Reverted to original transform-based positioning for animation
+        const chartContainer = context.chart.canvas.parentNode as HTMLElement;
+        let newLeft = tooltipModel.caretX + 10;
+        let newTop = tooltipModel.caretY;
+
+        if (newLeft + tooltipEl.offsetWidth > chartContainer.offsetWidth) {
+            newLeft = tooltipModel.caretX - tooltipEl.offsetWidth - 10;
+        }
+        if (newTop + tooltipEl.offsetHeight > chartContainer.offsetHeight) {
+            newTop = chartContainer.offsetHeight - tooltipEl.offsetHeight;
+        }
+        if (newLeft < 0) newLeft = 0;
+        if (newTop < 0) newTop = 0;
+
         tooltipEl.style.opacity = '1';
-        tooltipEl.style.left = positionX + tooltipModel.caretX + 'px';
-        tooltipEl.style.top = positionY + tooltipModel.caretY + 'px';
+        tooltipEl.style.pointerEvents = 'none';
+        tooltipEl.style.transform = `translate(${newLeft}px, ${newTop}px)`;
     };
 
     const options: ChartOptions<'doughnut'> = {
@@ -148,7 +162,7 @@ export function renderOrUpdateDoughnutChart(
                 labels: {
                     color: colors.text.subtle,
                     boxWidth: config.legendConfig?.position === 'bottom' ? 10 : 15,
-                    padding: 10, // Increased padding
+                    padding: 10,
                     font: {
                         size: config.legendConfig?.fontSize || 11,
                     }

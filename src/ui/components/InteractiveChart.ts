@@ -89,7 +89,8 @@ export function renderOrUpdateInteractiveChart(
   document.head.appendChild(style);
 
   // Initialize state and helpers
-  let currentFilters: InteractiveChartFilters = { ...initialFilters };
+  // Force default view to "Problems Solved" to match the default active button.
+  let currentFilters: InteractiveChartFilters = { ...initialFilters, primaryView: 'Problems Solved' };
   let mainChart: Chart | null = null;
   let currentChartData: InteractiveChartData | null = null;
   
@@ -114,7 +115,8 @@ export function renderOrUpdateInteractiveChart(
         (dataset as any).hoverBackgroundColor = dataset.backgroundColor;
     });
 
-    const showLegend = !config.isBentoMode && currentFilters.secondaryView === 'Language';
+    // Show legend for Language, Difficulty, and Status views
+    const showLegend = !config.isBentoMode && ['Language', 'Difficulty', 'Status'].includes(currentFilters.secondaryView);
 
     mainChart = new Chart(ctx, {
       type: 'bar',
@@ -136,13 +138,12 @@ export function renderOrUpdateInteractiveChart(
           x: {
             stacked: true, grid: { display: false },
             ticks: { 
-  color: colors.text.subtle, 
-  maxTicksLimit: config.isBentoMode ? 8 : 12, 
-  maxRotation: config.isBentoMode ? 0 : 45, 
-  minRotation: 0, 
-  font: { size: config.isBentoMode ? 16 : 12 } 
-}
-
+              color: colors.text.subtle, 
+              maxTicksLimit: config.isBentoMode ? 8 : 12, 
+              maxRotation: config.isBentoMode ? 0 : 45, 
+              minRotation: 0, 
+              font: { size: config.isBentoMode ? 16 : 12 } 
+            }
           },
           y: {
             stacked: true, beginAtZero: true, grid: { display: false },
@@ -281,7 +282,9 @@ export function renderOrUpdateInteractiveChart(
     mainChart.data.labels = currentChartData.labels;
     mainChart.data.datasets = currentChartData.datasets;
     if (mainChart.options.plugins?.legend) {
-        mainChart.options.plugins.legend.display = !config.isBentoMode && currentFilters.secondaryView === 'Language';
+        // Update legend visibility when filters change
+        const shouldShowLegend = !config.isBentoMode && ['Language', 'Difficulty', 'Status'].includes(currentFilters.secondaryView);
+        mainChart.options.plugins.legend.display = shouldShowLegend;
     }
     mainChart.update('none');
   }

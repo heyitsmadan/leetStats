@@ -95,10 +95,29 @@ export function renderOrUpdateStackedBarChart(
 
         tooltipEl.innerHTML = innerHtml;
 
-        const { offsetLeft: positionX, offsetTop: positionY } = context.chart.canvas;
+        // FIXED: Reverted to original transform-based positioning for animation
+        const activeElement = context.tooltip.dataPoints[0]?.element as BarElement & { width: number, x: number };
+        if (!activeElement) return;
+
+        const chartContainer = context.chart.canvas.parentNode as HTMLElement;
+        const barRightEdgeX = activeElement.x + (activeElement.width / 2);
+        const barLeftEdgeX = activeElement.x - (activeElement.width / 2);
+        const desiredOffset = 10;
+        
+        let newLeft = barRightEdgeX + desiredOffset;
+        if (newLeft + tooltipEl.offsetWidth > chartContainer.offsetWidth) {
+            newLeft = barLeftEdgeX - tooltipEl.offsetWidth - desiredOffset;
+        }
+
+        let newTop = tooltipModel.caretY - tooltipEl.offsetHeight / 2;
+        if (newTop < 0) newTop = 0;
+        if (newTop + tooltipEl.offsetHeight > chartContainer.offsetHeight) {
+            newTop = chartContainer.offsetHeight - tooltipEl.offsetHeight;
+        }
+
         tooltipEl.style.opacity = '1';
-        tooltipEl.style.left = positionX + tooltipModel.caretX + 'px';
-        tooltipEl.style.top = positionY + tooltipModel.caretY + 'px';
+        tooltipEl.style.pointerEvents = 'none';
+        tooltipEl.style.transform = `translate(${newLeft}px, ${newTop}px)`;
     };
 
     const options: ChartOptions<'bar'> = {
@@ -149,7 +168,6 @@ export function renderOrUpdateStackedBarChart(
         }
     };
 
-    // Apply bento-specific overrides for horizontal, non-cramped labels
     if (config.bentoOptions && options.scales?.x?.ticks) {
         options.scales.x.ticks.maxRotation = 0;
         options.scales.x.ticks.minRotation = 0;
