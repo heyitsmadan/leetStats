@@ -1117,14 +1117,89 @@ export function getSmartCumulativeView(timeRange: TimeRange, processedData: Proc
 function createGenerateCardButton(): HTMLElement {
     const button = document.createElement('button');
     button.id = 'generate-card-btn';
-    button.className = 'ml-auto inline-flex items-center px-3 py-1.5 text-sm font-medium text-label-2 dark:text-dark-label-2 bg-fill-3 dark:bg-dark-fill-3 border border-divider-border-2 dark:border-dark-divider-border-2 rounded-lg hover:bg-fill-2 dark:hover:bg-dark-fill-2 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 transition-colors';
+
+    // Combines original classes with a new one for the animation.
+    // NOTE: Padding classes are updated to match the other tabs.
+    button.className = 'animated-border-btn ml-auto inline-flex items-center px-5 py-[10px] text-sm font-medium text-label-2 dark:text-dark-label-2 rounded-lg focus:outline-none transition-all';
+    
     button.style.display = 'none'; // Initially hidden
-    
-    const iconUrl = chrome.runtime.getURL('assets/icons/sparkles.svg');
+
+    // The button content is wrapped in a span to ensure it appears above the background effects.
     button.innerHTML = `
-        <img src="${iconUrl}" alt="Generate" class="w-4 h-4 mr-2" />
-        Generate Card
+        <span>Share Stats</span>
     `;
-    
+
+    // Define the CSS for the animation and inject it into the document head.
+    // This is only done once.
+    if (!document.querySelector('#animated-border-styles')) {
+        const styleSheet = document.createElement('style');
+        styleSheet.id = 'animated-border-styles';
+        styleSheet.textContent = `
+            .animated-border-btn {
+                position: relative;
+                z-index: 1;
+                border: none; /* Remove any default border */
+                overflow: hidden; /* Crucial for the effect */
+                background-color: #333; /* Fallback background */
+            }
+
+            /* The animated gradient layer */
+            .animated-border-btn::before {
+                content: '';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                width: 150%;
+                height: 300%;
+                z-index: -2; /* Behind the ::after pseudo-element */
+                /* This creates a disconnected arc of color that orbits the button */
+                background: conic-gradient(
+                    from 180deg at 50% 50%,
+                    transparent 0%,
+                    #818cf8 35%,
+                    #f472b6 65%,
+                    transparent 100%
+                );
+                animation: rotate-gradient 4s linear infinite;
+            }
+
+            /* The solid background that sits on top of the gradient, creating the "border" effect */
+            .animated-border-btn::after {
+                content: '';
+                position: absolute;
+                top: 1px;
+                left: 1px;
+                right: 1px;
+                bottom: 1px;
+                background-color: #262626; /* This should match your site's dark background */
+                border-radius: 0.45rem; /* Slightly smaller than the button's border-radius */
+                z-index: -1;
+                transition: background-color 0.2s ease-in-out;
+            }
+
+            /* The content (text) needs to be on top of everything */
+            .animated-border-btn span {
+                position: relative;
+                z-index: 2;
+                transition: color 0.2s ease-in-out;
+            }
+            
+            .animated-border-btn:hover span {
+                color: #ffffff; /* Change text to white */
+            }
+
+            @keyframes rotate-gradient {
+                0% {
+                    transform: translate(-50%, -50%) rotate(0deg);
+                }
+                100% {
+                    transform: translate(-50%, -50%) rotate(360deg);
+                }
+            }
+        `;
+        document.head.appendChild(styleSheet);
+    }
+
     return button;
 }

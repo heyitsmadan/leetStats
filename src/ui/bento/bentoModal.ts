@@ -64,7 +64,7 @@ export function createBentoModalHTML(): string {
          width: 100%;
     }
     .render-safe #bento-footer {
-        padding: 40px 30px 30px; /* top, horizontal, bottom */
+        padding: 20px 40px 20px; /* top, horizontal, bottom */
         text-align: right;
         font-size: 16px;
         color: ${colors.text.subtle};
@@ -133,7 +133,7 @@ export function createBentoModalHTML(): string {
 
     /* Skills Table Styles */
     .render-safe .skills-table { display: flex; flex-direction: column; width: 100%; }
-    .render-safe .skills-header, .render-safe .skill-row { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 16px; padding: 8px 0; border-bottom: 1px solid ${colors.background.secondarySection}; align-items: center; }
+    .render-safe .skills-header, .render-safe .skill-row { display: grid; grid-template-columns: auto 1fr 1fr 1fr; gap: 16px; padding: 8px 0; border-bottom: 1px solid ${colors.background.secondarySection}; align-items: center; }
     .render-safe .skills-header { font-size: 16px; color: ${colors.text.subtle}; font-weight: 600; }
     .render-safe .skill-row:last-child { border-bottom: none; }
     .render-safe .skill-cell { text-align: center; font-size: 18px; }
@@ -256,3 +256,4 @@ export function createBentoModalHTML(): string {
     <style>${modalStyles}</style>
   `;
 }
+

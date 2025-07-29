@@ -80,7 +80,7 @@ export function renderProgressRing(container: HTMLElement, data: SolvedStats): v
 
   // The SVG will fill its container, and preserveAspectRatio will scale it without distortion.
   container.innerHTML = `
-    <svg viewBox="0 0 ${viewBoxWidth} ${viewBoxHeight}" preserveAspectRatio="xMidYMid meet" style="width: 100%; height: 100%; max-width: 350px; margin: auto;">
+    <svg viewBox="0 0 ${viewBoxWidth} ${viewBoxHeight}" preserveAspectRatio="xMidYMid meet" style="width: 100%; height: 100%; max-width: 250px; margin: auto;">
       <defs>
         <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
           <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="rgba(0,0,0,0.2)" />
