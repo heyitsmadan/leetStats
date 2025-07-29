@@ -1153,12 +1153,15 @@ function createGenerateCardButton(): HTMLElement {
                 width: 150%;
                 height: 300%;
                 z-index: -2; /* Behind the ::after pseudo-element */
-                /* This creates a disconnected arc of color that orbits the button */
+                /* This creates two smooth gradients that orbit the button */
                 background: conic-gradient(
                     from 180deg at 50% 50%,
                     transparent 0%,
-                    #818cf8 35%,
+                    #818cf8 15%,
+                    transparent 30%,
+                    transparent 50%,
                     #f472b6 65%,
+                    transparent 80%,
                     transparent 100%
                 );
                 animation: rotate-gradient 4s linear infinite;
