@@ -69,7 +69,9 @@ function formatTopicName(slug: string): string {
 }
 
 async function renderBentoPreview() {
+    // Guard against running if data is not ready.
     if (isRendering || !legacyStats || !processedDataCache || !skillMatrixData) return;
+
     const currentSkillMatrixData = skillMatrixData;
     isRendering = true;
 
@@ -83,7 +85,7 @@ async function renderBentoPreview() {
     currentPreviewBlob = null;
 
     try {
-        // --- 1. GATHER SELECTIONS & DEFINE COMPONENT PERSONALITIES ---
+        // --- 1. GATHER SELECTIONS ---
         const selections = {
             history: document.querySelector('#bento-checkbox-history[data-state="checked"]') !== null,
             records: Array.from(document.querySelectorAll('.bento-record-checkbox[data-state="checked"]')).map(cb => (cb as HTMLElement).dataset.recordName),
@@ -93,28 +95,22 @@ async function renderBentoPreview() {
             activities: Array.from(document.querySelectorAll('.bento-activity-checkbox[data-state="checked"]')).map(cb => (cb as HTMLElement).dataset.activityName),
         };
 
+        // --- 2. DEFINE COMPONENTS ---
         const componentDefinitions = {
-            history: { type: 'large', span: 4, condition: selections.history },
-            skills: { type: 'large', span: 4, condition: selections.skills.length > 0 },
-            progressTracker: { type: 'large', span: 4, condition: selections.activities.includes('Progress Tracker') },
-            
-            records: { type: 'medium', span: 2, condition: selections.records.filter(r => r !== "Overall Progress").length > 0 },
-            trophies: { type: 'medium', span: 2, condition: selections.trophies.length > 0 },
-
-            milestones: { type: 'small', span: 2, condition: selections.milestones.length > 0 },
-
-            overallProgress: { type: 'square', span: 2, condition: selections.records.includes("Overall Progress") },
-            submissionSignature: { type: 'square', span: 2, condition: selections.activities.includes('Submission Signature') },
-            languageStats: { type: 'square', span: 2, condition: selections.activities.includes('Language Stats') },
-            codingClock: { type: 'square', span: 2, condition: selections.activities.includes('Coding Clock') },
+            history: { condition: selections.history },
+            progressTracker: { condition: selections.activities.includes('Progress Tracker') },
+            codingClock: { condition: selections.activities.includes('Coding Clock') },
+            submissionSignature: { condition: selections.activities.includes('Submission Signature') },
+            languageStats: { condition: selections.activities.includes('Language Stats') },
+            trophies: { condition: selections.trophies.length > 0 },
+            milestones: { condition: selections.milestones.length > 0 },
+            records: { condition: selections.records.filter(r => r !== "Overall Progress").length > 0 },
+            overallProgress: { condition: selections.records.includes("Overall Progress") },
+            skills: { condition: selections.skills.length > 0 },
         };
 
-        // --- 2. LAYOUT ENGINE: Categorize selected components ---
-        const skillsSelected = componentDefinitions.skills.condition;
-        const largeItems = Object.keys(componentDefinitions).filter(key => key !== 'skills' && componentDefinitions[key as keyof typeof componentDefinitions].type === 'large' && componentDefinitions[key as keyof typeof componentDefinitions].condition);
-        const mediumItems = Object.keys(componentDefinitions).filter(key => componentDefinitions[key as keyof typeof componentDefinitions].type === 'medium' && componentDefinitions[key as keyof typeof componentDefinitions].condition);
-        const smallItems = Object.keys(componentDefinitions).filter(key => componentDefinitions[key as keyof typeof componentDefinitions].type === 'small' && componentDefinitions[key as keyof typeof componentDefinitions].condition);
-        const squareItems = Object.keys(componentDefinitions).filter(key => componentDefinitions[key as keyof typeof componentDefinitions].type === 'square' && componentDefinitions[key as keyof typeof componentDefinitions].condition);
+        const selectedItems = Object.keys(componentDefinitions)
+            .filter(key => componentDefinitions[key as keyof typeof componentDefinitions].condition);
 
         // --- 3. CREATE HTML STRUCTURE OFF-SCREEN ---
         const offscreenContainer = document.createElement('div');
@@ -122,7 +118,7 @@ async function renderBentoPreview() {
         offscreenContainer.style.left = '-9999px';
         offscreenContainer.style.top = '0px';
         offscreenContainer.style.width = `${RENDER_WIDTH}px`;
-        offscreenContainer.style.height = 'auto';
+        offscreenContainer.style.height = 'auto'; 
 
         offscreenContainer.innerHTML = `
             <div id="bento-render-node" class="render-safe">
@@ -133,50 +129,68 @@ async function renderBentoPreview() {
         
         const grid = offscreenContainer.querySelector('#bento-grid')!;
         
-        // --- 4. LAYOUT ENGINE: Place components onto the grid ---
-        largeItems.forEach(key => {
-            grid.appendChild(createCardElement(key, 4));
-        });
-        
-        const remainingItems = [...mediumItems, ...smallItems, ...squareItems];
-        let currentRowColumns = 0;
+        // --- 4. LAYOUT ENGINE ALGORITHM (REWRITTEN) ---
 
-        while (remainingItems.length > 0) {
-            if (remainingItems.length === 1 && currentRowColumns === 0) {
-                const lastItemKey = remainingItems.shift()!;
-                grid.appendChild(createCardElement(lastItemKey, 4));
-                continue;
-            }
-            
-            let itemPlacedInRow = false;
-            const placementOrder = ['medium', 'small', 'square'];
-            
-            for (const itemType of placementOrder) {
-                const itemIndex = remainingItems.findIndex(key => {
-                    const def = componentDefinitions[key as keyof typeof componentDefinitions];
-                    return def.type === itemType && (currentRowColumns + def.span <= 4);
-                });
+        // Define priorities based on the algorithm
+        const promotionPriority = ['history', 'progressTracker', 'codingClock', 'submissionSignature', 'languageStats', 'trophies', 'milestones', 'records', 'overallProgress'];
+        const visualOrderPriority = ['history', 'overallProgress'];
 
-                if (itemIndex !== -1) {
-                    const itemKey = remainingItems[itemIndex];
-                    const itemDef = componentDefinitions[itemKey as keyof typeof componentDefinitions];
-                    
-                    grid.appendChild(createCardElement(itemKey, itemDef.span));
-                    currentRowColumns += itemDef.span;
-                    remainingItems.splice(itemIndex, 1);
-                    itemPlacedInRow = true;
-                    break;
-                }
-            }
+        // Get all selected components that need layout decisions
+        let componentsToLayout = [...selectedItems];
 
-            if (currentRowColumns >= 4 || !itemPlacedInRow) {
-                currentRowColumns = 0;
-            }
+        // Rule: Skills is always rendered full width, at the bottom.
+        // Isolate it from the main layout logic.
+        const hasSkills = componentsToLayout.includes('skills');
+        if (hasSkills) {
+            componentsToLayout = componentsToLayout.filter(item => item !== 'skills');
         }
 
-        if (skillsSelected) {
+        // Determine if the count of main components is odd and which item to promote.
+        const isOddCount = componentsToLayout.length % 2 === 1;
+        let itemToPromote: string | null = null;
+        if (isOddCount) {
+            // Find the highest-priority item present in the selection to promote to full-width.
+            itemToPromote = promotionPriority.find(p => componentsToLayout.includes(p)) || null;
+        }
+
+        // Build the final ordered list of components to render, respecting the visual order guideline.
+        const orderedComponents: string[] = [];
+
+        // 1. Add top-priority visual items first to ensure they appear at the top.
+        visualOrderPriority.forEach(key => {
+            if (componentsToLayout.includes(key)) {
+                orderedComponents.push(key);
+            }
+        });
+
+        // 2. Add the rest of the items.
+        // Sorting them by the promotion priority ensures a consistent and predictable layout.
+        const remainingComponents = componentsToLayout
+            .filter(key => !visualOrderPriority.includes(key))
+            .sort((a, b) => {
+                const indexA = promotionPriority.indexOf(a);
+                const indexB = promotionPriority.indexOf(b);
+                // If an item isn't in the priority list, it has the lowest priority.
+                if (indexA === -1) return 1;
+                if (indexB === -1) return -1;
+                return indexA - indexB;
+            });
+
+        orderedComponents.push(...remainingComponents);
+
+        // Now, render the main components with the correct span based on the logic.
+        orderedComponents.forEach(key => {
+            // A component is full-width (span 4) if it's the one chosen for promotion. Otherwise, it's half-width (span 2).
+            const span = (key === itemToPromote) ? 4 : 2;
+            grid.appendChild(createCardElement(key, span));
+        });
+
+        // Finally, add the Skills component at the very end if it was selected.
+        if (hasSkills) {
             grid.appendChild(createCardElement('skills', 4));
         }
+        
+        // --- End of rewritten layout logic ---
 
         document.body.appendChild(offscreenContainer);
         const renderNode = document.getElementById('bento-render-node') as HTMLElement;
@@ -200,7 +214,6 @@ async function renderBentoPreview() {
         currentPreviewBlob = blob;
         if (shareBtn) shareBtn.removeAttribute('disabled');
 
-        // Draw the generated blob onto our preview canvas
         const ctx = previewCanvas.getContext('2d');
         if (ctx) {
             const img = new Image();
@@ -209,7 +222,7 @@ async function renderBentoPreview() {
                 previewCanvas.width = img.width;
                 previewCanvas.height = img.height;
                 ctx.drawImage(img, 0, 0);
-                URL.revokeObjectURL(url); // Clean up the object URL
+                URL.revokeObjectURL(url);
             };
             img.src = url;
         }
