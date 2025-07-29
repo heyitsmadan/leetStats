@@ -168,6 +168,7 @@ export function createBentoModalHTML(): string {
             <div id="bento-controls-panel" class="bg-dark-layer-0 rounded-lg p-4 flex flex-col flex-shrink-0" style="width: var(--left-panel-width);">
                 <h2 class="text-xl font-bold text-white mb-4 flex-shrink-0">Customize</h2>
                 <div class="space-y-2 overflow-y-auto overflow-x-hidden">
+                    <!-- Accordion sections remain unchanged -->
                     <div class="bg-dark-layer-1 rounded-lg">
                         <div class="bento-accordion-header p-3 cursor-pointer">
                             <div class="flex justify-between items-center">
@@ -239,7 +240,7 @@ export function createBentoModalHTML(): string {
 
             <div class="w-[500px] flex-shrink-0 flex flex-col bg-dark-layer-0 rounded-lg">
                 <div class="flex-shrink-0 flex justify-end p-2">
-                    <button id="bento-modal-close-btn" type="button" class="ring-offset-sd-background focus:ring-sd-ring data-[state=open]:bg-sd-accent data-[state=open]:text-sd-muted-foreground rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:pointer-events-none">
+                    <button id="bento-modal-close-btn" type="button" class="ring-offset-sd-background focus:ring-sd-ring data-[state=open]:bg-sd-accent data-[state=open]:text-sd-muted-foreground rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none disabled:pointer-events-none">
                         <div class="relative text-[20px] leading-[normal] before:block before:h-5 before:w-4 w-4">
                             <svg aria-hidden="true" focusable="false" data-prefix="far" data-icon="xmark" class="svg-inline--fa fa-xmark absolute left-1/2 top-1/2 h-[1em] -translate-x-1/2 -translate-y-1/2 align-[-0.125em]" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
                                 <path fill="currentColor" d="M345 137c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-119 119L73 103c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9l119 119L39 375c-9.4 9.4-9.4 24.6 0 33.9s24.6 9.4 33.9 0l119-119L311 409c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-119-119L345 137z"></path>
@@ -258,9 +259,14 @@ export function createBentoModalHTML(): string {
                     </div>
                 </div>
 
-                <div class="flex-shrink-0 flex justify-end p-4">
-                    <button id="share-bento-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-5 rounded-lg transition-colors duration-200 disabled:bg-gray-500 disabled:cursor-not-allowed">
-                        Share
+                <div class="flex-shrink-0 flex justify-end items-center p-4 gap-3">
+                    <button id="copy-bento-btn" class="bg-green-0 dark:bg-dark-green-0 text-green-s dark:text-dark-green-s hover:text-green-s dark:hover:text-dark-green-s flex items-center justify-center w-32 rounded-lg py-[7px] font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                        <span>Copy</span>
+                    </button>
+                    <button id="download-bento-btn" class="bg-dark-layer-1 hover:bg-dark-layer-2 border border-dark-divider-3 text-label-2 dark:text-dark-label-2 flex items-center justify-center w-32 rounded-lg py-[7px] font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                        <span>Download</span>
                     </button>
                 </div>
             </div>

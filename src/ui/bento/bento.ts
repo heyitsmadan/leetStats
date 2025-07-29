@@ -80,11 +80,15 @@ async function renderBentoPreview() {
 
     const loader = document.getElementById('bento-preview-loader');
     const previewCanvas = document.getElementById('bento-preview-canvas') as HTMLCanvasElement;
-    const shareBtn = document.getElementById('share-bento-btn');
+    // --- UPDATED: Get new copy and download buttons ---
+    const copyBtn = document.getElementById('copy-bento-btn');
+    const downloadBtn = document.getElementById('download-bento-btn');
 
     if (loader) loader.style.display = 'block';
     if (previewCanvas) previewCanvas.style.display = 'none';
-    if (shareBtn) shareBtn.setAttribute('disabled', 'true');
+    // --- UPDATED: Disable both buttons during render ---
+    if (copyBtn) copyBtn.setAttribute('disabled', 'true');
+    if (downloadBtn) downloadBtn.setAttribute('disabled', 'true');
     currentPreviewBlob = null;
 
     try {
@@ -189,7 +193,9 @@ async function renderBentoPreview() {
         }
         
         currentPreviewBlob = blob;
-        if (shareBtn) shareBtn.removeAttribute('disabled');
+        // --- UPDATED: Enable both buttons after render ---
+        if (copyBtn) copyBtn.removeAttribute('disabled');
+        if (downloadBtn) downloadBtn.removeAttribute('disabled');
 
         const ctx = previewCanvas.getContext('2d');
         if (ctx) {
@@ -444,13 +450,11 @@ export function initializeBentoGenerator(data: ProcessedData, username: string) 
     const generateCardBtn = document.getElementById('generate-card-btn');
     const modal = document.getElementById('bento-modal');
     const closeModalBtn = document.getElementById('bento-modal-close-btn');
-    const shareBtn = document.getElementById('share-bento-btn') as HTMLButtonElement;
+    // --- UPDATED: Get new copy and download buttons ---
+    const copyBtn = document.getElementById('copy-bento-btn') as HTMLButtonElement;
+    const downloadBtn = document.getElementById('download-bento-btn') as HTMLButtonElement;
 
-    if (!generateCardBtn || !modal || !closeModalBtn || !shareBtn) return;
-    
-    shareBtn.className = 'bg-green-0 dark:bg-dark-green-0 text-green-s dark:text-dark-green-s hover:text-green-s dark:hover:text-dark-green-s w-32 rounded-lg py-[7px] text-center font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
-    shareBtn.textContent = 'Share';
-
+    if (!generateCardBtn || !modal || !closeModalBtn || !copyBtn || !downloadBtn) return;
 
     generateCardBtn.addEventListener('click', () => {
         modal.style.display = 'flex';
@@ -473,21 +477,68 @@ export function initializeBentoGenerator(data: ProcessedData, username: string) 
         } 
     });
 
-    shareBtn.addEventListener('click', async () => {
+    // START ADDING HERE
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && modal.style.display === 'flex') {
+            closeModal();
+        }
+    });
+    // STOP ADDING HERE
+
+    // --- NEW: Hide copy button if Clipboard API for images is not supported ---
+    if (!navigator.clipboard || !window.ClipboardItem) {
+        copyBtn.style.display = 'none';
+    }
+
+    // --- NEW: Event listener for the Copy button ---
+    // --- NEW: Event listener for the Copy button ---
+    copyBtn.addEventListener('click', async () => {
         if (!currentPreviewBlob) return;
-        const file = new File([currentPreviewBlob], `leetstats_${username}.png`, { type: 'image/png' });
+
+        // Store the original button HTML content
+        const originalContent = copyBtn.innerHTML;
+
         try {
-            if (navigator.share && navigator.canShare({ files: [file] })) {
-                await navigator.share({ title: 'My LeetCode Stats', text: 'Check out my LeetCode stats card!', files: [file] });
-            } else {
-                throw new Error('Web Share API not supported.');
-            }
+            // Use the modern clipboard API to write the image blob
+            const clipboardItem = new ClipboardItem({ 'image/png': currentPreviewBlob });
+            await navigator.clipboard.write([clipboardItem]);
+
+            // Provide visual feedback: replace content with a checkmark SVG
+            copyBtn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-s dark:text-dark-green-s">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+            `;
+
+            // Revert back to the original content after a delay
+            setTimeout(() => {
+                copyBtn.innerHTML = originalContent;
+            }, 1500);
+
         } catch (err) {
+            console.error("Failed to copy image to clipboard:", err);
+            // On failure, briefly show "Failed!" text then revert
+            const buttonSpan = copyBtn.querySelector('span');
+            if (buttonSpan) {
+                 buttonSpan.textContent = 'Failed!';
+                 setTimeout(() => {
+                    copyBtn.innerHTML = originalContent;
+                }, 2500);
+            }
+        }
+    });
+
+    // --- NEW: Event listener for the Download button ---
+    downloadBtn.addEventListener('click', () => {
+        if (!currentPreviewBlob) return;
+        try {
             const link = document.createElement('a');
-            link.download = `leetstats_${username}.png`;
+            link.download = `leetstats_${usernameCache}.png`;
             link.href = URL.createObjectURL(currentPreviewBlob);
             link.click();
             URL.revokeObjectURL(link.href);
+        } catch (err) {
+            console.error("Failed to download the image.", err);
         }
     });
 
@@ -579,7 +630,7 @@ function populateAccordion() {
         controlsContainer.appendChild(togglesWrapper);
         const datePickers = document.createElement('div');
         datePickers.id = 'history-date-pickers';
-        datePickers.className = 'flex gap-2 items-center mt-2';
+        datePickers.className = 'flex gap-2 items-center justify-center mt-2';
         datePickers.innerHTML = `
             <input type="date" id="bento-history-start-date" class="bg-dark-layer-0 rounded p-1 text-sm text-gray-300 border border-dark-divider-3">
             <span class="text-gray-400">-</span>
@@ -625,7 +676,7 @@ function populateAccordion() {
         overrideCheckboxStyle(overallProgressCheckbox);
         const overallProgressStat = document.createElement('div');
         overallProgressStat.className = 'text-sm text-label-3 dark:text-dark-label-3 pl-4';
-        overallProgressStat.textContent = `${solvedStats.totalSolved} Solved`;
+        overallProgressStat.textContent = `${solvedStats.totalSolved} problems solved`;
         overallProgressStat.style.pointerEvents = 'none';
         overallProgressCheckbox.appendChild(overallProgressStat);
         measureAndTrackWidth(overallProgressCheckbox);
