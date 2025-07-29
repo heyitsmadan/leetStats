@@ -129,11 +129,11 @@ async function renderBentoPreview() {
         
         const grid = offscreenContainer.querySelector('#bento-grid')!;
         
-        // --- 4. LAYOUT ENGINE ALGORITHM (REWRITTEN) ---
+        // --- 4. LAYOUT ENGINE ALGORITHM (UPDATED) ---
 
         // Define priorities based on the algorithm
         const promotionPriority = ['history', 'progressTracker', 'codingClock', 'submissionSignature', 'languageStats', 'trophies', 'milestones', 'records', 'overallProgress'];
-        const visualOrderPriority = ['history', 'overallProgress'];
+        const visualOrderPriority = ['history']; // 'overallProgress' is now removed from special visual ordering.
 
         // Get all selected components that need layout decisions
         let componentsToLayout = [...selectedItems];
@@ -190,7 +190,7 @@ async function renderBentoPreview() {
             grid.appendChild(createCardElement('skills', 4));
         }
         
-        // --- End of rewritten layout logic ---
+        // --- End of layout logic ---
 
         document.body.appendChild(offscreenContainer);
         const renderNode = document.getElementById('bento-render-node') as HTMLElement;
@@ -238,6 +238,7 @@ async function renderBentoPreview() {
         isRendering = false;
     }
 }
+
 
 function createCardElement(key: string, span: number): HTMLElement {
     const card = document.createElement('div');
