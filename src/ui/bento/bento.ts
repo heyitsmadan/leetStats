@@ -498,6 +498,15 @@ export function initializeBentoGenerator(data: ProcessedData, username: string) 
 }
 
 function populateAccordion() {
+    let maxContentWidth = 0;
+
+    const measureAndTrackWidth = (element: HTMLElement) => {
+        const width = measureElementWidth(element);
+        if (width > maxContentWidth) {
+            maxContentWidth = width;
+        }
+    };
+
     const historyContent = document.getElementById('bento-history-accordion-content');
     const recordsContent = document.getElementById('bento-records-accordion-content');
     const trophiesContent = document.getElementById('bento-trophies-accordion-content');
@@ -505,35 +514,28 @@ function populateAccordion() {
     const skillsContent = document.getElementById('bento-skills-accordion-content');
     const activityContent = document.getElementById('bento-activity-accordion-content');
 
-    // Helper function to override checkbox styles for proper width calculation
     const overrideCheckboxStyle = (checkboxRow: HTMLElement) => {
         const leftSide = checkboxRow.firstElementChild as HTMLElement;
         if (leftSide) {
-            // Replace classes that constrain width
             leftSide.className = 'text-md flex items-center space-x-2';
             const textContainer = leftSide.querySelector('.truncate');
             if (textContainer) {
-                textContainer.className = ''; // Remove truncate wrapper
+                textContainer.className = '';
                 const textSpan = textContainer.querySelector('span');
-                if (textSpan) {
-                    textSpan.className = 'whitespace-nowrap'; // Prevent label from wrapping
-                }
+                if (textSpan) textSpan.className = 'whitespace-nowrap';
             }
         }
     };
 
     if (historyContent) {
-        historyContent.innerHTML = ''; // Clear previous content
-
+        historyContent.innerHTML = '';
         const controlsContainer = document.createElement('div');
         controlsContainer.id = 'history-controls-container';
         controlsContainer.className = 'space-y-2 mt-2 pl-8';
-        controlsContainer.style.display = 'none'; // Initially hidden
+        controlsContainer.style.display = 'none';
 
         const togglesWrapper = document.createElement('div');
         togglesWrapper.className = 'flex gap-2 items-center';
-
-        // Primary View Toggle
         const primaryToggleContainer = document.createElement('div');
         primaryToggleContainer.id = 'bento-history-primary-toggle';
         primaryToggleContainer.className = 'text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]';
@@ -542,8 +544,6 @@ function populateAccordion() {
             <button data-view="Submissions" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Submissions</button>
         `;
         togglesWrapper.appendChild(primaryToggleContainer);
-        
-        // Secondary View Toggle
         const secondaryToggleContainer = document.createElement('div');
         secondaryToggleContainer.id = 'bento-history-secondary-toggle';
         secondaryToggleContainer.className = 'text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]';
@@ -554,8 +554,6 @@ function populateAccordion() {
         `;
         togglesWrapper.appendChild(secondaryToggleContainer);
         controlsContainer.appendChild(togglesWrapper);
-
-        // Date Pickers
         const datePickers = document.createElement('div');
         datePickers.id = 'history-date-pickers';
         datePickers.className = 'flex gap-2 items-center mt-2';
@@ -566,44 +564,33 @@ function populateAccordion() {
         `;
         controlsContainer.appendChild(datePickers);
 
-        // Main Checkbox
-        const historyCheckboxCallback = (isChecked: boolean) => {
-            controlsContainer.style.display = isChecked ? 'block' : 'none';
-        };
+        const historyCheckboxCallback = (isChecked: boolean) => { controlsContainer.style.display = isChecked ? 'block' : 'none'; };
         const checkboxContainer = createCheckbox('bento-checkbox-history', 'Show History Chart', 'historyToggle', 'true', 'bento-history-checkbox', historyCheckboxCallback, true);
         overrideCheckboxStyle(checkboxContainer);
+        measureAndTrackWidth(checkboxContainer);
 
         historyContent.appendChild(checkboxContainer);
         historyContent.appendChild(controlsContainer);
 
-        // Set up event listeners for toggles
-        document.querySelectorAll('#bento-history-primary-toggle button').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const target = e.currentTarget as HTMLElement;
-                document.querySelectorAll('#bento-history-primary-toggle button').forEach(b => b.setAttribute('data-state', 'inactive'));
-                target.setAttribute('data-state', 'active');
-                debouncedRenderBentoPreview();
-            });
-        });
+        document.querySelectorAll('#bento-history-primary-toggle button').forEach(btn => btn.addEventListener('click', (e) => {
+            const target = e.currentTarget as HTMLElement;
+            document.querySelectorAll('#bento-history-primary-toggle button').forEach(b => b.setAttribute('data-state', 'inactive'));
+            target.setAttribute('data-state', 'active');
+            debouncedRenderBentoPreview();
+        }));
+        document.querySelectorAll('#bento-history-secondary-toggle button').forEach(btn => btn.addEventListener('click', (e) => {
+            const target = e.currentTarget as HTMLElement;
+            document.querySelectorAll('#bento-history-secondary-toggle button').forEach(b => b.setAttribute('data-state', 'inactive'));
+            target.setAttribute('data-state', 'active');
+            debouncedRenderBentoPreview();
+        }));
 
-        document.querySelectorAll('#bento-history-secondary-toggle button').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const target = e.currentTarget as HTMLElement;
-                document.querySelectorAll('#bento-history-secondary-toggle button').forEach(b => b.setAttribute('data-state', 'inactive'));
-                target.setAttribute('data-state', 'active');
-                debouncedRenderBentoPreview();
-            });
-        });
-
-        // Set up date pickers
         const startDateInput = datePickers.querySelector('#bento-history-start-date') as HTMLInputElement;
         const endDateInput = datePickers.querySelector('#bento-history-end-date') as HTMLInputElement;
-        const today = new Date();
-        const oneYearAgo = new Date();
+        const today = new Date(), oneYearAgo = new Date();
         oneYearAgo.setFullYear(today.getFullYear() - 1);
         endDateInput.valueAsDate = today;
         startDateInput.valueAsDate = oneYearAgo;
-        
         startDateInput.addEventListener('change', debouncedRenderBentoPreview);
         endDateInput.addEventListener('change', debouncedRenderBentoPreview);
     }
@@ -613,27 +600,19 @@ function populateAccordion() {
         const solvedStats = getSolvedStats(processedDataCache);
         const overallProgressCheckbox = createCheckbox(`bento-checkbox-record-overall-progress`, "Overall Progress", 'recordName', "Overall Progress", 'bento-record-checkbox', undefined, true);
         overrideCheckboxStyle(overallProgressCheckbox);
-
         const overallProgressStat = document.createElement('div');
         overallProgressStat.className = 'text-sm text-label-3 dark:text-dark-label-3 pl-4';
         overallProgressStat.textContent = `${solvedStats.totalSolved} Solved`;
         overallProgressStat.style.pointerEvents = 'none';
         overallProgressCheckbox.appendChild(overallProgressStat);
+        measureAndTrackWidth(overallProgressCheckbox);
         recordsContent.appendChild(overallProgressCheckbox);
 
         legacyStats.records.forEach(record => {
-            if (record && record.name) {
-                const checkboxRow = createCheckbox(
-                    `bento-checkbox-record-${record.name.replace(/\s+/g, '-')}`, 
-                    record.name, 
-                    'recordName', 
-                    record.name, 
-                    'bento-record-checkbox'
-                );
+            if (record?.name) {
+                const checkboxRow = createCheckbox(`bento-checkbox-record-${record.name.replace(/\s+/g, '-')}`, record.name, 'recordName', record.name, 'bento-record-checkbox');
                 overrideCheckboxStyle(checkboxRow);
-
                 const statValue = record.mainStat || record.value?.toString() || '';
-                
                 if (statValue) {
                     const statContainer = document.createElement('div');
                     statContainer.className = 'text-sm text-label-3 dark:text-dark-label-3 pl-4 whitespace-nowrap';
@@ -641,7 +620,7 @@ function populateAccordion() {
                     statContainer.style.pointerEvents = 'none';
                     checkboxRow.appendChild(statContainer);
                 }
-                
+                measureAndTrackWidth(checkboxRow);
                 recordsContent.appendChild(checkboxRow);
             }
         });
@@ -650,16 +629,15 @@ function populateAccordion() {
     if (trophiesContent && legacyStats?.trophies) {
         trophiesContent.innerHTML = '';
         legacyStats.trophies.filter(t => t.achieved).forEach(trophy => {
-            if (trophy && trophy.id && trophy.title) {
+            if (trophy?.id && trophy.title) {
                 const checkboxRow = createCheckbox(`bento-checkbox-trophy-${trophy.id}`, trophy.title, 'trophyId', trophy.id, 'bento-trophy-checkbox');
                 overrideCheckboxStyle(checkboxRow);
-
                 const subtitleContainer = document.createElement('div');
                 subtitleContainer.className = 'text-sm text-label-3 dark:text-dark-label-3 pl-4 truncate';
                 subtitleContainer.textContent = trophy.subtitle;
                 subtitleContainer.style.pointerEvents = 'none';
                 checkboxRow.appendChild(subtitleContainer);
-                
+                measureAndTrackWidth(checkboxRow);
                 trophiesContent.appendChild(checkboxRow);
             }
         });
@@ -672,21 +650,19 @@ function populateAccordion() {
                 const labelText = `${milestone.milestone}${getOrdinalSuffix(milestone.milestone)} ${formatMilestoneType(milestone.type)}`;
                 const checkboxRow = createCheckbox(`bento-checkbox-milestone-${index}`, labelText, 'milestoneIndex', index.toString(), 'bento-milestone-checkbox');
                 overrideCheckboxStyle(checkboxRow);
-                
                 const dateContainer = document.createElement('div');
                 dateContainer.className = 'text-sm text-label-3 dark:text-dark-label-3 pl-4 whitespace-nowrap';
                 dateContainer.textContent = milestone.date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
                 dateContainer.style.pointerEvents = 'none';
                 checkboxRow.appendChild(dateContainer);
-
+                measureAndTrackWidth(checkboxRow);
                 milestonesContent.appendChild(checkboxRow);
             }
         });
     }
 
     if (skillsContent && skillMatrixData?.topics) {
-        skillsContent.innerHTML = ''; // Clear previous content
-
+        skillsContent.innerHTML = '';
         const header = document.createElement('div');
         header.className = 'flex w-full items-center justify-between rounded-lg px-2 py-[5px] text-xs text-label-3 dark:text-dark-label-3';
         header.innerHTML = `
@@ -702,15 +678,7 @@ function populateAccordion() {
         const metrics = skillMatrixData.metrics;
         skillMatrixData.topics.forEach(topic => {
             if (topic) {
-                const checkboxRow = createCheckbox(
-                    `bento-checkbox-skill-${topic}`, 
-                    formatTopicName(topic), 
-                    'skillName', 
-                    topic, 
-                    'bento-skill-checkbox'
-                );
-
-                // Special override for skills to use flex-grow on the topic name
+                const checkboxRow = createCheckbox(`bento-checkbox-skill-${topic}`, formatTopicName(topic), 'skillName', topic, 'bento-skill-checkbox');
                 const leftSide = checkboxRow.firstElementChild as HTMLElement;
                 if (leftSide) {
                     leftSide.className = 'text-md flex items-center space-x-2 flex-grow';
@@ -721,22 +689,18 @@ function populateAccordion() {
                         if (textSpan) textSpan.className = 'whitespace-nowrap';
                     }
                 }
-                
-                const solved = metrics.problemsSolved[topic] || 0;
-                const avgTries = metrics.avgTries[topic];
-                const firstAce = metrics.firstAceRate[topic] || 0;
-
+                const { problemsSolved, avgTries, firstAceRate } = metrics;
                 const metricsContainer = document.createElement('div');
                 metricsContainer.className = 'flex flex-shrink-0 justify-end text-center text-sm items-center';
-                metricsContainer.style.width = '200px'; // Match header width
-                metricsContainer.style.pointerEvents = 'none'; 
+                metricsContainer.style.width = '200px';
+                metricsContainer.style.pointerEvents = 'none';
                 metricsContainer.innerHTML = `
-                    <span class="w-1/3">${solved}</span>
-                    <span class="w-1/3">${avgTries === Infinity ? '∞' : avgTries.toFixed(1)}</span>
-                    <span class="w-1/3">${firstAce.toFixed(0)}%</span>
+                    <span class="w-1/3">${problemsSolved[topic] || 0}</span>
+                    <span class="w-1/3">${avgTries[topic] === Infinity ? '∞' : avgTries[topic]?.toFixed(1) || '0.0'}</span>
+                    <span class="w-1/3">${firstAceRate[topic]?.toFixed(0) || '0'}%</span>
                 `;
-
                 checkboxRow.appendChild(metricsContainer);
+                measureAndTrackWidth(checkboxRow);
                 skillsContent.appendChild(checkboxRow);
             }
         });
@@ -746,16 +710,13 @@ function populateAccordion() {
         activityContent.innerHTML = '';
         const ACTIVITY_CHARTS = ["Submission Signature", "Language Stats", "Progress Tracker", "Coding Clock"];
         const DEFAULT_ACTIVITY_CHARTS = ["Language Stats", "Progress Tracker", "Coding Clock"];
-
         ACTIVITY_CHARTS.forEach(name => {
             const isDefaultChecked = DEFAULT_ACTIVITY_CHARTS.includes(name);
-
             if (name === "Coding Clock") {
                 const controlsContainer = document.createElement('div');
                 controlsContainer.id = 'coding-clock-controls-container';
                 controlsContainer.className = 'space-y-2 mt-1 pl-8';
                 controlsContainer.style.display = 'none';
-
                 const toggleContainer = document.createElement('div');
                 toggleContainer.id = 'bento-coding-clock-toggle';
                 toggleContainer.className = 'text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]';
@@ -764,31 +725,41 @@ function populateAccordion() {
                     <button data-view="DayOfWeek" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Weekly</button>
                 `;
                 controlsContainer.appendChild(toggleContainer);
-
-                const checkboxCallback = (isChecked: boolean) => {
-                    controlsContainer.style.display = isChecked ? 'block' : 'none';
-                };
-
+                const checkboxCallback = (isChecked: boolean) => { controlsContainer.style.display = isChecked ? 'block' : 'none'; };
                 const checkboxContainer = createCheckbox(`bento-checkbox-activity-${name.replace(/\s+/g, '-')}`, name, 'activityName', name, 'bento-activity-checkbox', checkboxCallback, isDefaultChecked);
                 overrideCheckboxStyle(checkboxContainer);
-                
+                measureAndTrackWidth(checkboxContainer);
                 activityContent.appendChild(checkboxContainer);
                 activityContent.appendChild(controlsContainer);
-
-                document.querySelectorAll('#bento-coding-clock-toggle button').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
-                        const target = e.currentTarget as HTMLElement;
-                        document.querySelectorAll('#bento-coding-clock-toggle button').forEach(b => b.setAttribute('data-state', 'inactive'));
-                        target.setAttribute('data-state', 'active');
-                        debouncedRenderBentoPreview();
-                    });
-                });
+                document.querySelectorAll('#bento-coding-clock-toggle button').forEach(btn => btn.addEventListener('click', (e) => {
+                    const target = e.currentTarget as HTMLElement;
+                    document.querySelectorAll('#bento-coding-clock-toggle button').forEach(b => b.setAttribute('data-state', 'inactive'));
+                    target.setAttribute('data-state', 'active');
+                    debouncedRenderBentoPreview();
+                }));
             } else {
                 const checkbox = createCheckbox(`bento-checkbox-activity-${name.replace(/\s+/g, '-')}`, name, 'activityName', name, 'bento-activity-checkbox', undefined, isDefaultChecked);
                 overrideCheckboxStyle(checkbox);
+                measureAndTrackWidth(checkbox);
                 activityContent.appendChild(checkbox);
             }
         });
+    }
+
+    // --- Set final calculated width ---
+    const PADDING_AND_SCROLLBAR_BUFFER = 70; // Panel's L/R padding (32px) + scrollbar buffer (20px)
+    const MIN_WIDTH = 380; // Minimum width to prevent the panel from becoming too narrow
+    const finalPanelWidth = maxContentWidth + PADDING_AND_SCROLLBAR_BUFFER;
+
+    const modal = document.getElementById('bento-modal');
+    if (modal) {
+        modal.style.setProperty('--left-panel-width', `${Math.max(finalPanelWidth, MIN_WIDTH)}px`);
+    }
+
+    // Clean up the offscreen container
+    const offscreenContainer = document.getElementById('bento-offscreen-container');
+    if (offscreenContainer) {
+        document.body.removeChild(offscreenContainer);
     }
 }
 
@@ -868,4 +839,24 @@ function createCheckbox(id: string, text: string, dataAttribute: string, dataVal
     }
     
     return container;
+}
+
+function measureElementWidth(element: HTMLElement): number {
+    let offscreenContainer = document.getElementById('bento-offscreen-container');
+    if (!offscreenContainer) {
+        offscreenContainer = document.createElement('div');
+        offscreenContainer.id = 'bento-offscreen-container';
+        offscreenContainer.style.position = 'absolute';
+        offscreenContainer.style.left = '-9999px';
+        offscreenContainer.style.top = '0';
+        offscreenContainer.style.width = 'max-content';
+        document.body.appendChild(offscreenContainer);
+    }
+
+    const clone = element.cloneNode(true) as HTMLElement;
+    offscreenContainer.appendChild(clone);
+    const width = clone.scrollWidth;
+    offscreenContainer.removeChild(clone);
+
+    return width;
 }
