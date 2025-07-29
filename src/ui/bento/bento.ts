@@ -441,20 +441,30 @@ export function initializeBentoGenerator(data: ProcessedData, username: string) 
 
     if (!generateCardBtn || !modal || !closeModalBtn || !shareBtn) return;
     
-    shareBtn.className = 'bg-green-0 dark:bg-dark-green-0 text-green-s dark:text-dark-green-s hover:text-green-s dark:hover:text-dark-green-s w-48 rounded-lg py-[7px] text-center font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
+    shareBtn.className = 'bg-green-0 dark:bg-dark-green-0 text-green-s dark:text-dark-green-s hover:text-green-s dark:hover:text-dark-green-s w-32 rounded-lg py-[7px] text-center font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed';
     shareBtn.textContent = 'Share';
 
 
     generateCardBtn.addEventListener('click', () => {
         modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden'; // Prevent body scrolling
         if (!document.getElementById('bento-records-accordion-content')?.hasChildNodes()) {
             populateAccordion();
         }
         renderBentoPreview();
     });
 
-    closeModalBtn.addEventListener('click', () => modal.style.display = 'none');
-    modal.addEventListener('click', (e) => { if (e.target === modal) modal.style.display = 'none'; });
+    const closeModal = () => {
+        modal.style.display = 'none';
+        document.body.style.overflow = ''; // Restore body scrolling
+    };
+
+    closeModalBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', (e) => { 
+        if (e.target === modal) {
+            closeModal();
+        } 
+    });
 
     shareBtn.addEventListener('click', async () => {
         if (!currentPreviewBlob) return;

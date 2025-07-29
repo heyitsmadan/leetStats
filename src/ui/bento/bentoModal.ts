@@ -10,6 +10,7 @@ export function createBentoModalHTML(): string {
       display: none;
       background-color: rgba(26, 26, 26, 0.7); /* page background with alpha */
       backdrop-filter: blur(8px);
+      z-index: 10000; /* A high z-index to ensure it's on top of all page elements */
     }
 
     /* --- Preview Area Styling --- */
@@ -149,7 +150,7 @@ export function createBentoModalHTML(): string {
   `;
 
   return `
-    <div id="bento-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div id="bento-modal" class="fixed inset-0 flex items-center justify-center p-4">
         <div class="bg-dark-layer-1 rounded-xl w-full max-w-6xl h-full max-h-[95vh] shadow-2xl flex flex-row p-1.5 gap-1.5">
 
             <!-- Left Panel: Customization -->
@@ -221,17 +222,19 @@ export function createBentoModalHTML(): string {
 
             <!-- Right Panel: Preview -->
             <div class="flex-1 flex flex-col min-w-0 bg-dark-layer-0 rounded-lg">
+                <!-- Top Row: Close Button -->
                 <div class="flex-shrink-0 flex justify-end p-2">
-                    <button id="bento-modal-close-btn" type="button" class="ring-offset-sd-background focus:ring-sd-ring data-[state=open]:bg-sd-accent data-[state=open]:text-sd-muted-foreground rounded-sm absolute right-4 top-[22px] opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:pointer-events-none">
-    <div class="relative text-[20px] leading-[normal] before:block before:h-5 before:w-4 w-4">
-        <svg aria-hidden="true" focusable="false" data-prefix="far" data-icon="xmark" class="svg-inline--fa fa-xmark absolute left-1/2 top-1/2 h-[1em] -translate-x-1/2 -translate-y-1/2 align-[-0.125em]" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
-            <path fill="currentColor" d="M345 137c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-119 119L73 103c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9l119 119L39 375c-9.4 9.4-9.4 24.6 0 33.9s24.6 9.4 33.9 0l119-119L311 409c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-119-119L345 137z"></path>
-        </svg>
-    </div>
-    <span class="sr-only">Close</span>
-</button>
+                    <button id="bento-modal-close-btn" type="button" class="ring-offset-sd-background focus:ring-sd-ring data-[state=open]:bg-sd-accent data-[state=open]:text-sd-muted-foreground rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:pointer-events-none">
+                        <div class="relative text-[20px] leading-[normal] before:block before:h-5 before:w-4 w-4">
+                            <svg aria-hidden="true" focusable="false" data-prefix="far" data-icon="xmark" class="svg-inline--fa fa-xmark absolute left-1/2 top-1/2 h-[1em] -translate-x-1/2 -translate-y-1/2 align-[-0.125em]" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
+                                <path fill="currentColor" d="M345 137c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-119 119L73 103c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9l119 119L39 375c-9.4 9.4-9.4 24.6 0 33.9s24.6 9.4 33.9 0l119-119L311 409c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-119-119L345 137z"></path>
+                            </svg>
+                        </div>
+                        <span class="sr-only">Close</span>
+                    </button>
                 </div>
 
+                <!-- Middle Row: Preview (grows) -->
                 <div class="flex-grow flex items-center justify-center min-h-0 p-4">
                     <div id="bento-preview-wrapper">
                         <div id="bento-preview-loader" style="display: none;">
@@ -241,6 +244,7 @@ export function createBentoModalHTML(): string {
                     </div>
                 </div>
 
+                <!-- Bottom Row: Share Button -->
                 <div class="flex-shrink-0 flex justify-end p-4">
                     <button id="share-bento-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-5 rounded-lg transition-colors duration-200 disabled:bg-gray-500 disabled:cursor-not-allowed">
                         Share
