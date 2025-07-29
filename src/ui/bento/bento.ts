@@ -26,7 +26,7 @@ let isRendering = false;
 let usernameCache = '';
 // --- Add this to your module-level state variables at the top of bento.ts ---
 let controlsPanel: HTMLElement | null = null;
-
+let avatarUrlCache = '';
 // --- Configuration ---
 const RENDER_WIDTH = 900;
 
@@ -75,18 +75,15 @@ async function renderBentoPreview() {
     if (isRendering || !legacyStats || !processedDataCache || !skillMatrixData) return;
 
     isRendering = true;
-    // --- CHANGE: Disable controls to prevent input during rendering ---
     if (controlsPanel) controlsPanel.classList.add('is-rendering');
 
     const loader = document.getElementById('bento-preview-loader');
     const previewCanvas = document.getElementById('bento-preview-canvas') as HTMLCanvasElement;
-    // --- UPDATED: Get new copy and download buttons ---
     const copyBtn = document.getElementById('copy-bento-btn');
     const downloadBtn = document.getElementById('download-bento-btn');
 
     if (loader) loader.style.display = 'block';
     if (previewCanvas) previewCanvas.style.display = 'none';
-    // --- UPDATED: Disable both buttons during render ---
     if (copyBtn) copyBtn.setAttribute('disabled', 'true');
     if (downloadBtn) downloadBtn.setAttribute('disabled', 'true');
     currentPreviewBlob = null;
@@ -101,6 +98,13 @@ async function renderBentoPreview() {
             skills: Array.from(document.querySelectorAll('.bento-skill-checkbox[data-state="checked"]')).map(cb => (cb as HTMLElement).dataset.skillName).filter((name): name is string => !!name),
             activities: Array.from(document.querySelectorAll('.bento-activity-checkbox[data-state="checked"]')).map(cb => (cb as HTMLElement).dataset.activityName),
         };
+        
+        // --- NEW: Get values from "About" controls ---
+        const displayAvatarCheckbox = document.getElementById('bento-checkbox-display-avatar');
+        const shouldDisplayAvatar = displayAvatarCheckbox ? displayAvatarCheckbox.dataset.state === 'checked' : false;
+
+        const usernameInput = document.getElementById('bento-username-input') as HTMLInputElement;
+        const currentUsername = usernameInput ? usernameInput.value : usernameCache; // Fallback to cache
 
         // --- 2. DEFINE COMPONENTS ---
         const componentDefinitions = {
@@ -127,9 +131,18 @@ async function renderBentoPreview() {
         offscreenContainer.style.width = `${RENDER_WIDTH}px`;
         offscreenContainer.style.height = 'auto'; 
 
+        // Conditionally create the avatar image HTML if a non-default URL is cached AND the checkbox is checked.
+        const avatarImgHtml = (avatarUrlCache && shouldDisplayAvatar)
+            ? `<img src="${avatarUrlCache}" alt="Avatar" style="width: 80px; height: 80px; border-radius: 16px; object-fit: cover;" crossorigin="anonymous" />`
+            : '';
+
+        // Update the innerHTML to include the avatar and add inline styles for the header layout.
         offscreenContainer.innerHTML = `
             <div id="bento-render-node" class="render-safe">
-                <div id="bento-header">${usernameCache}'s leetStats</div>
+                <div id="bento-header" style="display: flex; align-items: center; gap: 24px;">
+                    ${avatarImgHtml}
+                    <span>${currentUsername}'s leetStats</span>
+                </div>
                 <div id="bento-grid-wrapper"><div id="bento-grid"></div></div>
                 <div id="bento-footer">made by leetStats</div>
             </div>`;
@@ -193,7 +206,6 @@ async function renderBentoPreview() {
         }
         
         currentPreviewBlob = blob;
-        // --- UPDATED: Enable both buttons after render ---
         if (copyBtn) copyBtn.removeAttribute('disabled');
         if (downloadBtn) downloadBtn.removeAttribute('disabled');
 
@@ -218,7 +230,6 @@ async function renderBentoPreview() {
         console.error("Failed to render bento preview:", error);
         if (loader) loader.style.display = 'none';
     } finally {
-        // --- CHANGE: Re-enable controls and reset the rendering flag ---
         if (controlsPanel) controlsPanel.classList.remove('is-rendering');
         isRendering = false;
     }
@@ -445,14 +456,13 @@ export function initializeBentoGenerator(data: ProcessedData, username: string) 
     if (!legacyStats) legacyStats = getLegacyStats(data);
     if (!skillMatrixData) skillMatrixData = getSkillMatrixStats(data, { timeRange: 'All Time', difficulty: 'All' }, 'All Time');
     usernameCache = username;
+    avatarUrlCache = scrapeAvatarUrl(); // Scrape and cache the avatar URL on initialization.
 
-    // --- CHANGE: Cache the controls panel element when the modal is initialized ---
     controlsPanel = document.getElementById('bento-controls-panel');
 
     const generateCardBtn = document.getElementById('generate-card-btn');
     const modal = document.getElementById('bento-modal');
     const closeModalBtn = document.getElementById('bento-modal-close-btn');
-    // --- UPDATED: Get new copy and download buttons ---
     const copyBtn = document.getElementById('copy-bento-btn') as HTMLButtonElement;
     const downloadBtn = document.getElementById('download-bento-btn') as HTMLButtonElement;
 
@@ -460,7 +470,7 @@ export function initializeBentoGenerator(data: ProcessedData, username: string) 
 
     generateCardBtn.addEventListener('click', () => {
         modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden'; // Prevent body scrolling
+        document.body.style.overflow = 'hidden';
         if (!document.getElementById('bento-records-accordion-content')?.hasChildNodes()) {
             populateAccordion();
         }
@@ -469,7 +479,7 @@ export function initializeBentoGenerator(data: ProcessedData, username: string) 
 
     const closeModal = () => {
         modal.style.display = 'none';
-        document.body.style.overflow = ''; // Restore body scrolling
+        document.body.style.overflow = '';
     };
 
     closeModalBtn.addEventListener('click', closeModal);
@@ -479,47 +489,37 @@ export function initializeBentoGenerator(data: ProcessedData, username: string) 
         } 
     });
 
-    // START ADDING HERE
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && modal.style.display === 'flex') {
             closeModal();
         }
     });
-    // STOP ADDING HERE
 
-    // --- NEW: Hide copy button if Clipboard API for images is not supported ---
     if (!navigator.clipboard || !window.ClipboardItem) {
         copyBtn.style.display = 'none';
     }
 
-    // --- NEW: Event listener for the Copy button ---
-    // --- NEW: Event listener for the Copy button ---
     copyBtn.addEventListener('click', async () => {
         if (!currentPreviewBlob) return;
 
-        // Store the original button HTML content
         const originalContent = copyBtn.innerHTML;
 
         try {
-            // Use the modern clipboard API to write the image blob
             const clipboardItem = new ClipboardItem({ 'image/png': currentPreviewBlob });
             await navigator.clipboard.write([clipboardItem]);
 
-            // Provide visual feedback: replace content with a checkmark SVG
             copyBtn.innerHTML = `
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-s dark:text-dark-green-s">
                     <polyline points="20 6 9 17 4 12"></polyline>
                 </svg>
             `;
 
-            // Revert back to the original content after a delay
             setTimeout(() => {
                 copyBtn.innerHTML = originalContent;
             }, 1500);
 
         } catch (err) {
             console.error("Failed to copy image to clipboard:", err);
-            // On failure, briefly show "Failed!" text then revert
             const buttonSpan = copyBtn.querySelector('span');
             if (buttonSpan) {
                  buttonSpan.textContent = 'Failed!';
@@ -530,7 +530,6 @@ export function initializeBentoGenerator(data: ProcessedData, username: string) 
         }
     });
 
-    // --- NEW: Event listener for the Download button ---
     downloadBtn.addEventListener('click', () => {
         if (!currentPreviewBlob) return;
         try {
@@ -544,20 +543,15 @@ export function initializeBentoGenerator(data: ProcessedData, username: string) 
         }
     });
 
-    // --- ACCORDION LOGIC (MODIFIED) ---
-    // This part handles the smooth slide transition for the accordion.
     document.querySelectorAll('.bento-accordion-header').forEach(header => {
         header.addEventListener('click', () => {
-            const content = header.nextElementSibling as HTMLElement; // This is the outer wrapper
+            const content = header.nextElementSibling as HTMLElement;
             const icon = header.querySelector('svg');
             if (content && icon) {
                 const innerContent = content.firstElementChild as HTMLElement;
                 const isOpen = content.style.maxHeight && content.style.maxHeight !== '0px';
 
-                // Calculate a dynamic duration based on the content height to ensure
-                // the animation speed is consistent regardless of the section's length.
                 const height = innerContent.scrollHeight;
-                // Formula: base speed + scaled speed by height, with min/max caps.
                 const dynamicDuration = Math.max(300, Math.min(800, height * 1.2));
                 content.style.transition = `max-height ${dynamicDuration}ms ease-in-out`;
 
@@ -573,6 +567,7 @@ export function initializeBentoGenerator(data: ProcessedData, username: string) 
     });
 }
 
+
 function populateAccordion() {
     let maxContentWidth = 0;
 
@@ -583,6 +578,7 @@ function populateAccordion() {
         }
     };
 
+    const aboutContent = document.getElementById('bento-about-accordion-content');
     const historyContent = document.getElementById('bento-history-accordion-content');
     const recordsContent = document.getElementById('bento-records-accordion-content');
     const trophiesContent = document.getElementById('bento-trophies-accordion-content');
@@ -602,6 +598,51 @@ function populateAccordion() {
             }
         }
     };
+
+    // --- NEW: Populate "About" section ---
+    if (aboutContent) {
+        aboutContent.innerHTML = '';
+        const aboutContainer = document.createElement('div');
+        aboutContainer.className = 'space-y-3';
+
+        // --- CHANGE START ---
+
+        // Username Input (Moved up and restyled for alignment)
+        const usernameRow = document.createElement('div');
+        usernameRow.className = 'flex w-full items-center justify-between rounded-lg px-2 py-[5px] text-label-1 dark:text-dark-label-1';
+        usernameRow.innerHTML = `
+            <label for="bento-username-input" class="text-md">Username</label>
+            <input type="text" id="bento-username-input" value="${usernameCache}" class="bg-dark-layer-0 rounded p-1 text-sm text-gray-300 border border-dark-divider-3 w-48 text-left focus:outline-none">
+        `;
+        aboutContainer.appendChild(usernameRow);
+
+        // Avatar Checkbox
+        const hasAvatar = !!avatarUrlCache;
+        const avatarCheckbox = createCheckbox(
+            'bento-checkbox-display-avatar',
+            'Display Avatar',
+            'displayAvatar',
+            'true',
+            'bento-about-checkbox',
+            undefined, 
+            hasAvatar
+        );
+        if (!hasAvatar) {
+            avatarCheckbox.style.opacity = '0.5';
+            avatarCheckbox.style.pointerEvents = 'none';
+            const button = avatarCheckbox.querySelector('button');
+            if (button) button.disabled = true;
+        }
+        overrideCheckboxStyle(avatarCheckbox);
+        aboutContainer.appendChild(avatarCheckbox);
+        
+        // --- CHANGE END ---
+        
+        aboutContent.appendChild(aboutContainer);
+
+        const usernameInput = document.getElementById('bento-username-input');
+        usernameInput?.addEventListener('input', debouncedRenderBentoPreview);
+    }
 
     if (historyContent) {
         historyContent.innerHTML = '';
@@ -661,21 +702,15 @@ function populateAccordion() {
             debouncedRenderBentoPreview();
         }));
 
-        // WITH THIS NEW BLOCK:
-        // WITH THIS NEW BLOCK:
         const startDateInput = datePickers.querySelector('#bento-history-start-date') as HTMLInputElement;
         const endDateInput = datePickers.querySelector('#bento-history-end-date') as HTMLInputElement;
         
         const today = new Date();
         const todayString = today.toISOString().split('T')[0];
 
-        // --- Set Static Date Bounds ---
-        // The latest possible date is today.
         endDateInput.max = todayString;
         startDateInput.max = todayString;
 
-        // The earliest possible date is the first submission date.
-        // This now safely checks if the data exists before trying to access it.
         if (processedDataCache && processedDataCache.submissions && processedDataCache.submissions.length > 0) {
             const firstSubmission = processedDataCache.submissions[0];
             if (firstSubmission && typeof firstSubmission.timestamp === 'number') {
@@ -686,32 +721,26 @@ function populateAccordion() {
             }
         }
 
-        // --- Set Initial Values ---
         const oneYearAgo = new Date();
         oneYearAgo.setFullYear(today.getFullYear() - 1);
         endDateInput.value = todayString;
 
-        // Default start date is one year ago, but if the earliest submission is later, use that instead.
         if (startDateInput.min && oneYearAgo < new Date(startDateInput.min)) {
              startDateInput.value = startDateInput.min;
         } else {
              startDateInput.value = oneYearAgo.toISOString().split('T')[0];
         }
         
-        // --- Event Listeners for Dynamic Validation ---
         startDateInput.addEventListener('change', () => {
-            // An end date cannot be before the selected start date.
             endDateInput.min = startDateInput.value;
             debouncedRenderBentoPreview();
         });
 
         endDateInput.addEventListener('change', () => {
-            // A start date cannot be after the selected end date.
             startDateInput.max = endDateInput.value;
             debouncedRenderBentoPreview();
         });
 
-        // Set the initial dynamic constraint for the end date.
         endDateInput.min = startDateInput.value;
     }
 
@@ -1007,4 +1036,17 @@ function updateAccordionHeight(content: HTMLElement) {
             content.style.maxHeight = innerContent.scrollHeight + 'px';
         }
     }
+}
+
+function scrapeAvatarUrl(): string {
+    // This function runs in the context of the content script on the profile page.
+    // The selector targets the image within the specified div structure.
+    const avatarImg = document.querySelector('.relative.flex.h-20.w-20.shrink-0 img') as HTMLImageElement;
+    
+    // Check if the image element exists, has a src, and is not the default avatar.
+    if (avatarImg && avatarImg.src && !avatarImg.src.includes('default_avatar.jpg')) {
+        return avatarImg.src;
+    }
+    
+    return '';
 }

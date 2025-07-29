@@ -30,34 +30,34 @@ export class FetchLoader {
             position: 'fixed',
             bottom: '20px',
             left: '20px',
-            width: '280px',
+            width: '300px', // Increased width
             backgroundColor: colors.background.section,
             color: colors.text.primary,
-            borderRadius: '8px',
+            borderRadius: '12px', // Slightly larger radius
             zIndex: '10000',
-            padding: '12px 16px',
+            padding: '16px', // Increased padding
             fontFamily: `-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'`,
             fontSize: '14px',
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            boxShadow: '0 5px 15px rgba(0, 0, 0, 0.4)', // Enhanced shadow
             transform: 'translateY(200%)', // Start off-screen
-            transition: 'transform 0.4s ease-in-out',
-            border: `1px solid ${colors.background.secondarySection}`,
+            transition: 'transform 0.4s ease-in-out, box-shadow 0.3s ease', // Added transition for shadow
+            border: `1px solid rgb(80, 80, 80)`, // More prominent border
         });
 
         this.progressTextElement = document.createElement('div');
         this.progressTextElement.id = 'leetstats-loader-text';
         this.progressTextElement.textContent = 'Fetching submissions...';
         Object.assign(this.progressTextElement.style, {
-            marginBottom: '8px',
+            marginBottom: '10px', // Adjusted margin
             color: colors.text.subtle,
         });
 
         this.progressBarWrapper = document.createElement('div');
         Object.assign(this.progressBarWrapper.style, {
-            height: '6px',
+            height: '8px', // Slightly thicker bar
             width: '100%',
             backgroundColor: colors.background.empty,
-            borderRadius: '3px',
+            borderRadius: '4px', // Adjusted radius
             overflow: 'hidden',
         });
 
@@ -67,7 +67,7 @@ export class FetchLoader {
             height: '100%',
             width: '0%',
             backgroundColor: colors.status.accepted,
-            borderRadius: '3px',
+            borderRadius: '4px', // Adjusted radius
             transition: 'width 0.3s ease',
         });
 
@@ -87,7 +87,7 @@ export class FetchLoader {
             this.progressBarWrapper.style.display = 'block';
         }
         if (this.progressTextElement) {
-            this.progressTextElement.style.marginBottom = '8px';
+            this.progressTextElement.style.marginBottom = '10px';
         }
 
         document.body.appendChild(this.loaderElement);
