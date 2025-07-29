@@ -124,7 +124,7 @@ async function renderBentoPreview() {
             <div id="bento-render-node" class="render-safe">
                 <div id="bento-header">${usernameCache}'s leetStats</div>
                 <div id="bento-grid-wrapper"><div id="bento-grid"></div></div>
-                <div id="bento-footer">made by leetStats extension</div>
+                <div id="bento-footer">made by leetStats</div>
             </div>`;
         
         const grid = offscreenContainer.querySelector('#bento-grid')!;
@@ -505,6 +505,23 @@ function populateAccordion() {
     const skillsContent = document.getElementById('bento-skills-accordion-content');
     const activityContent = document.getElementById('bento-activity-accordion-content');
 
+    // Helper function to override checkbox styles for proper width calculation
+    const overrideCheckboxStyle = (checkboxRow: HTMLElement) => {
+        const leftSide = checkboxRow.firstElementChild as HTMLElement;
+        if (leftSide) {
+            // Replace classes that constrain width
+            leftSide.className = 'text-md flex items-center space-x-2';
+            const textContainer = leftSide.querySelector('.truncate');
+            if (textContainer) {
+                textContainer.className = ''; // Remove truncate wrapper
+                const textSpan = textContainer.querySelector('span');
+                if (textSpan) {
+                    textSpan.className = 'whitespace-nowrap'; // Prevent label from wrapping
+                }
+            }
+        }
+    };
+
     if (historyContent) {
         historyContent.innerHTML = ''; // Clear previous content
 
@@ -553,9 +570,9 @@ function populateAccordion() {
         const historyCheckboxCallback = (isChecked: boolean) => {
             controlsContainer.style.display = isChecked ? 'block' : 'none';
         };
-        // Set the history chart to be checked by default
         const checkboxContainer = createCheckbox('bento-checkbox-history', 'Show History Chart', 'historyToggle', 'true', 'bento-history-checkbox', historyCheckboxCallback, true);
-        
+        overrideCheckboxStyle(checkboxContainer);
+
         historyContent.appendChild(checkboxContainer);
         historyContent.appendChild(controlsContainer);
 
@@ -594,8 +611,9 @@ function populateAccordion() {
     if (recordsContent && legacyStats?.records && processedDataCache) {
         recordsContent.innerHTML = '';
         const solvedStats = getSolvedStats(processedDataCache);
-        // Set "Overall Progress" to be checked by default
         const overallProgressCheckbox = createCheckbox(`bento-checkbox-record-overall-progress`, "Overall Progress", 'recordName', "Overall Progress", 'bento-record-checkbox', undefined, true);
+        overrideCheckboxStyle(overallProgressCheckbox);
+
         const overallProgressStat = document.createElement('div');
         overallProgressStat.className = 'text-sm text-label-3 dark:text-dark-label-3 pl-4';
         overallProgressStat.textContent = `${solvedStats.totalSolved} Solved`;
@@ -612,18 +630,13 @@ function populateAccordion() {
                     record.name, 
                     'bento-record-checkbox'
                 );
-
-                const leftSide = checkboxRow.firstElementChild as HTMLElement;
-                if (leftSide) {
-                    leftSide.classList.remove('w-full', 'max-w-[192px]', 'flex-1');
-                    leftSide.classList.add('flex-grow');
-                }
+                overrideCheckboxStyle(checkboxRow);
 
                 const statValue = record.mainStat || record.value?.toString() || '';
                 
                 if (statValue) {
                     const statContainer = document.createElement('div');
-                    statContainer.className = 'text-sm text-label-3 dark:text-dark-label-3 pl-4';
+                    statContainer.className = 'text-sm text-label-3 dark:text-dark-label-3 pl-4 whitespace-nowrap';
                     statContainer.textContent = statValue;
                     statContainer.style.pointerEvents = 'none';
                     checkboxRow.appendChild(statContainer);
@@ -639,12 +652,7 @@ function populateAccordion() {
         legacyStats.trophies.filter(t => t.achieved).forEach(trophy => {
             if (trophy && trophy.id && trophy.title) {
                 const checkboxRow = createCheckbox(`bento-checkbox-trophy-${trophy.id}`, trophy.title, 'trophyId', trophy.id, 'bento-trophy-checkbox');
-                
-                const leftSide = checkboxRow.firstElementChild as HTMLElement;
-                if (leftSide) {
-                    leftSide.classList.remove('w-full', 'max-w-[192px]', 'flex-1');
-                    leftSide.classList.add('flex-grow');
-                }
+                overrideCheckboxStyle(checkboxRow);
 
                 const subtitleContainer = document.createElement('div');
                 subtitleContainer.className = 'text-sm text-label-3 dark:text-dark-label-3 pl-4 truncate';
@@ -663,9 +671,10 @@ function populateAccordion() {
             if (milestone) {
                 const labelText = `${milestone.milestone}${getOrdinalSuffix(milestone.milestone)} ${formatMilestoneType(milestone.type)}`;
                 const checkboxRow = createCheckbox(`bento-checkbox-milestone-${index}`, labelText, 'milestoneIndex', index.toString(), 'bento-milestone-checkbox');
+                overrideCheckboxStyle(checkboxRow);
                 
                 const dateContainer = document.createElement('div');
-                dateContainer.className = 'text-sm text-label-3 dark:text-dark-label-3 pl-4';
+                dateContainer.className = 'text-sm text-label-3 dark:text-dark-label-3 pl-4 whitespace-nowrap';
                 dateContainer.textContent = milestone.date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
                 dateContainer.style.pointerEvents = 'none';
                 checkboxRow.appendChild(dateContainer);
@@ -681,8 +690,8 @@ function populateAccordion() {
         const header = document.createElement('div');
         header.className = 'flex w-full items-center justify-between rounded-lg px-2 py-[5px] text-xs text-label-3 dark:text-dark-label-3';
         header.innerHTML = `
-            <div class="w-3/5 pl-8 font-medium">Topic</div>
-            <div class="flex w-2/5 justify-end text-center font-medium">
+            <div class="flex-grow pl-8 font-medium">Topic</div>
+            <div class="flex flex-shrink-0 justify-end text-center font-medium" style="width: 200px;">
                 <span class="w-1/3" title="Problems Solved">Solved</span>
                 <span class="w-1/3" title="Average Attempts">Avg. Attempts</span>
                 <span class="w-1/3" title="First Ace Rate">First Ace %</span>
@@ -701,12 +710,16 @@ function populateAccordion() {
                     'bento-skill-checkbox'
                 );
 
+                // Special override for skills to use flex-grow on the topic name
                 const leftSide = checkboxRow.firstElementChild as HTMLElement;
                 if (leftSide) {
-                    leftSide.classList.remove('w-full', 'max-w-[192px]', 'flex-1', 'truncate');
-                    leftSide.classList.add('w-3/5');
+                    leftSide.className = 'text-md flex items-center space-x-2 flex-grow';
                     const textContainer = leftSide.querySelector('.truncate');
-                    textContainer?.classList.remove('truncate');
+                    if (textContainer) {
+                        textContainer.className = '';
+                        const textSpan = textContainer.querySelector('span');
+                        if (textSpan) textSpan.className = 'whitespace-nowrap';
+                    }
                 }
                 
                 const solved = metrics.problemsSolved[topic] || 0;
@@ -714,7 +727,8 @@ function populateAccordion() {
                 const firstAce = metrics.firstAceRate[topic] || 0;
 
                 const metricsContainer = document.createElement('div');
-                metricsContainer.className = 'flex w-2/5 justify-end text-center text-sm items-center';
+                metricsContainer.className = 'flex flex-shrink-0 justify-end text-center text-sm items-center';
+                metricsContainer.style.width = '200px'; // Match header width
                 metricsContainer.style.pointerEvents = 'none'; 
                 metricsContainer.innerHTML = `
                     <span class="w-1/3">${solved}</span>
@@ -723,7 +737,6 @@ function populateAccordion() {
                 `;
 
                 checkboxRow.appendChild(metricsContainer);
-                
                 skillsContent.appendChild(checkboxRow);
             }
         });
@@ -732,7 +745,6 @@ function populateAccordion() {
     if (activityContent) {
         activityContent.innerHTML = '';
         const ACTIVITY_CHARTS = ["Submission Signature", "Language Stats", "Progress Tracker", "Coding Clock"];
-        // Define the list of activity charts that should be checked by default
         const DEFAULT_ACTIVITY_CHARTS = ["Language Stats", "Progress Tracker", "Coding Clock"];
 
         ACTIVITY_CHARTS.forEach(name => {
@@ -742,7 +754,7 @@ function populateAccordion() {
                 const controlsContainer = document.createElement('div');
                 controlsContainer.id = 'coding-clock-controls-container';
                 controlsContainer.className = 'space-y-2 mt-1 pl-8';
-                controlsContainer.style.display = 'none'; // Initially hidden
+                controlsContainer.style.display = 'none';
 
                 const toggleContainer = document.createElement('div');
                 toggleContainer.id = 'bento-coding-clock-toggle';
@@ -758,11 +770,11 @@ function populateAccordion() {
                 };
 
                 const checkboxContainer = createCheckbox(`bento-checkbox-activity-${name.replace(/\s+/g, '-')}`, name, 'activityName', name, 'bento-activity-checkbox', checkboxCallback, isDefaultChecked);
+                overrideCheckboxStyle(checkboxContainer);
                 
                 activityContent.appendChild(checkboxContainer);
                 activityContent.appendChild(controlsContainer);
 
-                // Add event listeners for the new toggle
                 document.querySelectorAll('#bento-coding-clock-toggle button').forEach(btn => {
                     btn.addEventListener('click', (e) => {
                         const target = e.currentTarget as HTMLElement;
@@ -772,7 +784,9 @@ function populateAccordion() {
                     });
                 });
             } else {
-                activityContent.appendChild(createCheckbox(`bento-checkbox-activity-${name.replace(/\s+/g, '-')}`, name, 'activityName', name, 'bento-activity-checkbox', undefined, isDefaultChecked));
+                const checkbox = createCheckbox(`bento-checkbox-activity-${name.replace(/\s+/g, '-')}`, name, 'activityName', name, 'bento-activity-checkbox', undefined, isDefaultChecked);
+                overrideCheckboxStyle(checkbox);
+                activityContent.appendChild(checkbox);
             }
         });
     }

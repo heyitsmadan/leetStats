@@ -7,6 +7,7 @@ export function createBentoModalHTML(): string {
   // Using colors from the theme file for inline styles
   const modalStyles = `
     #bento-modal {
+      --left-panel-width: 480px; /* <<< You can precisely control the left panel width here */
       display: none;
       background-color: rgba(26, 26, 26, 0.7); /* page background with alpha */
       backdrop-filter: blur(8px);
@@ -151,14 +152,12 @@ export function createBentoModalHTML(): string {
 
   return `
     <div id="bento-modal" class="fixed inset-0 flex items-center justify-center p-4">
-        <div class="bg-dark-layer-1 rounded-xl w-full max-w-6xl h-full max-h-[95vh] shadow-2xl flex flex-row p-1.5 gap-1.5">
+        <div class="bg-dark-layer-1 rounded-xl h-full max-h-[95vh] shadow-2xl flex flex-row p-1.5 gap-1.5">
 
-            <!-- Left Panel: Customization -->
-            <div class="w-1/2 max-w-2xl bg-dark-layer-0 rounded-lg p-4 overflow-y-auto">
-                <h2 class="text-xl font-bold text-white mb-4">Customize Card</h2>
-                <div class="space-y-2">
-                    <!-- History Section -->
-                     <div class="bg-dark-layer-1 rounded-lg">
+            <div class="bg-dark-layer-0 rounded-lg p-4 flex flex-col flex-shrink-0" style="width: var(--left-panel-width);">
+                <h2 class="text-xl font-bold text-white mb-4 flex-shrink-0">Customize Card</h2>
+                <div class="space-y-2 overflow-y-auto overflow-x-hidden">
+                    <div class="bg-dark-layer-1 rounded-lg">
                         <div class="bento-accordion-header p-3 cursor-pointer">
                             <div class="flex justify-between items-center">
                                 <h3 class="font-semibold text-white">History</h3>
@@ -167,7 +166,6 @@ export function createBentoModalHTML(): string {
                         </div>
                         <div id="bento-history-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
                     </div>
-                    <!-- Milestones Section -->
                     <div class="bg-dark-layer-1 rounded-lg">
                         <div class="bento-accordion-header p-3 cursor-pointer">
                             <div class="flex justify-between items-center">
@@ -177,7 +175,6 @@ export function createBentoModalHTML(): string {
                         </div>
                         <div id="bento-milestones-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
                     </div>
-                    <!-- Trophies Section -->
                     <div class="bg-dark-layer-1 rounded-lg">
                         <div class="bento-accordion-header p-3 cursor-pointer">
                             <div class="flex justify-between items-center">
@@ -187,7 +184,6 @@ export function createBentoModalHTML(): string {
                         </div>
                         <div id="bento-trophies-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
                     </div>
-                    <!-- Records Section -->
                     <div class="bg-dark-layer-1 rounded-lg">
                         <div class="bento-accordion-header p-3 cursor-pointer">
                             <div class="flex justify-between items-center">
@@ -197,7 +193,6 @@ export function createBentoModalHTML(): string {
                         </div>
                         <div id="bento-records-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
                     </div>
-                    <!-- Activity Section -->
                     <div class="bg-dark-layer-1 rounded-lg">
                         <div class="bento-accordion-header p-3 cursor-pointer">
                             <div class="flex justify-between items-center">
@@ -207,7 +202,6 @@ export function createBentoModalHTML(): string {
                         </div>
                         <div id="bento-activity-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
                     </div>
-                    <!-- Skills Section -->
                     <div class="bg-dark-layer-1 rounded-lg">
                         <div class="bento-accordion-header p-3 cursor-pointer">
                             <div class="flex justify-between items-center">
@@ -220,9 +214,7 @@ export function createBentoModalHTML(): string {
                 </div>
             </div>
 
-            <!-- Right Panel: Preview -->
-            <div class="flex-1 flex flex-col min-w-0 bg-dark-layer-0 rounded-lg">
-                <!-- Top Row: Close Button -->
+            <div class="w-[500px] flex-shrink-0 flex flex-col bg-dark-layer-0 rounded-lg">
                 <div class="flex-shrink-0 flex justify-end p-2">
                     <button id="bento-modal-close-btn" type="button" class="ring-offset-sd-background focus:ring-sd-ring data-[state=open]:bg-sd-accent data-[state=open]:text-sd-muted-foreground rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:pointer-events-none">
                         <div class="relative text-[20px] leading-[normal] before:block before:h-5 before:w-4 w-4">
@@ -234,7 +226,6 @@ export function createBentoModalHTML(): string {
                     </button>
                 </div>
 
-                <!-- Middle Row: Preview (grows) -->
                 <div class="flex-grow flex items-center justify-center min-h-0 p-4">
                     <div id="bento-preview-wrapper">
                         <div id="bento-preview-loader" style="display: none;">
@@ -244,7 +235,6 @@ export function createBentoModalHTML(): string {
                     </div>
                 </div>
 
-                <!-- Bottom Row: Share Button -->
                 <div class="flex-shrink-0 flex justify-end p-4">
                     <button id="share-bento-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-5 rounded-lg transition-colors duration-200 disabled:bg-gray-500 disabled:cursor-not-allowed">
                         Share
@@ -256,4 +246,3 @@ export function createBentoModalHTML(): string {
     <style>${modalStyles}</style>
   `;
 }
-
