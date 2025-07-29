@@ -185,7 +185,7 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
     trophies.push({
       id: 'nemesis',
       title: 'Nemesis',
-      subtitle: `Conquered after ${pluralize(nemesisProblem.failedSubmissions, 'failed attempt')}`,
+      subtitle: `Endured ${pluralize(nemesisProblem.failedSubmissions, 'failed attempt')}`,
       problemTitle: nemesisProblem.title || nemesisProblem.slug,
       problemSlug: nemesisProblem.slug,
       icon: trophySvgs.nemesis, // <-- SVG Path

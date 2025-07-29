@@ -56,7 +56,7 @@ export function renderOrUpdateCumulativeLineChart(
     chartData: CumulativeChartStats,
     filters: { difficulty: Difficulty; cumulativeView: CumulativeView; timeRange: TimeRange },
     existingChart?: CumulativeLineChartInstance,
-    config: { isInteractive?: boolean; hidePoints?: boolean } = { isInteractive: true }
+    config: { isInteractive?: boolean; hidePoints?: boolean, tickFontSize?: number, maxTicksLimit?: number } = { isInteractive: true }
 ): CumulativeLineChartInstance {
     const canvas = container.querySelector('canvas') as HTMLCanvasElement;
     if (!canvas) throw new Error('Canvas element not found in the container.');
@@ -143,7 +143,10 @@ export function renderOrUpdateCumulativeLineChart(
                 grid: { display: false }, 
                 ticks: { 
                     color: colors.text.subtle,
-                    maxTicksLimit: config.isInteractive ? 5 : 4,
+                    maxTicksLimit: config.maxTicksLimit ?? (config.isInteractive ? 5 : 3),
+                    font: {
+                        size: config.tickFontSize,
+                    },
                     callback: function(value, index, ticks) {
                         const label = this.getLabelForValue(value as number);
                         const date = new Date(label);
@@ -164,7 +167,13 @@ export function renderOrUpdateCumulativeLineChart(
             y: { 
                 beginAtZero: true, 
                 grid: { display: false }, 
-                ticks: { color: colors.text.subtle, precision: 0 }
+                ticks: { 
+                    color: colors.text.subtle, 
+                    precision: 0,
+                    font: {
+                        size: config.tickFontSize,
+                    },
+                }
             },
         },
         plugins: {

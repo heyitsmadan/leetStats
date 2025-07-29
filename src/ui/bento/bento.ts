@@ -137,7 +137,7 @@ async function renderBentoPreview() {
         const grid = offscreenContainer.querySelector('#bento-grid')!;
         
         // --- 4. LAYOUT ENGINE ALGORITHM (UPDATED) ---
-        const promotionPriority = ['history', 'progressTracker', 'codingClock', 'submissionSignature', 'languageStats', 'trophies', 'milestones', 'records', 'overallProgress'];
+        const promotionPriority = ['history', 'progressTracker', 'codingClock', 'overallProgress', 'submissionSignature', 'languageStats', 'trophies', 'milestones', 'records'];
         const visualOrderPriority = ['history'];
         let componentsToLayout = [...selectedItems];
         const hasSkills = componentsToLayout.includes('skills');
@@ -247,6 +247,7 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (history && historyStartDate && historyEndDate) {
         const card = container.querySelector('#bento-card-history');
         if (card) {
+            const maxTicks = isFullWidth(card) ? 6 : 3;
             const primaryView = (document.querySelector('#bento-history-primary-toggle button[data-state="active"]') as HTMLElement)?.dataset.view || 'Problems Solved';
             const secondaryView = (document.querySelector('#bento-history-secondary-toggle button[data-state="active"]') as HTMLElement)?.dataset.view || 'Difficulty';
 
@@ -266,7 +267,7 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
                 scales: {
                     x: {
                         ticks: {
-                            maxTicksLimit: 4,
+                            maxTicksLimit: maxTicks,
                             maxRotation: 0,
                             minRotation: 0,
                         }
@@ -305,7 +306,7 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (selectedTrophies.length > 0) {
         const card = container.querySelector('#bento-card-trophies');
         if (card) {
-            const titleAlign = isFullWidth(card) ? 'text-align: center;' : '';
+            const titleAlign = isFullWidth(card) ? '' : '';
             let listHtml = '';
             selectedTrophies.forEach(t => { listHtml += `<div class="trophy-item"><img src="${chrome.runtime.getURL(t.icon)}" alt="${t.title}" class="trophy-icon" /><div class="trophy-details"><div class="trophy-title">${t.title}</div><div class="trophy-subtitle">${t.subtitle}</div>${t.problemSlug !== 'placeholder' ? `<a href="https://leetcode.com/problems/${t.problemSlug}/" target="_blank" class="trophy-problem">${t.problemTitle}</a>` : ''}</div></div>`; });
             card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary}; ${titleAlign}">Trophies</h3><div class="bento-card-content" style="display: grid; place-items: center; height: 100%;"><div class="trophy-list">${listHtml}</div></div>`;
@@ -317,7 +318,7 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (selectedMilestones.length > 0) {
         const card = container.querySelector('#bento-card-milestones');
         if (card) {
-            const titleAlign = isFullWidth(card) ? 'text-align: center;' : '';
+            const titleAlign = isFullWidth(card) ? '' : '';
             let html = `<h3 class="bento-card-title" style="color: ${colors.text.primary}; ${titleAlign}">Milestones</h3><div class="bento-card-content" style="display: grid; place-items: center; height: 100%;"><div class="milestone-timeline"><div class="timeline-line"></div><div class="milestone-list">`;
             selectedMilestones.forEach(m => {
                 const color = getMilestoneColor(m.type);
@@ -376,9 +377,10 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
             card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">Problems Solved Over Time</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-progress-tracker-canvas"></canvas></div></div>`;
             const chartContainer = card.querySelector('.chart-container');
             if (chartContainer) {
+                const maxTicks = isFullWidth(card) ? 6 : 3;
                 const cumulativeView = getSmartCumulativeView('All Time', processedDataCache);
                 const stats = getCumulativeStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All', cumulativeView });
-                if (stats) renderOrUpdateCumulativeLineChart(chartContainer as HTMLElement, stats, { timeRange: 'All Time', difficulty: 'All', cumulativeView }, undefined, { isInteractive: false, hidePoints: true });
+                if (stats) renderOrUpdateCumulativeLineChart(chartContainer as HTMLElement, stats, { timeRange: 'All Time', difficulty: 'All', cumulativeView }, undefined, { isInteractive: false, hidePoints: true, tickFontSize: 16, maxTicksLimit: maxTicks });
             }
         }
     }
@@ -395,7 +397,7 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
                 const stats = getCodingClockStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All', clockView: clockView as 'HourOfDay' | 'DayOfWeek' });
                 
                 const bentoOptions = {
-                    maxTicksLimit: clockView === 'HourOfDay' ? 12 : 7
+                    maxTicksLimit: clockView === 'HourOfDay' ? 5 : 7
                 };
 
                 renderOrUpdateStackedBarChart(chartContainer as HTMLElement, stats, undefined, { 
@@ -408,7 +410,7 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (activities.includes("Submission Signature")) {
         const card = container.querySelector('#bento-card-submissionSignature');
         if (card) {
-            const titleAlign = isFullWidth(card) ? 'text-align: center;' : 'text-align: center;'; // Always center for this one
+            const titleAlign = isFullWidth(card) ? '' : '';
             card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary}; ${titleAlign}">Submission Signature</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-submission-signature-canvas"></canvas></div></div>`;
             const chartContainer = card.querySelector('.chart-container');
             if (chartContainer) {
@@ -899,6 +901,17 @@ function createCheckbox(id: string, text: string, dataAttribute: string, dataVal
         
         if (onClickCallback) {
             onClickCallback(newStateIsChecked);
+
+            // Find the parent accordion content wrapper
+            const parentAccordionContent = container.closest('.bento-accordion-content') as HTMLElement;
+            if (parentAccordionContent) {
+                // Use a brief timeout to allow the DOM to update from the callback
+                // before we recalculate the height for the transition. This ensures the
+                // animation is smooth.
+                setTimeout(() => {
+                    updateAccordionHeight(parentAccordionContent);
+                }, 50); 
+            }
         }
 
         debouncedRenderBentoPreview();
@@ -933,4 +946,21 @@ function measureElementWidth(element: HTMLElement): number {
     offscreenContainer.removeChild(clone);
 
     return width;
+}
+
+/**
+ * Recalculates and sets the max-height for an open accordion section.
+ * This is used when content is dynamically added to an already open accordion.
+ * @param content The accordion content wrapper element (the one with the transition).
+ */
+function updateAccordionHeight(content: HTMLElement) {
+    // Check if the accordion is actually open by seeing if it has a max-height style
+    if (content.style.maxHeight && content.style.maxHeight !== '0px') {
+        const innerContent = content.firstElementChild as HTMLElement;
+        if (innerContent) {
+            // Set the max-height to the new scrollHeight of the inner content
+            // to make the accordion expand smoothly to fit the new controls.
+            content.style.maxHeight = innerContent.scrollHeight + 'px';
+        }
+    }
 }

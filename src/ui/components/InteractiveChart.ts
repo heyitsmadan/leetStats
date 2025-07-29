@@ -23,7 +23,7 @@ export function renderOrUpdateInteractiveChart(
   processedData: ProcessedData,
   initialFilters: InteractiveChartFilters,
   existingInstance?: InteractiveChartInstance,
-  config: { isBentoMode?: boolean } = {}
+  config: { isBentoMode?: boolean; scales?: any } = {}
 ): InteractiveChartInstance {
 
   if (existingInstance) {
@@ -139,9 +139,9 @@ export function renderOrUpdateInteractiveChart(
             stacked: true, grid: { display: false },
             ticks: { 
               color: colors.text.subtle, 
-              maxTicksLimit: config.isBentoMode ? 8 : 12, 
-              maxRotation: config.isBentoMode ? 0 : 45, 
-              minRotation: 0, 
+              maxTicksLimit: config.scales?.x?.ticks?.maxTicksLimit ?? (config.isBentoMode ? 8 : 12), 
+              maxRotation: config.scales?.x?.ticks?.maxRotation ?? (config.isBentoMode ? 0 : 45), 
+              minRotation: config.scales?.x?.ticks?.minRotation ?? 0, 
               font: { size: config.isBentoMode ? 16 : 12 } 
             }
           },
