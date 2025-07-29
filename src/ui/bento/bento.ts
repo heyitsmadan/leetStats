@@ -661,14 +661,58 @@ function populateAccordion() {
             debouncedRenderBentoPreview();
         }));
 
+        // WITH THIS NEW BLOCK:
+        // WITH THIS NEW BLOCK:
         const startDateInput = datePickers.querySelector('#bento-history-start-date') as HTMLInputElement;
         const endDateInput = datePickers.querySelector('#bento-history-end-date') as HTMLInputElement;
-        const today = new Date(), oneYearAgo = new Date();
+        
+        const today = new Date();
+        const todayString = today.toISOString().split('T')[0];
+
+        // --- Set Static Date Bounds ---
+        // The latest possible date is today.
+        endDateInput.max = todayString;
+        startDateInput.max = todayString;
+
+        // The earliest possible date is the first submission date.
+        // This now safely checks if the data exists before trying to access it.
+        if (processedDataCache && processedDataCache.submissions && processedDataCache.submissions.length > 0) {
+            const firstSubmission = processedDataCache.submissions[0];
+            if (firstSubmission && typeof firstSubmission.timestamp === 'number') {
+                const firstSubDate = new Date(firstSubmission.timestamp * 1000);
+                const firstSubmissionDateString = firstSubDate.toISOString().split('T')[0];
+                startDateInput.min = firstSubmissionDateString;
+                endDateInput.min = firstSubmissionDateString;
+            }
+        }
+
+        // --- Set Initial Values ---
+        const oneYearAgo = new Date();
         oneYearAgo.setFullYear(today.getFullYear() - 1);
-        endDateInput.valueAsDate = today;
-        startDateInput.valueAsDate = oneYearAgo;
-        startDateInput.addEventListener('change', debouncedRenderBentoPreview);
-        endDateInput.addEventListener('change', debouncedRenderBentoPreview);
+        endDateInput.value = todayString;
+
+        // Default start date is one year ago, but if the earliest submission is later, use that instead.
+        if (startDateInput.min && oneYearAgo < new Date(startDateInput.min)) {
+             startDateInput.value = startDateInput.min;
+        } else {
+             startDateInput.value = oneYearAgo.toISOString().split('T')[0];
+        }
+        
+        // --- Event Listeners for Dynamic Validation ---
+        startDateInput.addEventListener('change', () => {
+            // An end date cannot be before the selected start date.
+            endDateInput.min = startDateInput.value;
+            debouncedRenderBentoPreview();
+        });
+
+        endDateInput.addEventListener('change', () => {
+            // A start date cannot be after the selected end date.
+            startDateInput.max = endDateInput.value;
+            debouncedRenderBentoPreview();
+        });
+
+        // Set the initial dynamic constraint for the end date.
+        endDateInput.min = startDateInput.value;
     }
 
     if (recordsContent && legacyStats?.records && processedDataCache) {

@@ -116,7 +116,7 @@ export function renderOrUpdateInteractiveChart(
     });
 
     // Show legend for Language, Difficulty, and Status views
-    const showLegend = !config.isBentoMode && ['Language', 'Difficulty', 'Status'].includes(currentFilters.secondaryView);
+    const showLegend = ['Language', 'Difficulty', 'Status'].includes(currentFilters.secondaryView);
 
     mainChart = new Chart(ctx, {
       type: 'bar',
@@ -283,7 +283,7 @@ export function renderOrUpdateInteractiveChart(
     mainChart.data.datasets = currentChartData.datasets;
     if (mainChart.options.plugins?.legend) {
         // Update legend visibility when filters change
-        const shouldShowLegend = !config.isBentoMode && ['Language', 'Difficulty', 'Status'].includes(currentFilters.secondaryView);
+        const shouldShowLegend =  ['Language', 'Difficulty', 'Status'].includes(currentFilters.secondaryView);
         mainChart.options.plugins.legend.display = shouldShowLegend;
     }
     mainChart.update('none');
