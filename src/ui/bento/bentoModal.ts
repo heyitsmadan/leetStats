@@ -14,6 +14,13 @@ export function createBentoModalHTML(): string {
       z-index: 10000; /* A high z-index to ensure it's on top of all page elements */
     }
 
+    /* --- Accordion Transition Styles (MODIFIED) --- */
+    .bento-accordion-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.3s ease-out;
+    }
+
     /* --- Preview Area Styling --- */
     #bento-preview-wrapper {
         width: 100%;
@@ -155,7 +162,7 @@ export function createBentoModalHTML(): string {
         <div class="bg-dark-layer-1 rounded-xl h-full max-h-[95vh] shadow-2xl flex flex-row p-1.5 gap-1.5">
 
             <div class="bg-dark-layer-0 rounded-lg p-4 flex flex-col flex-shrink-0" style="width: var(--left-panel-width);">
-                <h2 class="text-xl font-bold text-white mb-4 flex-shrink-0">Customize Card</h2>
+                <h2 class="text-xl font-bold text-white mb-4 flex-shrink-0">Customize</h2>
                 <div class="space-y-2 overflow-y-auto overflow-x-hidden">
                     <div class="bg-dark-layer-1 rounded-lg">
                         <div class="bento-accordion-header p-3 cursor-pointer">
@@ -164,7 +171,9 @@ export function createBentoModalHTML(): string {
                                 <svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </div>
                         </div>
-                        <div id="bento-history-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
+                        <div class="bento-accordion-content">
+                            <div id="bento-history-accordion-content" class="p-3 border-t border-dark-divider-3"></div>
+                        </div>
                     </div>
                     <div class="bg-dark-layer-1 rounded-lg">
                         <div class="bento-accordion-header p-3 cursor-pointer">
@@ -173,7 +182,9 @@ export function createBentoModalHTML(): string {
                                 <svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </div>
                         </div>
-                        <div id="bento-milestones-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
+                        <div class="bento-accordion-content">
+                            <div id="bento-milestones-accordion-content" class="p-3 border-t border-dark-divider-3"></div>
+                        </div>
                     </div>
                     <div class="bg-dark-layer-1 rounded-lg">
                         <div class="bento-accordion-header p-3 cursor-pointer">
@@ -182,7 +193,9 @@ export function createBentoModalHTML(): string {
                                 <svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </div>
                         </div>
-                        <div id="bento-trophies-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
+                        <div class="bento-accordion-content">
+                            <div id="bento-trophies-accordion-content" class="p-3 border-t border-dark-divider-3"></div>
+                        </div>
                     </div>
                     <div class="bg-dark-layer-1 rounded-lg">
                         <div class="bento-accordion-header p-3 cursor-pointer">
@@ -191,7 +204,9 @@ export function createBentoModalHTML(): string {
                                 <svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </div>
                         </div>
-                        <div id="bento-records-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
+                        <div class="bento-accordion-content">
+                            <div id="bento-records-accordion-content" class="p-3 border-t border-dark-divider-3"></div>
+                        </div>
                     </div>
                     <div class="bg-dark-layer-1 rounded-lg">
                         <div class="bento-accordion-header p-3 cursor-pointer">
@@ -200,7 +215,9 @@ export function createBentoModalHTML(): string {
                                 <svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </div>
                         </div>
-                        <div id="bento-activity-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
+                        <div class="bento-accordion-content">
+                            <div id="bento-activity-accordion-content" class="p-3 border-t border-dark-divider-3"></div>
+                        </div>
                     </div>
                     <div class="bg-dark-layer-1 rounded-lg">
                         <div class="bento-accordion-header p-3 cursor-pointer">
@@ -209,7 +226,9 @@ export function createBentoModalHTML(): string {
                                 <svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                             </div>
                         </div>
-                        <div id="bento-skills-accordion-content" class="p-3 border-t border-dark-divider-3" style="display: none;"></div>
+                        <div class="bento-accordion-content">
+                            <div id="bento-skills-accordion-content" class="p-3 border-t border-dark-divider-3"></div>
+                        </div>
                     </div>
                 </div>
             </div>

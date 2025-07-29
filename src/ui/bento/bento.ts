@@ -347,13 +347,37 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (skills.length > 0) {
         const card = container.querySelector('#bento-card-skills');
         if (card) {
-            let html = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">Skills</h3><div class="bento-card-content"><div class="skills-table"><div class="skills-header"><div class="skill-cell" style="text-align: left;">Topic</div><div class="skill-cell">Solved</div><div class="skill-cell">Avg. Attempts</div><div class="skill-cell">First Ace</div></div>`;
-            skills.forEach((skill: string) => {
+            // Use a flexible grid and increased gap for better alignment and spacing.
+            const gridStyle = `display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 24px; align-items: center; width: 100%;`;
+            
+            const headerStyle = `${gridStyle} padding: 8px 0; border-bottom: 1px solid ${colors.background.secondarySection}; font-size: 16px; color: ${colors.text.subtle}; font-weight: 600;`;
+            const rowStyle = `${gridStyle} padding: 8px 0; border-bottom: 1px solid ${colors.background.secondarySection}; font-size: 18px;`;
+            const lastRowStyle = `${gridStyle} padding: 8px 0; border-bottom: none; font-size: 18px;`;
+
+            let html = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">Skills</h3><div class="bento-card-content" style="width: 100%;"><div class="skills-table" style="width: 100%;">`;
+            
+            // Use <br> in headers to allow for two-line text, improving alignment.
+            html += `<div class="skills-header" style="${headerStyle}">
+                        <div class="skill-cell" style="text-align: left;"></div>
+                        <div class="skill-cell" style="text-align: center;">Problems<br>Solved</div>
+                        <div class="skill-cell" style="text-align: center;">Average<br>Attempts</div>
+                        <div class="skill-cell" style="text-align: center;">First Ace<br>Rate</div>
+                     </div>`;
+
+            skills.forEach((skill: string, index: number) => {
                 const metrics = skillData.metrics;
                 const solved = metrics.problemsSolved[skill] || 0;
                 const avgTries = metrics.avgTries[skill];
                 const firstAce = metrics.firstAceRate[skill] || 0;
-                html += `<div class="skill-row"><div class="skill-cell" style="text-align: left;">${formatTopicName(skill)}</div><div class="skill-cell">${solved}</div><div class="skill-cell">${avgTries === Infinity ? '∞' : avgTries.toFixed(1)}</div><div class="skill-cell">${firstAce.toFixed(0)}%</div></div>`;
+                
+                const currentRowStyle = index === skills.length - 1 ? lastRowStyle : rowStyle;
+
+                html += `<div class="skill-row" style="${currentRowStyle}">
+                            <div class="skill-cell" style="text-align: left; font-weight: 600;">${formatTopicName(skill)}</div>
+                            <div class="skill-cell" style="text-align: center;">${solved}</div>
+                            <div class="skill-cell" style="text-align: center;">${avgTries === Infinity ? '∞' : avgTries.toFixed(1)}</div>
+                            <div class="skill-cell" style="text-align: center;">${firstAce.toFixed(0)}%</div>
+                         </div>`;
             });
             html += `</div></div>`;
             card.innerHTML = html;
@@ -426,6 +450,7 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     }
 }
 
+
 const debouncedRenderBentoPreview = debounce(renderBentoPreview, 400);
 
 export function initializeBentoGenerator(data: ProcessedData, username: string) {
@@ -484,16 +509,32 @@ export function initializeBentoGenerator(data: ProcessedData, username: string) 
         }
     });
 
+    // --- ACCORDION LOGIC (MODIFIED) ---
+    // This part handles the smooth slide transition for the accordion.
     document.querySelectorAll('.bento-accordion-header').forEach(header => {
         header.addEventListener('click', () => {
-            const content = header.nextElementSibling as HTMLElement;
-            const icon = header.querySelector('svg');
-            if (content && icon) {
-                const isVisible = content.style.display === 'block';
-                content.style.display = isVisible ? 'none' : 'block';
-                icon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
-            }
-        });
+    const content = header.nextElementSibling as HTMLElement; // This is the outer wrapper
+    const icon = header.querySelector('svg');
+    if (content && icon) {
+        const innerContent = content.firstElementChild as HTMLElement;
+        const isOpen = content.style.maxHeight && content.style.maxHeight !== '0px';
+
+        // Calculate a dynamic duration based on the content height to ensure
+        // the animation speed is consistent regardless of the section's length.
+        const height = innerContent.scrollHeight;
+        // Formula: base speed + scaled speed by height, with min/max caps.
+        const dynamicDuration = Math.max(300, Math.min(800, height * 1.2));
+        content.style.transition = `max-height ${dynamicDuration}ms ease-in-out`;
+
+        if (isOpen) {
+            content.style.maxHeight = '0px';
+            icon.style.transform = 'rotate(0deg)';
+        } else {
+            content.style.maxHeight = height + 'px';
+            icon.style.transform = 'rotate(180deg)';
+        }
+    }
+});
     });
 }
 
@@ -666,11 +707,11 @@ function populateAccordion() {
         const header = document.createElement('div');
         header.className = 'flex w-full items-center justify-between rounded-lg px-2 py-[5px] text-xs text-label-3 dark:text-dark-label-3';
         header.innerHTML = `
-            <div class="flex-grow pl-8 font-medium">Topic</div>
+                    <div class="flex-grow pl-8 font-medium"></div>
             <div class="flex flex-shrink-0 justify-end text-center font-medium" style="width: 200px;">
-                <span class="w-1/3" title="Problems Solved">Solved</span>
-                <span class="w-1/3" title="Average Attempts">Avg. Attempts</span>
-                <span class="w-1/3" title="First Ace Rate">First Ace %</span>
+                <span class="w-1/3" title="Problems Solved">Problems Solved</span>
+                <span class="w-1/3" title="Average Attempts">Average Attempts</span>
+                <span class="w-1/3" title="First Ace Rate">First Ace Rate</span>
             </div>
         `;
         skillsContent.appendChild(header);
@@ -722,7 +763,7 @@ function populateAccordion() {
                 toggleContainer.className = 'text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]';
                 toggleContainer.innerHTML = `
                     <button data-view="HourOfDay" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Hourly</button>
-                    <button data-view="DayOfWeek" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Weekly</button>
+                    <button data-view="DayOfWeek" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Daily</button>
                 `;
                 controlsContainer.appendChild(toggleContainer);
                 const checkboxCallback = (isChecked: boolean) => { controlsContainer.style.display = isChecked ? 'block' : 'none'; };
@@ -747,7 +788,7 @@ function populateAccordion() {
     }
 
     // --- Set final calculated width ---
-    const PADDING_AND_SCROLLBAR_BUFFER = 70; // Panel's L/R padding (32px) + scrollbar buffer (20px)
+    const PADDING_AND_SCROLLBAR_BUFFER = 90; // Panel's L/R padding (32px) + scrollbar buffer (20px)
     const MIN_WIDTH = 380; // Minimum width to prevent the panel from becoming too narrow
     const finalPanelWidth = maxContentWidth + PADDING_AND_SCROLLBAR_BUFFER;
 
