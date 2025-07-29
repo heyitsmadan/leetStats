@@ -24,6 +24,8 @@ let processedDataCache: ProcessedData | null = null;
 let currentPreviewBlob: Blob | null = null;
 let isRendering = false;
 let usernameCache = '';
+// --- Add this to your module-level state variables at the top of bento.ts ---
+let controlsPanel: HTMLElement | null = null;
 
 // --- Configuration ---
 const RENDER_WIDTH = 900;
@@ -69,11 +71,12 @@ function formatTopicName(slug: string): string {
 }
 
 async function renderBentoPreview() {
-    // Guard against running if data is not ready.
+    // Guard against running if data is not ready or another render is in progress.
     if (isRendering || !legacyStats || !processedDataCache || !skillMatrixData) return;
 
-    const currentSkillMatrixData = skillMatrixData;
     isRendering = true;
+    // --- CHANGE: Disable controls to prevent input during rendering ---
+    if (controlsPanel) controlsPanel.classList.add('is-rendering');
 
     const loader = document.getElementById('bento-preview-loader');
     const previewCanvas = document.getElementById('bento-preview-canvas') as HTMLCanvasElement;
@@ -130,73 +133,47 @@ async function renderBentoPreview() {
         const grid = offscreenContainer.querySelector('#bento-grid')!;
         
         // --- 4. LAYOUT ENGINE ALGORITHM (UPDATED) ---
-
-        // Define priorities based on the algorithm
         const promotionPriority = ['history', 'progressTracker', 'codingClock', 'submissionSignature', 'languageStats', 'trophies', 'milestones', 'records', 'overallProgress'];
-        const visualOrderPriority = ['history']; // 'overallProgress' is now removed from special visual ordering.
-
-        // Get all selected components that need layout decisions
+        const visualOrderPriority = ['history'];
         let componentsToLayout = [...selectedItems];
-
-        // Rule: Skills is always rendered full width, at the bottom.
-        // Isolate it from the main layout logic.
         const hasSkills = componentsToLayout.includes('skills');
         if (hasSkills) {
             componentsToLayout = componentsToLayout.filter(item => item !== 'skills');
         }
-
-        // Determine if the count of main components is odd and which item to promote.
         const isOddCount = componentsToLayout.length % 2 === 1;
         let itemToPromote: string | null = null;
         if (isOddCount) {
-            // Find the highest-priority item present in the selection to promote to full-width.
             itemToPromote = promotionPriority.find(p => componentsToLayout.includes(p)) || null;
         }
-
-        // Build the final ordered list of components to render, respecting the visual order guideline.
         const orderedComponents: string[] = [];
-
-        // 1. Add top-priority visual items first to ensure they appear at the top.
         visualOrderPriority.forEach(key => {
             if (componentsToLayout.includes(key)) {
                 orderedComponents.push(key);
             }
         });
-
-        // 2. Add the rest of the items.
-        // Sorting them by the promotion priority ensures a consistent and predictable layout.
         const remainingComponents = componentsToLayout
             .filter(key => !visualOrderPriority.includes(key))
             .sort((a, b) => {
                 const indexA = promotionPriority.indexOf(a);
                 const indexB = promotionPriority.indexOf(b);
-                // If an item isn't in the priority list, it has the lowest priority.
                 if (indexA === -1) return 1;
                 if (indexB === -1) return -1;
                 return indexA - indexB;
             });
-
         orderedComponents.push(...remainingComponents);
-
-        // Now, render the main components with the correct span based on the logic.
         orderedComponents.forEach(key => {
-            // A component is full-width (span 4) if it's the one chosen for promotion. Otherwise, it's half-width (span 2).
             const span = (key === itemToPromote) ? 4 : 2;
             grid.appendChild(createCardElement(key, span));
         });
-
-        // Finally, add the Skills component at the very end if it was selected.
         if (hasSkills) {
             grid.appendChild(createCardElement('skills', 4));
         }
         
-        // --- End of layout logic ---
-
         document.body.appendChild(offscreenContainer);
         const renderNode = document.getElementById('bento-render-node') as HTMLElement;
 
         // --- 5. RENDER CHARTS & COMPONENTS ---
-        await renderComponentContent(renderNode, selections, currentSkillMatrixData);
+        await renderComponentContent(renderNode, selections, skillMatrixData!);
         
         await new Promise(resolve => setTimeout(resolve, 200));
         
@@ -235,6 +212,8 @@ async function renderBentoPreview() {
         console.error("Failed to render bento preview:", error);
         if (loader) loader.style.display = 'none';
     } finally {
+        // --- CHANGE: Re-enable controls and reset the rendering flag ---
+        if (controlsPanel) controlsPanel.classList.remove('is-rendering');
         isRendering = false;
     }
 }
@@ -459,6 +438,9 @@ export function initializeBentoGenerator(data: ProcessedData, username: string) 
     if (!skillMatrixData) skillMatrixData = getSkillMatrixStats(data, { timeRange: 'All Time', difficulty: 'All' }, 'All Time');
     usernameCache = username;
 
+    // --- CHANGE: Cache the controls panel element when the modal is initialized ---
+    controlsPanel = document.getElementById('bento-controls-panel');
+
     const generateCardBtn = document.getElementById('generate-card-btn');
     const modal = document.getElementById('bento-modal');
     const closeModalBtn = document.getElementById('bento-modal-close-btn');
@@ -513,28 +495,28 @@ export function initializeBentoGenerator(data: ProcessedData, username: string) 
     // This part handles the smooth slide transition for the accordion.
     document.querySelectorAll('.bento-accordion-header').forEach(header => {
         header.addEventListener('click', () => {
-    const content = header.nextElementSibling as HTMLElement; // This is the outer wrapper
-    const icon = header.querySelector('svg');
-    if (content && icon) {
-        const innerContent = content.firstElementChild as HTMLElement;
-        const isOpen = content.style.maxHeight && content.style.maxHeight !== '0px';
+            const content = header.nextElementSibling as HTMLElement; // This is the outer wrapper
+            const icon = header.querySelector('svg');
+            if (content && icon) {
+                const innerContent = content.firstElementChild as HTMLElement;
+                const isOpen = content.style.maxHeight && content.style.maxHeight !== '0px';
 
-        // Calculate a dynamic duration based on the content height to ensure
-        // the animation speed is consistent regardless of the section's length.
-        const height = innerContent.scrollHeight;
-        // Formula: base speed + scaled speed by height, with min/max caps.
-        const dynamicDuration = Math.max(300, Math.min(800, height * 1.2));
-        content.style.transition = `max-height ${dynamicDuration}ms ease-in-out`;
+                // Calculate a dynamic duration based on the content height to ensure
+                // the animation speed is consistent regardless of the section's length.
+                const height = innerContent.scrollHeight;
+                // Formula: base speed + scaled speed by height, with min/max caps.
+                const dynamicDuration = Math.max(300, Math.min(800, height * 1.2));
+                content.style.transition = `max-height ${dynamicDuration}ms ease-in-out`;
 
-        if (isOpen) {
-            content.style.maxHeight = '0px';
-            icon.style.transform = 'rotate(0deg)';
-        } else {
-            content.style.maxHeight = height + 'px';
-            icon.style.transform = 'rotate(180deg)';
-        }
-    }
-});
+                if (isOpen) {
+                    content.style.maxHeight = '0px';
+                    icon.style.transform = 'rotate(0deg)';
+                } else {
+                    content.style.maxHeight = height + 'px';
+                    icon.style.transform = 'rotate(180deg)';
+                }
+            }
+        });
     });
 }
 

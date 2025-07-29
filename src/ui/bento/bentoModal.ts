@@ -7,11 +7,18 @@ export function createBentoModalHTML(): string {
   // Using colors from the theme file for inline styles
   const modalStyles = `
     #bento-modal {
-      --left-panel-width: 480px; /* <<< You can precisely control the left panel width here */
+      --left-panel-width: 480px;
       display: none;
-      background-color: rgba(26, 26, 26, 0.7); /* page background with alpha */
+      background-color: rgba(26, 26, 26, 0.7);
       backdrop-filter: blur(8px);
-      z-index: 10000; /* A high z-index to ensure it's on top of all page elements */
+      z-index: 10000;
+    }
+
+    /* --- CHANGE: Style to disable controls during render --- */
+    #bento-controls-panel.is-rendering {
+      pointer-events: none;
+      opacity: 0.6;
+      transition: opacity 0.3s ease-in-out;
     }
 
     /* --- Accordion Transition Styles (MODIFIED) --- */
@@ -28,15 +35,14 @@ export function createBentoModalHTML(): string {
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 0 auto; /* Center the wrapper horizontally */
+        margin: 0 auto;
     }
     #bento-preview-canvas {
         width: 100%;
         height: 100%;
         object-fit: contain;
         border-radius: 12px;
-        /* Provide a sensible max size for the preview in the UI */
-        max-width: 450px; /* RENDER_WIDTH / 2 */
+        max-width: 450px;
         max-height: 85vh;
     }
 
@@ -47,8 +53,8 @@ export function createBentoModalHTML(): string {
     }
     #bento-render-node {
         width: 900px;
-        height: auto; /* KEY CHANGE: Height is now dynamic */
-        background: #1a1a1a; /* CHANGE: Set a solid background color as a fallback */
+        height: auto;
+        background: #1a1a1a;
         display: flex; 
         flex-direction: column;
     }
@@ -67,12 +73,12 @@ export function createBentoModalHTML(): string {
     .render-safe #bento-grid {
          display: grid;
          grid-template-columns: repeat(4, 1fr);
-         align-items: stretch; /* KEY CHANGE: Make cards in the same row equal height */
+         align-items: stretch;
          gap: 20px;
          width: 100%;
     }
     .render-safe #bento-footer {
-        padding: 20px 40px 20px; /* top, horizontal, bottom */
+        padding: 20px 40px 20px;
         text-align: right;
         font-size: 16px;
         color: ${colors.text.subtle};
@@ -84,7 +90,7 @@ export function createBentoModalHTML(): string {
         border: 1px solid ${colors.background.secondarySection};
         border-radius: 24px;
         padding: 24px;
-        display: flex; /* Use flex to make card content area grow */
+        display: flex;
         flex-direction: column;
         overflow: hidden;
     }
@@ -96,11 +102,10 @@ export function createBentoModalHTML(): string {
         flex-shrink: 0;
     }
     .render-safe .bento-card-content {
-        flex-grow: 1; /* Allow content to fill available vertical space */
+        flex-grow: 1;
         display: flex;
         flex-direction: column;
         min-height: 0;
-        /* Center content within cards */
         align-items: center;
         justify-content: center;
     }
@@ -113,7 +118,7 @@ export function createBentoModalHTML(): string {
     .render-safe .record-list { display: flex; flex-direction: column; gap: 16px; width: 100%;}
     .render-safe .record-item { display: flex; justify-content: space-between; align-items: baseline; font-size: 20px; border-bottom: 1px solid ${colors.background.secondarySection}; padding-bottom: 16px; gap: 32px; width: 100%; }
     .render-safe .record-item:last-child { border-bottom: none; }
-    .render-safe .record-label { color: ${colors.text.primary}; white-space: nowrap; } /* CHANGE: Use primary text color */
+    .render-safe .record-label { color: ${colors.text.primary}; white-space: nowrap; }
     .render-safe .record-value { text-align: right; font-weight: 600; font-size: 22px; color: ${colors.text.primary}; }
     .render-safe .record-context { display: block; font-size: 16px; font-weight: 400; color: ${colors.text.subtle}; }
     
@@ -124,7 +129,7 @@ export function createBentoModalHTML(): string {
     .render-safe .trophy-icon { width: 48px; height: 48px; flex-shrink: 0; }
     .render-safe .trophy-details { display: flex; flex-direction: column; gap: 4px; }
     .render-safe .trophy-title { font-size: 20px; font-weight: 600; color: ${colors.text.primary}; }
-    .render-safe .trophy-problem { font-size: 16px; color: #64b5f6; text-decoration: none; } /* CHANGE: Updated link color */
+    .render-safe .trophy-problem { font-size: 16px; color: #64b5f6; text-decoration: none; }
     .render-safe .trophy-subtitle { font-size: 16px; color: ${colors.text.subtle}; }
 
     /* Milestone Styles */
@@ -135,9 +140,8 @@ export function createBentoModalHTML(): string {
     .render-safe .milestone-dot { position: absolute; left: 0; top: 8px; width: 18px; height: 18px; border-radius: 50%; border: 3px solid ${colors.background.section}; }
     .render-safe .milestone-event { font-size: 20px; font-weight: 600; }
     .render-safe .milestone-date { font-size: 16px; color: ${colors.text.subtle}; }
-    .render-safe .milestone-problem { font-size: 14px; color: #6b7280; text-decoration: none; } /* CHANGE: Updated problem link style */
+    .render-safe .milestone-problem { font-size: 14px; color: #6b7280; text-decoration: none; }
     .render-safe .milestone-problem:hover { text-decoration: underline; }
-
 
     /* Skills Table Styles */
     .render-safe .skills-table { display: flex; flex-direction: column; width: 100%; }
@@ -161,7 +165,7 @@ export function createBentoModalHTML(): string {
     <div id="bento-modal" class="fixed inset-0 flex items-center justify-center p-4">
         <div class="bg-dark-layer-1 rounded-xl h-full max-h-[95vh] shadow-2xl flex flex-row p-1.5 gap-1.5">
 
-            <div class="bg-dark-layer-0 rounded-lg p-4 flex flex-col flex-shrink-0" style="width: var(--left-panel-width);">
+            <div id="bento-controls-panel" class="bg-dark-layer-0 rounded-lg p-4 flex flex-col flex-shrink-0" style="width: var(--left-panel-width);">
                 <h2 class="text-xl font-bold text-white mb-4 flex-shrink-0">Customize</h2>
                 <div class="space-y-2 overflow-y-auto overflow-x-hidden">
                     <div class="bg-dark-layer-1 rounded-lg">
