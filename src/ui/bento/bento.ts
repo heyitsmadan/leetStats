@@ -163,8 +163,8 @@ async function renderBentoPreview() {
         const specialInLayout = componentsToLayout.filter(c => special.includes(c));
         let layoutHandled = false;
 
-        // RULE 1: Special layout for 4, 6, or 8 components WITHOUT skills
-        if (!hasSkills && (totalCount === 4 || totalCount === 6 || totalCount === 8) && specialInLayout.length >= 2) {
+        // RULE 1: Special layout for 4 components WITHOUT skills
+        if (!hasSkills && totalCount === 4 && specialInLayout.length >= 2) {
             const sortedSpecial = specialInLayout.sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
             const itemToPromoteTop = sortedSpecial[0];
             const itemToPromoteBottom = sortedSpecial[1];
@@ -177,7 +177,24 @@ async function renderBentoPreview() {
             grid.appendChild(createCardElement(itemToPromoteBottom, 4));
             layoutHandled = true;
         }
-        // RULE 2: Special layout for 7 components WITHOUT skills
+        // RULE 2: Special layout for 6 components WITHOUT skills
+        else if (!hasSkills && totalCount === 6 && specialInLayout.length >= 2) {
+            const sortedSpecial = specialInLayout.sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+            const firstPromo = sortedSpecial[0];
+            const secondPromo = sortedSpecial[1];
+            
+            const allPromoted = [firstPromo, secondPromo];
+            const halfWidthItems = componentsToLayout.filter(c => !allPromoted.includes(c)).sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+
+            grid.appendChild(createCardElement(allPromoted[0], 4));
+            grid.appendChild(createCardElement(halfWidthItems[0], 2));
+            grid.appendChild(createCardElement(halfWidthItems[1], 2));
+            grid.appendChild(createCardElement(allPromoted[1], 4));
+            grid.appendChild(createCardElement(halfWidthItems[2], 2));
+            grid.appendChild(createCardElement(halfWidthItems[3], 2));
+            layoutHandled = true;
+        }
+        // RULE 3: Special layout for 7 components WITHOUT skills
         else if (!hasSkills && totalCount === 7) {
             const firstPromo = promotionPriority.find(p => componentsToLayout.includes(p))!;
             const remainingAfterFirstPromo = componentsToLayout.filter(c => c !== firstPromo);
@@ -201,7 +218,68 @@ async function renderBentoPreview() {
                 layoutHandled = true;
             }
         }
-        // NEW RULE 3: Special layout for 7 components WITH skills
+        // RULE 4: Special layout for 8 components WITHOUT skills
+        else if (!hasSkills && totalCount === 8 && specialInLayout.length >= 2) {
+            const sortedSpecial = specialInLayout.sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+            const firstPromo = sortedSpecial[0];
+            const secondPromo = sortedSpecial[1];
+            
+            const allPromoted = [firstPromo, secondPromo];
+            const halfWidthItems = componentsToLayout.filter(c => !allPromoted.includes(c)).sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+
+            grid.appendChild(createCardElement(allPromoted[0], 4));
+            grid.appendChild(createCardElement(halfWidthItems[0], 2));
+            grid.appendChild(createCardElement(halfWidthItems[1], 2));
+            grid.appendChild(createCardElement(allPromoted[1], 4));
+            grid.appendChild(createCardElement(halfWidthItems[2], 2));
+            grid.appendChild(createCardElement(halfWidthItems[3], 2));
+            grid.appendChild(createCardElement(halfWidthItems[4], 2));
+            grid.appendChild(createCardElement(halfWidthItems[5], 2));
+            layoutHandled = true;
+        }
+        // RULE 5: Special layout for 9 components WITHOUT skills
+        else if (!hasSkills && totalCount === 9) {
+            const firstPromo = promotionPriority.find(p => componentsToLayout.includes(p))!;
+            const remainingAfterFirstPromo = componentsToLayout.filter(c => c !== firstPromo);
+            const specialInRemaining = remainingAfterFirstPromo.filter(c => special.includes(c));
+
+            if (specialInRemaining.length >= 2) {
+                const sortedSpecial = specialInRemaining.sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+                const secondPromo = sortedSpecial[0];
+                const thirdPromo = sortedSpecial[1];
+
+                const allPromoted = [firstPromo, secondPromo, thirdPromo].sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+                const halfWidthItems = componentsToLayout.filter(c => !allPromoted.includes(c)).sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+
+                grid.appendChild(createCardElement(allPromoted[0], 4));
+                grid.appendChild(createCardElement(halfWidthItems[0], 2));
+                grid.appendChild(createCardElement(halfWidthItems[1], 2));
+                grid.appendChild(createCardElement(allPromoted[1], 4));
+                grid.appendChild(createCardElement(halfWidthItems[2], 2));
+                grid.appendChild(createCardElement(halfWidthItems[3], 2));
+                grid.appendChild(createCardElement(allPromoted[2], 4));
+                grid.appendChild(createCardElement(halfWidthItems[4], 2));
+                grid.appendChild(createCardElement(halfWidthItems[5], 2));
+                layoutHandled = true;
+            }
+        }
+        // RULE 6: Special layout for 5 components WITH skills
+        else if (hasSkills && totalSelectedCount === 5) {
+            const halfWidthItems = componentsToLayout.sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+            grid.appendChild(createCardElement(halfWidthItems[0], 2));
+            grid.appendChild(createCardElement(halfWidthItems[1], 2));
+            layoutHandled = true;
+        }
+        // RULE 7: Special layout for 6 components WITH skills
+        else if (hasSkills && totalSelectedCount === 6) {
+            const itemToPromote = promotionPriority.find(p => componentsToLayout.includes(p))!;
+            const halfWidthItems = componentsToLayout.filter(c => c !== itemToPromote).sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+            grid.appendChild(createCardElement(itemToPromote, 4));
+            grid.appendChild(createCardElement(halfWidthItems[0], 2));
+            grid.appendChild(createCardElement(halfWidthItems[1], 2));
+            layoutHandled = true;
+        }
+        // RULE 8: Special layout for 7 components WITH skills
         else if (hasSkills && totalSelectedCount === 7 && specialInLayout.length >= 2) {
             const sortedSpecial = specialInLayout.sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
             const firstPromo = sortedSpecial[0];
@@ -216,6 +294,58 @@ async function renderBentoPreview() {
             grid.appendChild(createCardElement(allPromoted[1], 4));
             grid.appendChild(createCardElement(halfWidthItems[2], 2));
             grid.appendChild(createCardElement(halfWidthItems[3], 2));
+            layoutHandled = true;
+        }
+        // RULE 9: Special layout for 8 components WITH skills
+        else if (hasSkills && totalSelectedCount === 8 && specialInLayout.length >= 1) {
+            const sortedSpecial = specialInLayout.sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+            const firstPromo = sortedSpecial[0];
+
+            const halfWidthItems = componentsToLayout.filter(c => c !== firstPromo).sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+            
+            grid.appendChild(createCardElement(halfWidthItems[0], 2));
+            grid.appendChild(createCardElement(halfWidthItems[1], 2));
+            grid.appendChild(createCardElement(firstPromo, 4));
+            grid.appendChild(createCardElement(halfWidthItems[2], 2));
+            grid.appendChild(createCardElement(halfWidthItems[3], 2));
+            layoutHandled = true;
+        }
+        // RULE 10: Special layout for 9 components WITH skills
+        else if (hasSkills && totalSelectedCount === 9 && specialInLayout.length >= 2) {
+            const sortedSpecial = specialInLayout.sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+            const firstPromo = sortedSpecial[0];
+            const secondPromo = sortedSpecial[1];
+
+            const allPromoted = [firstPromo, secondPromo];
+            const halfWidthItems = componentsToLayout.filter(c => !allPromoted.includes(c)).sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+            
+            grid.appendChild(createCardElement(allPromoted[0], 4));
+            grid.appendChild(createCardElement(halfWidthItems[0], 2));
+            grid.appendChild(createCardElement(halfWidthItems[1], 2));
+            grid.appendChild(createCardElement(allPromoted[1], 4));
+            grid.appendChild(createCardElement(halfWidthItems[2], 2));
+            grid.appendChild(createCardElement(halfWidthItems[3], 2));
+            layoutHandled = true;
+        }
+        // RULE 11: Special layout for 10 components WITH skills
+        else if (hasSkills && totalSelectedCount === 10 && specialInLayout.length >= 3) {
+            const sortedSpecial = specialInLayout.sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+            const firstPromo = sortedSpecial[0];
+            const secondPromo = sortedSpecial[1];
+            const thirdPromo = sortedSpecial[2];
+
+            const allPromoted = [firstPromo, secondPromo, thirdPromo];
+            const halfWidthItems = componentsToLayout.filter(c => !allPromoted.includes(c)).sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+
+            grid.appendChild(createCardElement(allPromoted[0], 4));
+            grid.appendChild(createCardElement(halfWidthItems[0], 2));
+            grid.appendChild(createCardElement(halfWidthItems[1], 2));
+            grid.appendChild(createCardElement(allPromoted[1], 4));
+            grid.appendChild(createCardElement(halfWidthItems[2], 2));
+            grid.appendChild(createCardElement(halfWidthItems[3], 2));
+            grid.appendChild(createCardElement(allPromoted[2], 4));
+            grid.appendChild(createCardElement(halfWidthItems[4], 2));
+            grid.appendChild(createCardElement(halfWidthItems[5], 2));
             layoutHandled = true;
         }
 
@@ -256,6 +386,39 @@ async function renderBentoPreview() {
         // Add skills card at the end if it was selected
         if (hasSkills) {
             grid.appendChild(createCardElement('skills', 4));
+        }
+
+        // Special handling for trailing half-width items in skills layouts
+        if (layoutHandled && hasSkills) {
+            if (totalSelectedCount === 5) {
+                const halfWidthItems = componentsToLayout.sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+                grid.appendChild(createCardElement(halfWidthItems[2], 2));
+                grid.appendChild(createCardElement(halfWidthItems[3], 2));
+            } else if (totalSelectedCount === 6) {
+                const itemToPromote = promotionPriority.find(p => componentsToLayout.includes(p))!;
+                const halfWidthItems = componentsToLayout.filter(c => c !== itemToPromote).sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+                grid.appendChild(createCardElement(halfWidthItems[2], 2));
+                grid.appendChild(createCardElement(halfWidthItems[3], 2));
+            } else if (totalSelectedCount === 8) {
+                const specialInLayout = componentsToLayout.filter(c => special.includes(c));
+                if (specialInLayout.length >= 1) {
+                    const sortedSpecial = specialInLayout.sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+                    const firstPromo = sortedSpecial[0];
+                    const halfWidthItems = componentsToLayout.filter(c => c !== firstPromo).sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+                    grid.appendChild(createCardElement(halfWidthItems[4], 2));
+                    grid.appendChild(createCardElement(halfWidthItems[5], 2));
+                }
+            } else if (totalSelectedCount === 9) {
+                 const specialInLayout = componentsToLayout.filter(c => special.includes(c));
+                 if (specialInLayout.length >= 2) {
+                    const sortedSpecial = specialInLayout.sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+                    const firstPromo = sortedSpecial[0];
+                    const secondPromo = sortedSpecial[1];
+                    const halfWidthItems = componentsToLayout.filter(c => c !== firstPromo && c !== secondPromo).sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+                    grid.appendChild(createCardElement(halfWidthItems[4], 2));
+                    grid.appendChild(createCardElement(halfWidthItems[5], 2));
+                 }
+            }
         }
         
         document.body.appendChild(offscreenContainer);
