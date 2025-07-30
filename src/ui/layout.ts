@@ -95,8 +95,11 @@ export function renderPageLayout(processedData: ProcessedData, username: string)
     }
 
     // 2.5. Create and insert Generate Card button
-    const generateCardBtn = createGenerateCardButton();
+    let generateCardBtn: HTMLElement | null = null;
+if (processedData.submissions.length > 0) {
+    generateCardBtn = createGenerateCardButton();
     tabBar.appendChild(generateCardBtn);
+}
 
     // 3. Create stats content pane based on whether data exists
     const statsPane = document.createElement('div');
@@ -108,13 +111,22 @@ export function renderPageLayout(processedData: ProcessedData, username: string)
         // If no data, fill pane with the empty state message
         const imageUrl = chrome.runtime.getURL('assets/images/null_dark.png');
         statsPane.innerHTML = `
-            <div class="flex flex-col items-center justify-center py-24 text-center">
-                <img src="${imageUrl}" alt="No data" class="mb-6 w-32 h-32 opacity-50" />
-                <h3 class="text-xl font-semibold text-label-1 dark:text-dark-label-1 mb-2">No stats</h3>
-                <p class="text-label-2 dark:text-dark-label-2 max-w-md">
-                    No submission data found. Start solving problems to see your statistics!
-                </p>
-            </div>
+        <div class="mb-[70px] mt-[57px] flex-1">
+          <div class="flex h-full flex-col items-center justify-center">
+            <!-- Empty data illustration -->
+            <img
+              class="w-[200px]"
+              alt="数据为空"
+              src="${imageUrl}"
+            >
+            
+            <!-- Message text -->
+            <span class="mt-3 text-sm font-medium text-label-4 dark:text-dark-label-4">
+              No stats
+            </span>
+          </div>
+        </div>
+
         `;
     } else {
         // If there's data, fill it with the charts grid
@@ -833,7 +845,7 @@ function setupTabLogic(
     statsPane: HTMLElement,
     processedData: ProcessedData,
     username: string,
-    generateCardBtn: HTMLElement  // Add this parameter
+    generateCardBtn: HTMLElement | null  // Add this parameter
 ) {
     const ACTIVE_CLASSES = 'text-label-1 dark:text-dark-label-1 bg-fill-3 dark:bg-dark-fill-3'.split(' ');
     let isStatsActive = false;
@@ -932,7 +944,9 @@ function setupTabLogic(
         rightElements.forEach(el => (el as HTMLElement).style.display = 'none');
         
         // Show Generate Card button
-        generateCardBtn.style.display = 'inline-flex';
+        if (generateCardBtn) {
+    generateCardBtn.style.display = 'inline-flex';
+}
 
         // Start observing for new content
         startContentObservation();
@@ -968,7 +982,9 @@ function setupTabLogic(
             stopContentObservation();
 
             // Hide Generate Card button and restore right-aligned elements
-            generateCardBtn.style.display = 'none';
+            if (generateCardBtn) {
+    generateCardBtn.style.display = 'none';
+}
             const rightElements = tabBar.querySelectorAll(`
                 .ml-auto:not(#generate-card-btn),
                 a[href*="/submissions/"],
