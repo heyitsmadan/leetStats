@@ -17,38 +17,31 @@ import { getSmartCumulativeView } from '../layout';
 import { colors } from '../theme/colors';
 import { toBlob } from 'html-to-image';
 import { styles } from '../theme/styles';
+
 // --- Module-level state ---
 let legacyStats: LegacyStats | null = null;
 let skillMatrixData: SkillMatrixData | null = null;
 let processedDataCache: ProcessedData | null = null;
 let currentPreviewBlob: Blob | null = null;
-let isRendering = false;
+let latestGenerationToken = 0; // Used to track the latest render request
 let usernameCache = '';
-// --- Add this to your module-level state variables at the top of bento.ts ---
 let controlsPanel: HTMLElement | null = null;
 let avatarUrlCache = '';
+
 // --- Configuration ---
 const RENDER_WIDTH = 900;
 
 // --- Helper functions ---
 
 /**
- * A debounce function to prevent a function from being called too frequently.
- * This is crucial for performance with expensive operations like image generation.
- * @param func The function to debounce.
- * @param delay The delay in milliseconds.
- * @returns A debounced version of the function.
+ * Increments the generation token and calls the main render function.
+ * This ensures that only the latest request will result in a UI update,
+ * effectively cancelling any previously running generation tasks.
  */
-function debounce(func: (...args: any[]) => void, delay: number) {
-    let timeoutId: number;
-    return (...args: any[]) => {
-        clearTimeout(timeoutId);
-        timeoutId = window.setTimeout(() => {
-            func(...args);
-        }, delay);
-    };
+function triggerRender() {
+    latestGenerationToken++;
+    renderBentoPreview(latestGenerationToken);
 }
-
 
 function getMilestoneColor(type: string): string {
   const colorMap: { [key: string]: string } = { 'easy': colors.problems.easy, 'medium': colors.problems.medium, 'hard': colors.problems.hard, 'problems_solved': colors.status.accepted, 'submissions': '#64b5f6' };
@@ -70,13 +63,24 @@ function formatTopicName(slug: string): string {
     return slug.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
 }
 
-async function renderBentoPreview() {
-    // Guard against running if data is not ready or another render is in progress.
-    if (isRendering || !legacyStats || !processedDataCache || !skillMatrixData) return;
+/**
+ * Asynchronously renders the bento preview based on current selections.
+ * It uses a token system and unique DOM element IDs to handle race conditions, 
+ * ensuring only the most recent render request updates the UI.
+ * @param generationToken The token for this specific render request.
+ */
+async function renderBentoPreview(generationToken: number) {
+    // If this is not the latest request, abort immediately.
+    if (generationToken !== latestGenerationToken) {
+        return;
+    }
 
-    isRendering = true;
-    if (controlsPanel) controlsPanel.classList.add('is-rendering');
+    // Guard against running if essential data is not ready.
+    if (!legacyStats || !processedDataCache || !skillMatrixData) {
+        return;
+    }
 
+    // --- UI updates to show loading state ---
     const loader = document.getElementById('bento-preview-loader');
     const previewCanvas = document.getElementById('bento-preview-canvas') as HTMLCanvasElement;
     const copyBtn = document.getElementById('copy-bento-btn');
@@ -87,6 +91,9 @@ async function renderBentoPreview() {
     if (copyBtn) copyBtn.setAttribute('disabled', 'true');
     if (downloadBtn) downloadBtn.setAttribute('disabled', 'true');
     currentPreviewBlob = null;
+
+    // Create a unique container for this specific render pass to avoid DOM conflicts.
+    const offscreenContainer = document.createElement('div');
 
     try {
         // --- 1. GATHER SELECTIONS ---
@@ -103,7 +110,7 @@ async function renderBentoPreview() {
         const shouldDisplayAvatar = displayAvatarCheckbox ? displayAvatarCheckbox.dataset.state === 'checked' : false;
 
         const usernameInput = document.getElementById('bento-username-input') as HTMLInputElement;
-        const currentUsername = usernameInput ? usernameInput.value : usernameCache; // Fallback to cache
+        const currentUsername = usernameInput ? usernameInput.value : usernameCache;
 
         // --- 2. DEFINE COMPONENTS ---
         const componentDefinitions = {
@@ -122,8 +129,7 @@ async function renderBentoPreview() {
         const selectedItems = Object.keys(componentDefinitions)
             .filter(key => componentDefinitions[key as keyof typeof componentDefinitions].condition);
 
-        // --- 3. CREATE HTML STRUCTURE OFF-SCREEN ---
-        const offscreenContainer = document.createElement('div');
+        // --- 3. CREATE ISOLATED HTML STRUCTURE OFF-SCREEN ---
         offscreenContainer.style.position = 'absolute';
         offscreenContainer.style.left = '-9999px';
         offscreenContainer.style.top = '0px';
@@ -422,25 +428,36 @@ async function renderBentoPreview() {
         }
         
         document.body.appendChild(offscreenContainer);
-        const renderNode = document.getElementById('bento-render-node') as HTMLElement;
+        const renderNode = offscreenContainer.querySelector('#bento-render-node') as HTMLElement;
 
-        // --- 5. RENDER CHARTS & COMPONENTS ---
+        // --- 5. RENDER CHARTS & DYNAMIC CONTENT ---
         await renderComponentContent(renderNode, selections, skillMatrixData!);
         
+        // A short delay for charts to fully render before capture.
         await new Promise(resolve => setTimeout(resolve, 200));
         
-        const renderHeight = renderNode.scrollHeight;
+        // Another check before the expensive image generation step.
+        if (generationToken !== latestGenerationToken) {
+            throw new Error(`Render cancelled before image generation (token: ${generationToken})`);
+        }
         
+        const renderHeight = renderNode.scrollHeight;
         const blob = await toBlob(renderNode, {
             width: RENDER_WIDTH,
             height: renderHeight,
             skipFonts: true
         });
 
+        // FINAL CHECK: Is this still the latest request after the blob has been created?
+        if (generationToken !== latestGenerationToken) {
+             throw new Error(`Render became stale after image generation (token: ${generationToken})`);
+        }
+
         if (!blob) {
             throw new Error("Failed to generate image blob.");
         }
         
+        // --- SUCCESS: Update UI with the new image ---
         currentPreviewBlob = blob;
         if (copyBtn) copyBtn.removeAttribute('disabled');
         if (downloadBtn) downloadBtn.removeAttribute('disabled');
@@ -450,24 +467,35 @@ async function renderBentoPreview() {
             const img = new Image();
             const url = URL.createObjectURL(blob);
             img.onload = () => {
-                previewCanvas.width = img.width;
-                previewCanvas.height = img.height;
-                ctx.drawImage(img, 0, 0);
+                // Final check inside the async onload callback
+                if (generationToken === latestGenerationToken) {
+                    previewCanvas.width = img.width;
+                    previewCanvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    if (loader) loader.style.display = 'none';
+                    if (previewCanvas) previewCanvas.style.display = 'block';
+                }
                 URL.revokeObjectURL(url);
             };
             img.src = url;
+        } else {
+             if (loader) loader.style.display = 'none';
         }
 
-        if (loader) loader.style.display = 'none';
-        if (previewCanvas) previewCanvas.style.display = 'block';
-        document.body.removeChild(offscreenContainer);
-
     } catch (error) {
-        console.error("Failed to render bento preview:", error);
-        if (loader) loader.style.display = 'none';
+        // Log cancellation messages differently from actual errors.
+        if (error instanceof Error && (error.message.includes('cancelled') || error.message.includes('stale'))) {
+             console.log(error.message); // This is an expected outcome, not an error.
+        } else {
+            console.error("Failed to render bento preview:", error);
+            // Only hide the loader on an actual failure.
+            if (loader) loader.style.display = 'none';
+        }
     } finally {
-        if (controlsPanel) controlsPanel.classList.remove('is-rendering');
-        isRendering = false;
+        // Always clean up the offscreen container.
+        if (offscreenContainer && document.body.contains(offscreenContainer)) {
+            document.body.removeChild(offscreenContainer);
+        }
     }
 }
 
@@ -688,15 +716,12 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     }
 }
 
-
-const debouncedRenderBentoPreview = debounce(renderBentoPreview, 400);
-
 export function initializeBentoGenerator(data: ProcessedData, username: string) {
     processedDataCache = data;
     if (!legacyStats) legacyStats = getLegacyStats(data);
     if (!skillMatrixData) skillMatrixData = getSkillMatrixStats(data, { timeRange: 'All Time', difficulty: 'All' }, 'All Time');
     usernameCache = username;
-    avatarUrlCache = scrapeAvatarUrl(); // Scrape and cache the avatar URL on initialization.
+    avatarUrlCache = scrapeAvatarUrl();
 
     controlsPanel = document.getElementById('bento-controls-panel');
 
@@ -714,7 +739,8 @@ export function initializeBentoGenerator(data: ProcessedData, username: string) 
         if (!document.getElementById('bento-records-accordion-content')?.hasChildNodes()) {
             populateAccordion();
         }
-        renderBentoPreview();
+        // Initial render when opening the modal
+        triggerRender();
     });
 
     const closeModal = () => {
@@ -724,15 +750,10 @@ export function initializeBentoGenerator(data: ProcessedData, username: string) 
 
     closeModalBtn.addEventListener('click', closeModal);
     modal.addEventListener('click', (e) => { 
-        if (e.target === modal) {
-            closeModal();
-        } 
+        if (e.target === modal) closeModal();
     });
-
     document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && modal.style.display === 'flex') {
-            closeModal();
-        }
+        if (e.key === 'Escape' && modal.style.display === 'flex') closeModal();
     });
 
     if (!navigator.clipboard || !window.ClipboardItem) {
@@ -871,7 +892,7 @@ function populateAccordion() {
         aboutContent.appendChild(aboutContainer);
 
         const usernameInput = document.getElementById('bento-username-input');
-        usernameInput?.addEventListener('input', debouncedRenderBentoPreview);
+        usernameInput?.addEventListener('input', triggerRender);
     }
 
     if (historyContent) {
@@ -914,7 +935,7 @@ function populateAccordion() {
         const checkboxContainer = createCheckbox('bento-checkbox-history', 'History Chart', 'historyToggle', 'true', 'bento-history-checkbox', historyCheckboxCallback, true);
         overrideCheckboxStyle(checkboxContainer);
         measureAndTrackWidth(checkboxContainer);
-        measureAndTrackWidth(controlsContainer); // <-- ADD THIS LINE
+        measureAndTrackWidth(controlsContainer);
 
         historyContent.appendChild(checkboxContainer);
         historyContent.appendChild(controlsContainer);
@@ -923,13 +944,13 @@ function populateAccordion() {
             const target = e.currentTarget as HTMLElement;
             document.querySelectorAll('#bento-history-primary-toggle button').forEach(b => b.setAttribute('data-state', 'inactive'));
             target.setAttribute('data-state', 'active');
-            debouncedRenderBentoPreview();
+            triggerRender();
         }));
         document.querySelectorAll('#bento-history-secondary-toggle button').forEach(btn => btn.addEventListener('click', (e) => {
             const target = e.currentTarget as HTMLElement;
             document.querySelectorAll('#bento-history-secondary-toggle button').forEach(b => b.setAttribute('data-state', 'inactive'));
             target.setAttribute('data-state', 'active');
-            debouncedRenderBentoPreview();
+            triggerRender();
         }));
 
         const startDateInput = datePickers.querySelector('#bento-history-start-date') as HTMLInputElement;
@@ -963,12 +984,12 @@ function populateAccordion() {
         
         startDateInput.addEventListener('change', () => {
             endDateInput.min = startDateInput.value;
-            debouncedRenderBentoPreview();
+            triggerRender();
         });
 
         endDateInput.addEventListener('change', () => {
             startDateInput.max = endDateInput.value;
-            debouncedRenderBentoPreview();
+            triggerRender();
         });
 
         endDateInput.min = startDateInput.value;
@@ -1114,7 +1135,7 @@ function populateAccordion() {
                     const target = e.currentTarget as HTMLElement;
                     document.querySelectorAll('#bento-coding-clock-toggle button').forEach(b => b.setAttribute('data-state', 'inactive'));
                     target.setAttribute('data-state', 'active');
-                    debouncedRenderBentoPreview();
+                    triggerRender();
                 }));
             } else {
                 const checkbox = createCheckbox(`bento-checkbox-activity-${name.replace(/\s+/g, '-')}`, name, 'activityName', name, 'bento-activity-checkbox', undefined, isDefaultChecked);
@@ -1209,7 +1230,7 @@ function createCheckbox(id: string, text: string, dataAttribute: string, dataVal
             }
         }
 
-        debouncedRenderBentoPreview();
+        triggerRender();
     };
 
     container.addEventListener('click', toggleCheckbox);
