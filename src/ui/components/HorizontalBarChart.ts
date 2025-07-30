@@ -205,7 +205,14 @@ export function renderOrUpdateHorizontalBarChart(
         scales: {
             x: {
                 stacked: true,
-                ticks: { color: colors.text.subtle, precision: 0 },
+                ticks: { 
+                    color: colors.text.subtle, 
+                    precision: 0,
+                    font: {
+                        size: config.isInteractive ? 12 : 16
+                    },
+                    maxTicksLimit: config.isInteractive ? undefined : 5
+                },
                 grid: { display: false }
             },
             y: {

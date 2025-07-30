@@ -173,6 +173,7 @@ export function renderOrUpdateCumulativeLineChart(
                     font: {
                         size: config.tickFontSize,
                     },
+                    maxTicksLimit: !config.isInteractive ? 5 : undefined,
                 }
             },
         },

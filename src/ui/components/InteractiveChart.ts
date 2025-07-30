@@ -147,7 +147,12 @@ export function renderOrUpdateInteractiveChart(
           },
           y: {
             stacked: true, beginAtZero: true, grid: { display: false },
-            ticks: { color: colors.text.subtle, precision: 0, font: { size: config.isBentoMode ? 16 : 12 } }
+            ticks: { 
+                color: colors.text.subtle, 
+                precision: 0, 
+                font: { size: config.isBentoMode ? 16 : 12 },
+                maxTicksLimit: config.isBentoMode ? 5 : undefined
+            }
           }
         },
         elements: { bar: { borderRadius: 4, borderSkipped: 'bottom' } },

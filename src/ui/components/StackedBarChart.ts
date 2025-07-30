@@ -156,7 +156,8 @@ export function renderOrUpdateStackedBarChart(
                     precision: 0,
                     font: {
                         size: config.isInteractive ? 12 : 16 // Larger font for bento
-                    }
+                    },
+                    maxTicksLimit: !config.isInteractive ? 5 : undefined
                 },
                 grid: { display: false }
             },
