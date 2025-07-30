@@ -6,6 +6,7 @@ export class FetchLoader {
     private progressTextElement: HTMLElement | null = null;
     private progressBarFillElement: HTMLElement | null = null;
     private progressBarWrapper: HTMLElement | null = null;
+    private firstTimeMessageElement: HTMLElement | null = null; // Element for the new message
 
     constructor() {
         this.injectStyles();
@@ -52,6 +53,11 @@ export class FetchLoader {
             }
             
             #leetstats-loader-text {
+                color: var(--loader-text-subtle);
+                transition: color 0.3s ease;
+            }
+
+            #leetstats-loader-first-time-message {
                 color: var(--loader-text-subtle);
                 transition: color 0.3s ease;
             }
@@ -120,9 +126,23 @@ export class FetchLoader {
             transition: 'width 0.3s ease',
         });
 
+        // Create the new message element
+        this.firstTimeMessageElement = document.createElement('div');
+        this.firstTimeMessageElement.id = 'leetstats-loader-first-time-message';
+        this.firstTimeMessageElement.textContent = "don't worry, it takes time only the first time...";
+        // New code
+Object.assign(this.firstTimeMessageElement.style, {
+    textAlign: 'right',
+    marginTop: '8px',
+    fontSize: '11px',
+    fontStyle: 'italic',
+    display: 'none', // Initially hidden
+});
+
         this.progressBarWrapper.appendChild(this.progressBarFillElement);
         this.loaderElement.appendChild(this.progressTextElement);
         this.loaderElement.appendChild(this.progressBarWrapper);
+        this.loaderElement.appendChild(this.firstTimeMessageElement); // Add message to loader
     }
 
     /**
@@ -131,11 +151,15 @@ export class FetchLoader {
     public show() {
         if (!this.loaderElement) return;
 
+        // Show progress bar and message
         if (this.progressBarWrapper) {
             this.progressBarWrapper.style.display = 'block';
         }
         if (this.progressTextElement) {
             this.progressTextElement.style.marginBottom = '10px';
+        }
+        if (this.firstTimeMessageElement) {
+            this.firstTimeMessageElement.style.display = 'block';
         }
 
         document.body.appendChild(this.loaderElement);
@@ -167,6 +191,17 @@ export class FetchLoader {
     public complete() {
         if (!this.progressBarFillElement || !this.loaderElement) return;
 
+        setTimeout(() => {
+            if (this.loaderElement) {
+                // ADD THE LINE HERE
+                if (this.firstTimeMessageElement) {
+                    this.firstTimeMessageElement.style.display = 'none';
+                }
+                this.loaderElement.style.transform = 'translateY(200%)';
+                setTimeout(() => this.loaderElement?.remove(), 500);
+            }
+        }, 1000);
+
         this.progressBarFillElement.style.width = '100%';
 
         setTimeout(() => {
@@ -184,6 +219,11 @@ export class FetchLoader {
     public error(errorMessage: string) {
         if (!this.progressTextElement || !this.progressBarWrapper || !this.loaderElement) return;
         
+        // Hide the first time message on error
+        if (this.firstTimeMessageElement) {
+            this.firstTimeMessageElement.style.display = 'none';
+        }
+
         this.progressTextElement.textContent = errorMessage;
         
         this.progressBarWrapper.style.display = 'none';
