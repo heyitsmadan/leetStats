@@ -1140,7 +1140,7 @@ function createGenerateCardButton(): HTMLElement {
                 z-index: 1;
                 border: none; /* Remove any default border */
                 overflow: hidden; /* Crucial for the effect */
-                background-color: #333; /* Fallback background */
+                background-color: transparent; /* Use transparent as base */
             }
 
             /* The animated gradient layer */
@@ -1153,7 +1153,6 @@ function createGenerateCardButton(): HTMLElement {
                 width: 150%;
                 height: 300%;
                 z-index: -2; /* Behind the ::after pseudo-element */
-                /* This creates two smooth gradients that orbit the button */
                 background: conic-gradient(
                     from 180deg at 50% 50%,
                     transparent 0%,
@@ -1175,11 +1174,23 @@ function createGenerateCardButton(): HTMLElement {
                 left: 1px;
                 right: 1px;
                 bottom: 1px;
-                background-color: #262626; /* This should match your site's dark background */
+                background-color: #262626; /* Dark mode default background */
                 border-radius: 0.45rem; /* Slightly smaller than the button's border-radius */
                 z-index: -1;
                 transition: background-color 0.2s ease-in-out;
             }
+            
+            /* --- LIGHT MODE OVERRIDE --- */
+            html:not(.dark) .animated-border-btn::after {
+                background-color: #ffffff; /* Light mode background */
+            }
+            html:not(.dark) .animated-border-btn span {
+                color: #4a4a4a; /* Darker text for light mode */
+            }
+            html:not(.dark) .animated-border-btn:hover span {
+                 color: #000000; /* Hover text color for light mode */
+            }
+
 
             /* The content (text) needs to be on top of everything */
             .animated-border-btn span {
@@ -1189,7 +1200,7 @@ function createGenerateCardButton(): HTMLElement {
             }
             
             .animated-border-btn:hover span {
-                color: #ffffff; /* Change text to white */
+                color: #ffffff; /* Change text to white on hover for dark mode */
             }
 
             @keyframes rotate-gradient {

@@ -582,7 +582,6 @@ function populateAccordion() {
         }
     };
 
-    // UPDATED: Changed ID to reflect new static container for "About" section
     const aboutContent = document.getElementById('bento-about-content-container');
     const historyContent = document.getElementById('bento-history-accordion-content');
     const recordsContent = document.getElementById('bento-records-accordion-content');
@@ -604,22 +603,19 @@ function populateAccordion() {
         }
     };
 
-    // Populate "About" section (now static)
     if (aboutContent) {
         aboutContent.innerHTML = '';
         const aboutContainer = document.createElement('div');
         aboutContainer.className = 'space-y-3';
 
-        // Username Input
         const usernameRow = document.createElement('div');
         usernameRow.className = 'flex w-full items-center justify-between rounded-lg px-2 py-[5px] text-label-1 dark:text-dark-label-1';
         usernameRow.innerHTML = `
             <label for="bento-username-input" class="text-md">Username</label>
-            <input type="text" id="bento-username-input" value="${usernameCache}" class="bg-dark-layer-0 rounded p-1 text-sm text-gray-300 border border-dark-divider-3 w-48 text-left focus:outline-none">
+            <input type="text" id="bento-username-input" value="${usernameCache}" class="bg-layer-0 dark:bg-dark-layer-0 rounded p-1 text-sm text-label-1 dark:text-dark-label-1 border border-divider-3 dark:border-dark-divider-3 w-48 text-left focus:outline-none focus:ring-1 focus:ring-brand-orange">
         `;
         aboutContainer.appendChild(usernameRow);
 
-        // Avatar Checkbox
         const hasAvatar = !!avatarUrlCache;
         const avatarCheckbox = createCheckbox(
             'bento-checkbox-display-avatar',
@@ -676,9 +672,9 @@ function populateAccordion() {
         datePickers.id = 'history-date-pickers';
         datePickers.className = 'flex gap-2 items-center justify-center mt-2';
         datePickers.innerHTML = `
-            <input type="date" id="bento-history-start-date" class="bg-dark-layer-0 rounded p-1 text-sm text-gray-300 border border-dark-divider-3">
-            <span class="text-gray-400">-</span>
-            <input type="date" id="bento-history-end-date" class="bg-dark-layer-0 rounded p-1 text-sm text-gray-300 border border-dark-divider-3">
+            <input type="date" id="bento-history-start-date" class="bg-layer-0 dark:bg-dark-layer-0 rounded p-1 text-sm text-label-1 dark:text-dark-label-1 border border-divider-3 dark:border-dark-divider-3">
+            <span class="text-label-3 dark:text-dark-label-3">-</span>
+            <input type="date" id="bento-history-end-date" class="bg-layer-0 dark:bg-dark-layer-0 rounded p-1 text-sm text-label-1 dark:text-dark-label-1 border border-divider-3 dark:border-dark-divider-3">
         `;
         controlsContainer.appendChild(datePickers);
 
@@ -758,7 +754,7 @@ function populateAccordion() {
         measureAndTrackWidth(overallProgressCheckbox);
         recordsContent.appendChild(overallProgressCheckbox);
 
-        legacyStats.records.forEach(record => {
+        legacyStats.records.forEach((record:any) => {
             if (record?.name) {
                 const checkboxRow = createCheckbox(`bento-checkbox-record-${record.name.replace(/\s+/g, '-')}`, record.name, 'recordName', record.name, 'bento-record-checkbox');
                 overrideCheckboxStyle(checkboxRow);
@@ -778,7 +774,7 @@ function populateAccordion() {
 
     if (trophiesContent && legacyStats?.trophies) {
         trophiesContent.innerHTML = '';
-        legacyStats.trophies.filter(t => t.achieved).forEach(trophy => {
+        legacyStats.trophies.filter((t:any) => t.achieved).forEach((trophy:any) => {
             if (trophy?.id && trophy.title) {
                 const checkboxRow = createCheckbox(`bento-checkbox-trophy-${trophy.id}`, trophy.title, 'trophyId', trophy.id, 'bento-trophy-checkbox');
                 overrideCheckboxStyle(checkboxRow);
@@ -795,7 +791,7 @@ function populateAccordion() {
 
     if (milestonesContent && legacyStats?.milestones) {
         milestonesContent.innerHTML = '';
-        legacyStats.milestones.forEach((milestone, index) => {
+        legacyStats.milestones.forEach((milestone: any, index: number) => {
             if (milestone) {
                 const labelText = `${milestone.milestone}${getOrdinalSuffix(milestone.milestone)} ${formatMilestoneType(milestone.type)}`;
                 const checkboxRow = createCheckbox(`bento-checkbox-milestone-${index}`, labelText, 'milestoneIndex', index.toString(), 'bento-milestone-checkbox');
@@ -816,11 +812,11 @@ function populateAccordion() {
         const header = document.createElement('div');
         header.className = 'flex w-full items-center justify-between rounded-lg px-2 py-[5px] text-xs text-label-3 dark:text-dark-label-3';
         header.innerHTML = `
-                    <div class="flex-grow pl-8 font-medium"></div>
+            <div class="flex-grow pl-8 font-medium"></div>
             <div class="flex flex-shrink-0 justify-end text-center font-medium" style="width: 200px;">
-                <span class="w-1/3" title="Problems Solved">Problems Solved</span>
-                <span class="w-1/3" title="Average Attempts">Average Attempts</span>
-                <span class="w-1/3" title="First Ace Rate">First Ace Rate</span>
+                <span class="w-1/3" title="Problems Solved">Solved</span>
+                <span class="w-1/3" title="Average Attempts">Avg. Tries</span>
+                <span class="w-1/3" title="First Ace Rate">Ace Rate</span>
             </div>
         `;
         skillsContent.appendChild(header);
@@ -841,7 +837,7 @@ function populateAccordion() {
                 }
                 const { problemsSolved, avgTries, firstAceRate } = metrics;
                 const metricsContainer = document.createElement('div');
-                metricsContainer.className = 'flex flex-shrink-0 justify-end text-center text-sm items-center';
+                metricsContainer.className = 'flex flex-shrink-0 justify-end text-center text-sm items-center text-label-2 dark:text-dark-label-2';
                 metricsContainer.style.width = '200px';
                 metricsContainer.style.pointerEvents = 'none';
                 metricsContainer.innerHTML = `
@@ -914,7 +910,7 @@ function populateAccordion() {
 
 function createCheckbox(id: string, text: string, dataAttribute: string, dataValue: string, customClass: string, onClickCallback?: (isChecked: boolean) => void, defaultChecked = false): HTMLElement {
     const container = document.createElement('div');
-    container.className = 'flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-[5px] text-label-1 dark:text-dark-label-1 hover:bg-sd-accent';
+    container.className = 'flex w-full cursor-pointer items-center justify-between rounded-lg px-2 py-[5px] text-label-1 dark:text-dark-label-1 hover:bg-fill-3 dark:hover:bg-dark-fill-3';
     
     const leftSide = document.createElement('div');
     leftSide.className = 'text-md flex w-full max-w-[192px] flex-1 items-center space-x-2 truncate';
@@ -936,7 +932,6 @@ function createCheckbox(id: string, text: string, dataAttribute: string, dataVal
         </span>
     `;
 
-    // Set initial state based on the defaultChecked parameter
     if (defaultChecked) {
         button.setAttribute('aria-checked', 'true');
         button.dataset.state = 'checked';
@@ -973,13 +968,8 @@ function createCheckbox(id: string, text: string, dataAttribute: string, dataVal
         
         if (onClickCallback) {
             onClickCallback(newStateIsChecked);
-
-            // Find the parent accordion content wrapper
             const parentAccordionContent = container.closest('.bento-accordion-content') as HTMLElement;
             if (parentAccordionContent) {
-                // Use a brief timeout to allow the DOM to update from the callback
-                // before we recalculate the height for the transition. This ensures the
-                // animation is smooth.
                 setTimeout(() => {
                     updateAccordionHeight(parentAccordionContent);
                 }, 50); 
@@ -991,8 +981,6 @@ function createCheckbox(id: string, text: string, dataAttribute: string, dataVal
 
     container.addEventListener('click', toggleCheckbox);
     
-    // If the checkbox is checked by default and has a callback, trigger it
-    // to ensure any dependent UI is displayed correctly on initial load.
     if (defaultChecked && onClickCallback) {
         onClickCallback(true);
     }
