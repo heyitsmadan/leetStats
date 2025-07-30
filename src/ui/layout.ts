@@ -21,7 +21,7 @@ import { styles } from './theme/styles';
 const ACTIVE_INNER_DIV_CLASSES = 'text-label-1 dark:text-dark-label-1 bg-fill-3 dark:bg-dark-fill-3'.split(' ');
 let interactiveChart: InteractiveChartInstance | undefined;
 let interactiveChartFilters = {
-  primaryView: 'Submissions' as 'Submissions' | 'Problems Solved',
+  primaryView: 'Problems Solved' as 'Submissions' | 'Problems Solved',
   secondaryView: 'Difficulty' as 'Difficulty' | 'Language' | 'Status',
   timeRange: 'All Time' as TimeRange,
   difficulty: 'All' as Difficulty,

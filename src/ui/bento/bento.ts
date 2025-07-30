@@ -434,6 +434,7 @@ async function renderBentoPreview() {
         const blob = await toBlob(renderNode, {
             width: RENDER_WIDTH,
             height: renderHeight,
+            skipFonts: true
         });
 
         if (!blob) {
@@ -878,7 +879,6 @@ function populateAccordion() {
         const controlsContainer = document.createElement('div');
         controlsContainer.id = 'history-controls-container';
         controlsContainer.className = 'space-y-2 mt-2 pl-8';
-        controlsContainer.style.display = 'none';
 
         const togglesWrapper = document.createElement('div');
         togglesWrapper.className = 'flex gap-2 items-center';
@@ -914,6 +914,7 @@ function populateAccordion() {
         const checkboxContainer = createCheckbox('bento-checkbox-history', 'History Chart', 'historyToggle', 'true', 'bento-history-checkbox', historyCheckboxCallback, true);
         overrideCheckboxStyle(checkboxContainer);
         measureAndTrackWidth(checkboxContainer);
+        measureAndTrackWidth(controlsContainer); // <-- ADD THIS LINE
 
         historyContent.appendChild(checkboxContainer);
         historyContent.appendChild(controlsContainer);
@@ -1124,7 +1125,7 @@ function populateAccordion() {
         });
     }
 
-    const PADDING_AND_SCROLLBAR_BUFFER = 90;
+    const PADDING_AND_SCROLLBAR_BUFFER = 70;
     const MIN_WIDTH = 380;
     const finalPanelWidth = maxContentWidth + PADDING_AND_SCROLLBAR_BUFFER;
 

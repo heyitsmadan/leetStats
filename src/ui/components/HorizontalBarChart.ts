@@ -217,7 +217,7 @@ export function renderOrUpdateHorizontalBarChart(
             },
             y: {
                 stacked: true,
-                ticks: { color: colors.text.subtle, font: { size: 14 } },
+                ticks: { color: colors.text.subtle, font: { size: 12} },
                 grid: { display: false }
             },
         },
