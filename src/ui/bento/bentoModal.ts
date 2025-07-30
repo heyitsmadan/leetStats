@@ -258,7 +258,7 @@ export function createBentoModalHTML(): string {
             <div class="w-[500px] flex-shrink-0 flex flex-col bg-layer-0 dark:bg-dark-layer-0 rounded-lg">
                 <div class="flex-shrink-0 flex justify-end p-2">
                     <button id="bento-modal-close-btn" type="button" class="text-label-2 dark:text-dark-label-2 ring-offset-sd-background focus:ring-sd-ring data-[state=open]:bg-sd-accent data-[state=open]:text-sd-muted-foreground rounded-sm opacity-70 transition-opacity hover:opacity-100 focus:outline-none disabled:pointer-events-none">
-                        <div class="relative text-[20px] leading-[normal] before:block before:h-5 before:w-4 w-4">
+                        <div class="relative text-[24px] leading-[normal] before:block before:h-5 before:w-4 w-4">
                             <svg aria-hidden="true" focusable="false" data-prefix="far" data-icon="xmark" class="svg-inline--fa fa-xmark absolute left-1/2 top-1/2 h-[1em] -translate-x-1/2 -translate-y-1/2 align-[-0.125em]" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512">
                                 <path fill="currentColor" d="M345 137c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-119 119L73 103c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9l119 119L39 375c-9.4 9.4-9.4 24.6 0 33.9s24.6 9.4 33.9 0l119-119L311 409c9.4 9.4 24.6 9.4 33.9 0s9.4-24.6 0-33.9l-119-119L345 137z"></path>
                             </svg>
@@ -276,7 +276,7 @@ export function createBentoModalHTML(): string {
                     </div>
                 </div>
 
-                <div class="flex-shrink-0 flex justify-end items-center p-4 gap-3">
+                <div class="flex-shrink-0 flex justify-center items-center p-4 gap-3">
                     <button id="copy-bento-btn" class="bg-green-0 dark:bg-dark-green-0 text-green-s dark:text-dark-green-s hover:text-green-s dark:hover:text-dark-green-s flex items-center justify-center w-32 rounded-lg py-[7px] font-medium transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mr-2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
                         <span>Copy</span>
