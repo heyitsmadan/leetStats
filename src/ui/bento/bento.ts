@@ -99,7 +99,6 @@ async function renderBentoPreview() {
             activities: Array.from(document.querySelectorAll('.bento-activity-checkbox[data-state="checked"]')).map(cb => (cb as HTMLElement).dataset.activityName),
         };
         
-        // --- NEW: Get values from "About" controls ---
         const displayAvatarCheckbox = document.getElementById('bento-checkbox-display-avatar');
         const shouldDisplayAvatar = displayAvatarCheckbox ? displayAvatarCheckbox.dataset.state === 'checked' : false;
 
@@ -131,12 +130,10 @@ async function renderBentoPreview() {
         offscreenContainer.style.width = `${RENDER_WIDTH}px`;
         offscreenContainer.style.height = 'auto'; 
 
-        // Conditionally create the avatar image HTML if a non-default URL is cached AND the checkbox is checked.
         const avatarImgHtml = (avatarUrlCache && shouldDisplayAvatar)
             ? `<img src="${avatarUrlCache}" alt="Avatar" style="width: 80px; height: 80px; border-radius: 16px; object-fit: cover;" crossorigin="anonymous" />`
             : '';
 
-        // Update the innerHTML to include the avatar and add inline styles for the header layout.
         offscreenContainer.innerHTML = `
             <div id="bento-render-node" class="render-safe">
                 <div id="bento-header" style="display: flex; align-items: center; gap: 24px;">
@@ -149,39 +146,114 @@ async function renderBentoPreview() {
         
         const grid = offscreenContainer.querySelector('#bento-grid')!;
         
-        // --- 4. LAYOUT ENGINE ALGORITHM (UPDATED) ---
+        // --- 4. LAYOUT ENGINE ALGORITHM (REVISED) ---
         const promotionPriority = ['history', 'progressTracker', 'codingClock', 'overallProgress', 'submissionSignature', 'languageStats', 'trophies', 'milestones', 'records'];
+        const special = ['history', 'progressTracker', 'codingClock', 'overallProgress'];
         const visualOrderPriority = ['history'];
+
         let componentsToLayout = [...selectedItems];
         const hasSkills = componentsToLayout.includes('skills');
+
         if (hasSkills) {
             componentsToLayout = componentsToLayout.filter(item => item !== 'skills');
         }
-        const isOddCount = componentsToLayout.length % 2 === 1;
-        let itemToPromote: string | null = null;
-        if (isOddCount) {
-            itemToPromote = promotionPriority.find(p => componentsToLayout.includes(p)) || null;
+
+        const totalSelectedCount = selectedItems.length;
+        const totalCount = componentsToLayout.length;
+        const specialInLayout = componentsToLayout.filter(c => special.includes(c));
+        let layoutHandled = false;
+
+        // RULE 1: Special layout for 4, 6, or 8 components WITHOUT skills
+        if (!hasSkills && (totalCount === 4 || totalCount === 6 || totalCount === 8) && specialInLayout.length >= 2) {
+            const sortedSpecial = specialInLayout.sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+            const itemToPromoteTop = sortedSpecial[0];
+            const itemToPromoteBottom = sortedSpecial[1];
+            const middleComponents = componentsToLayout
+                .filter(c => c !== itemToPromoteTop && c !== itemToPromoteBottom)
+                .sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+
+            grid.appendChild(createCardElement(itemToPromoteTop, 4));
+            middleComponents.forEach(key => grid.appendChild(createCardElement(key, 2)));
+            grid.appendChild(createCardElement(itemToPromoteBottom, 4));
+            layoutHandled = true;
         }
-        const orderedComponents: string[] = [];
-        visualOrderPriority.forEach(key => {
-            if (componentsToLayout.includes(key)) {
-                orderedComponents.push(key);
+        // RULE 2: Special layout for 7 components WITHOUT skills
+        else if (!hasSkills && totalCount === 7) {
+            const firstPromo = promotionPriority.find(p => componentsToLayout.includes(p))!;
+            const remainingAfterFirstPromo = componentsToLayout.filter(c => c !== firstPromo);
+            const specialInRemaining = remainingAfterFirstPromo.filter(c => special.includes(c));
+
+            if (specialInRemaining.length >= 2) {
+                const sortedSpecial = specialInRemaining.sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+                const secondPromo = sortedSpecial[0];
+                const thirdPromo = sortedSpecial[1];
+
+                const allPromoted = [firstPromo, secondPromo, thirdPromo].sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+                const halfWidthItems = componentsToLayout.filter(c => !allPromoted.includes(c)).sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+
+                grid.appendChild(createCardElement(allPromoted[0], 4));
+                grid.appendChild(createCardElement(halfWidthItems[0], 2));
+                grid.appendChild(createCardElement(halfWidthItems[1], 2));
+                grid.appendChild(createCardElement(allPromoted[1], 4));
+                grid.appendChild(createCardElement(halfWidthItems[2], 2));
+                grid.appendChild(createCardElement(halfWidthItems[3], 2));
+                grid.appendChild(createCardElement(allPromoted[2], 4));
+                layoutHandled = true;
             }
-        });
-        const remainingComponents = componentsToLayout
-            .filter(key => !visualOrderPriority.includes(key))
-            .sort((a, b) => {
-                const indexA = promotionPriority.indexOf(a);
-                const indexB = promotionPriority.indexOf(b);
-                if (indexA === -1) return 1;
-                if (indexB === -1) return -1;
-                return indexA - indexB;
+        }
+        // NEW RULE 3: Special layout for 7 components WITH skills
+        else if (hasSkills && totalSelectedCount === 7 && specialInLayout.length >= 2) {
+            const sortedSpecial = specialInLayout.sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+            const firstPromo = sortedSpecial[0];
+            const secondPromo = sortedSpecial[1];
+            
+            const allPromoted = [firstPromo, secondPromo];
+            const halfWidthItems = componentsToLayout.filter(c => !allPromoted.includes(c)).sort((a, b) => promotionPriority.indexOf(a) - promotionPriority.indexOf(b));
+            
+            grid.appendChild(createCardElement(allPromoted[0], 4));
+            grid.appendChild(createCardElement(halfWidthItems[0], 2));
+            grid.appendChild(createCardElement(halfWidthItems[1], 2));
+            grid.appendChild(createCardElement(allPromoted[1], 4));
+            grid.appendChild(createCardElement(halfWidthItems[2], 2));
+            grid.appendChild(createCardElement(halfWidthItems[3], 2));
+            layoutHandled = true;
+        }
+
+
+        // Default/Fallback logic for all other cases
+        if (!layoutHandled) {
+            const isOddCount = componentsToLayout.length % 2 === 1;
+            let itemToPromote: string | null = null;
+            if (isOddCount) {
+                itemToPromote = promotionPriority.find(p => componentsToLayout.includes(p)) || null;
+            }
+
+            const orderedComponents: string[] = [];
+            visualOrderPriority.forEach(key => {
+                if (componentsToLayout.includes(key)) {
+                    orderedComponents.push(key);
+                }
             });
-        orderedComponents.push(...remainingComponents);
-        orderedComponents.forEach(key => {
-            const span = (key === itemToPromote) ? 4 : 2;
-            grid.appendChild(createCardElement(key, span));
-        });
+
+            const remainingComponents = componentsToLayout
+                .filter(key => !visualOrderPriority.includes(key))
+                .sort((a, b) => {
+                    const indexA = promotionPriority.indexOf(a);
+                    const indexB = promotionPriority.indexOf(b);
+                    if (indexA === -1) return 1;
+                    if (indexB === -1) return -1;
+                    return indexA - indexB;
+                });
+
+            orderedComponents.push(...remainingComponents);
+
+            orderedComponents.forEach(key => {
+                const span = (key === itemToPromote) ? 4 : 2;
+                grid.appendChild(createCardElement(key, span));
+            });
+        }
+
+        // Add skills card at the end if it was selected
         if (hasSkills) {
             grid.appendChild(createCardElement('skills', 4));
         }
