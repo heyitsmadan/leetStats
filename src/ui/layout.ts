@@ -733,7 +733,7 @@ function createStatsPaneWithGrid(username: string): HTMLElement {
             <!-- TOP-LEFT: CODING CLOCK -->
             <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
                 <div class="flex justify-between items-center mb-4">
-                    <div class="${styles.subSectionHeader}">Coding Clock</div>
+                    <div class="${styles.subSectionHeader}">Coding Frequency</div>
                     <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
                         <button id="day-view-btn" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Daily</button>
                         <button id="hour-view-btn" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Hourly</button>
@@ -761,7 +761,7 @@ function createStatsPaneWithGrid(username: string): HTMLElement {
 
             <!-- BOTTOM-LEFT: SUBMISSION SIGNATURE -->
             <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-                <div class="${styles.subSectionHeader}">Submission Signature</div>
+                <div class="${styles.subSectionHeader}">Submission Breakdown</div>
                 <div class="mt-4 relative h-64 w-full">
                     <canvas id="submission-signature-chart"></canvas>
                 </div>

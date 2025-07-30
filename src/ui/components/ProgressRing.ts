@@ -53,7 +53,7 @@ export function renderProgressRing(container: HTMLElement, data: SolvedStats): v
   const viewBoxWidth = 180;
   const viewBoxHeight = 180;
   const radius = 58; 
-  const strokeWidth = 8;
+  const strokeWidth = 5;
   const centerX = viewBoxWidth / 2;
   const centerY = 80; 
 

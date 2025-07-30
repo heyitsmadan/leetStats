@@ -109,9 +109,9 @@ async function renderBentoPreview() {
         // --- 2. DEFINE COMPONENTS ---
         const componentDefinitions = {
             history: { condition: selections.history },
-            progressTracker: { condition: selections.activities.includes('Progress Tracker') },
-            codingClock: { condition: selections.activities.includes('Coding Clock') },
-            submissionSignature: { condition: selections.activities.includes('Submission Signature') },
+            progressTracker: { condition: selections.activities.includes('Progress Over Time') },
+            codingClock: { condition: selections.activities.includes('Coding Frequency') },
+            submissionSignature: { condition: selections.activities.includes('Submission Breakdown') },
             languageStats: { condition: selections.activities.includes('Language Stats') },
             trophies: { condition: selections.trophies.length > 0 },
             milestones: { condition: selections.milestones.length > 0 },
@@ -382,10 +382,10 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     }
 
     // Render Activity Charts
-    if (activities.includes("Progress Tracker")) {
+    if (activities.includes("Progress Over Time")) {
         const card = container.querySelector('#bento-card-progressTracker');
         if (card) {
-            card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">Problems Solved Over Time</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-progress-tracker-canvas"></canvas></div></div>`;
+            card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">Progress Over Time</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-progress-tracker-canvas"></canvas></div></div>`;
             const chartContainer = card.querySelector('.chart-container');
             if (chartContainer) {
                 const maxTicks = isFullWidth(card) ? 6 : 3;
@@ -395,11 +395,11 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
             }
         }
     }
-    if (activities.includes("Coding Clock")) {
+    if (activities.includes("Coding Frequency")) {
         const card = container.querySelector('#bento-card-codingClock');
         if (card) {
             const clockView = (document.querySelector('#bento-coding-clock-toggle button[data-state="active"]') as HTMLElement)?.dataset.view || 'HourOfDay';
-            const title = clockView === 'HourOfDay' ? 'Submissions by Hour' : 'Submissions by Day';
+            const title = 'Coding Frequency'
             
             card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">${title}</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-coding-clock-canvas"></canvas></div></div>`;
             const chartContainer = card.querySelector('.chart-container');
@@ -422,11 +422,11 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
             }
         }
     }
-    if (activities.includes("Submission Signature")) {
+    if (activities.includes("Submission Breakdown")) {
         const card = container.querySelector('#bento-card-submissionSignature');
         if (card) {
             const titleAlign = isFullWidth(card) ? '' : '';
-            card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary}; ${titleAlign}">Submission Signature</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-submission-signature-canvas"></canvas></div></div>`;
+            card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary}; ${titleAlign}">Submission Breakdown</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-submission-signature-canvas"></canvas></div></div>`;
             const chartContainer = card.querySelector('.chart-container');
             if (chartContainer) {
                 const stats = getSubmissionSignatureStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All' });
@@ -611,7 +611,7 @@ function populateAccordion() {
         const usernameRow = document.createElement('div');
         usernameRow.className = 'flex w-full items-center justify-between rounded-lg px-2 py-[5px] text-label-1 dark:text-dark-label-1';
         usernameRow.innerHTML = `
-            <label for="bento-username-input" class="text-md">Username</label>
+            <label for="bento-username-input" class="text-md">Name</label>
             <input type="text" id="bento-username-input" value="${usernameCache}" class="bg-layer-0 dark:bg-dark-layer-0 rounded p-1 text-sm text-label-1 dark:text-dark-label-1 border border-divider-3 dark:border-dark-divider-3 w-48 text-left focus:outline-none focus:ring-1 focus:ring-brand-orange">
         `;
         aboutContainer.appendChild(usernameRow);
@@ -619,7 +619,7 @@ function populateAccordion() {
         const hasAvatar = !!avatarUrlCache;
         const avatarCheckbox = createCheckbox(
             'bento-checkbox-display-avatar',
-            'Display Avatar',
+            'Avatar',
             'displayAvatar',
             'true',
             'bento-about-checkbox',
@@ -679,7 +679,7 @@ function populateAccordion() {
         controlsContainer.appendChild(datePickers);
 
         const historyCheckboxCallback = (isChecked: boolean) => { controlsContainer.style.display = isChecked ? 'block' : 'none'; };
-        const checkboxContainer = createCheckbox('bento-checkbox-history', 'Show History Chart', 'historyToggle', 'true', 'bento-history-checkbox', historyCheckboxCallback, true);
+        const checkboxContainer = createCheckbox('bento-checkbox-history', 'History Chart', 'historyToggle', 'true', 'bento-history-checkbox', historyCheckboxCallback, true);
         overrideCheckboxStyle(checkboxContainer);
         measureAndTrackWidth(checkboxContainer);
 
@@ -814,9 +814,9 @@ function populateAccordion() {
         header.innerHTML = `
             <div class="flex-grow pl-8 font-medium"></div>
             <div class="flex flex-shrink-0 justify-end text-center font-medium" style="width: 200px;">
-                <span class="w-1/3" title="Problems Solved">Solved</span>
-                <span class="w-1/3" title="Average Attempts">Avg. Tries</span>
-                <span class="w-1/3" title="First Ace Rate">Ace Rate</span>
+                <span class="w-1/3" title="Problems Solved">Problems Solved</span>
+                <span class="w-1/3" title="Average Attempts">Average Attempts</span>
+                <span class="w-1/3" title="First Ace Rate">First Ace Rate</span>
             </div>
         `;
         skillsContent.appendChild(header);
@@ -854,11 +854,11 @@ function populateAccordion() {
 
     if (activityContent) {
         activityContent.innerHTML = '';
-        const ACTIVITY_CHARTS = ["Submission Signature", "Language Stats", "Progress Tracker", "Coding Clock"];
-        const DEFAULT_ACTIVITY_CHARTS = ["Language Stats", "Progress Tracker", "Coding Clock"];
+        const ACTIVITY_CHARTS = ["Submission Breakdown", "Language Stats", "Progress Over Time", "Coding Frequency"];
+        const DEFAULT_ACTIVITY_CHARTS = ["Language Stats", "Progress Over Time", "Coding Frequency"];
         ACTIVITY_CHARTS.forEach(name => {
             const isDefaultChecked = DEFAULT_ACTIVITY_CHARTS.includes(name);
-            if (name === "Coding Clock") {
+            if (name === "Coding Frequency") {
                 const controlsContainer = document.createElement('div');
                 controlsContainer.id = 'coding-clock-controls-container';
                 controlsContainer.className = 'space-y-2 mt-1 pl-8';
