@@ -8,7 +8,64 @@ export class FetchLoader {
     private progressBarWrapper: HTMLElement | null = null;
 
     constructor() {
+        this.injectStyles();
         this.create();
+    }
+
+    /**
+     * Injects a stylesheet into the document head to handle dynamic theme switching
+     * for the loader component. This is done only once.
+     */
+    private injectStyles() {
+        if (document.getElementById('leetstats-loader-styles')) return;
+
+        const styleSheet = document.createElement('style');
+        styleSheet.id = 'leetstats-loader-styles';
+        // Define CSS variables for light and dark themes.
+        // The .dark class on a parent element (e.g., <html>) will trigger the dark theme styles.
+        styleSheet.textContent = `
+            :root {
+                --loader-bg: #FFFFFF;
+                --loader-text-primary: rgb(26, 26, 26);
+                --loader-text-subtle: rgb(118, 118, 118);
+                --loader-border: rgb(229, 229, 229);
+                --loader-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+                --loader-progress-bg: rgb(235, 235, 235);
+                --loader-progress-fill: ${colors.status.accepted}; /* Assumes this is a theme-agnostic color like green */
+            }
+
+            .dark {
+                --loader-bg: #282828;
+                --loader-text-primary: rgb(239, 239, 239);
+                --loader-text-subtle: rgb(169, 169, 169);
+                --loader-border: rgb(80, 80, 80);
+                --loader-shadow: 0 5px 15px rgba(0, 0, 0, 0.4);
+                --loader-progress-bg: rgb(60, 60, 60);
+            }
+
+            #leetstats-loader {
+                background-color: var(--loader-bg);
+                color: var(--loader-text-primary);
+                border: 1px solid var(--loader-border);
+                box-shadow: var(--loader-shadow);
+                transition: transform 0.4s ease-in-out, background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+            }
+            
+            #leetstats-loader-text {
+                color: var(--loader-text-subtle);
+                transition: color 0.3s ease;
+            }
+
+            #leetstats-loader-progress-wrapper {
+                background-color: var(--loader-progress-bg);
+                transition: background-color 0.3s ease;
+            }
+
+            #leetstats-loader-fill {
+                background-color: var(--loader-progress-fill);
+            }
+        `;
+        document.head.appendChild(styleSheet);
     }
 
     /**
@@ -20,44 +77,37 @@ export class FetchLoader {
     }
 
     /**
-     * Creates the loader's DOM elements and applies LeetCode-like styles.
+     * Creates the loader's DOM elements. Theming is now handled by the injected stylesheet.
      */
     private create() {
         this.loaderElement = document.createElement('div');
         this.loaderElement.id = 'leetstats-loader';
         
+        // Apply styles that are NOT theme-dependent via inline styles.
         Object.assign(this.loaderElement.style, {
             position: 'fixed',
             bottom: '20px',
             left: '20px',
-            width: '300px', // Increased width
-            backgroundColor: colors.background.section,
-            color: colors.text.primary,
-            borderRadius: '12px', // Slightly larger radius
+            width: '300px',
+            borderRadius: '12px',
             zIndex: '10000',
-            padding: '16px', // Increased padding
+            padding: '16px',
             fontFamily: `-apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', Helvetica, Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol'`,
             fontSize: '14px',
-            boxShadow: '0 5px 15px rgba(0, 0, 0, 0.4)', // Enhanced shadow
-            transform: 'translateY(200%)', // Start off-screen
-            transition: 'transform 0.4s ease-in-out, box-shadow 0.3s ease', // Added transition for shadow
-            border: `1px solid rgb(80, 80, 80)`, // More prominent border
+            transform: 'translateY(200%)',
         });
 
         this.progressTextElement = document.createElement('div');
         this.progressTextElement.id = 'leetstats-loader-text';
         this.progressTextElement.textContent = 'Fetching submissions...';
-        Object.assign(this.progressTextElement.style, {
-            marginBottom: '10px', // Adjusted margin
-            color: colors.text.subtle,
-        });
+        this.progressTextElement.style.marginBottom = '10px';
 
         this.progressBarWrapper = document.createElement('div');
+        this.progressBarWrapper.id = 'leetstats-loader-progress-wrapper'; // Added ID for styling
         Object.assign(this.progressBarWrapper.style, {
-            height: '8px', // Slightly thicker bar
+            height: '8px',
             width: '100%',
-            backgroundColor: colors.background.empty,
-            borderRadius: '4px', // Adjusted radius
+            borderRadius: '4px',
             overflow: 'hidden',
         });
 
@@ -66,8 +116,7 @@ export class FetchLoader {
         Object.assign(this.progressBarFillElement.style, {
             height: '100%',
             width: '0%',
-            backgroundColor: colors.status.accepted,
-            borderRadius: '4px', // Adjusted radius
+            borderRadius: '4px',
             transition: 'width 0.3s ease',
         });
 
@@ -82,7 +131,6 @@ export class FetchLoader {
     public show() {
         if (!this.loaderElement) return;
 
-        // Ensure the progress bar is visible when the loader is shown.
         if (this.progressBarWrapper) {
             this.progressBarWrapper.style.display = 'block';
         }
@@ -138,10 +186,8 @@ export class FetchLoader {
         
         this.progressTextElement.textContent = errorMessage;
         
-        // Hide the progress bar wrapper entirely.
         this.progressBarWrapper.style.display = 'none';
         
-        // Remove the bottom margin from the text to vertically center it.
         this.progressTextElement.style.marginBottom = '0';
 
         setTimeout(() => {
@@ -149,6 +195,6 @@ export class FetchLoader {
                 this.loaderElement.style.transform = 'translateY(200%)';
                 setTimeout(() => this.loaderElement?.remove(), 500);
             }
-        }, 3000); // Keep the message visible for 3 seconds.
+        }, 3000);
     }
 }
