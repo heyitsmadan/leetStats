@@ -14,21 +14,18 @@ export function createBentoModalHTML(): string {
       z-index: 10000;
     }
 
-    /* --- CHANGE: Style to disable controls during render --- */
     #bento-controls-panel.is-rendering {
       pointer-events: none;
       opacity: 0.6;
       transition: opacity 0.3s ease-in-out;
     }
 
-    /* --- Accordion Transition Styles (MODIFIED) --- */
     .bento-accordion-content {
       max-height: 0;
       overflow: hidden;
       transition: max-height 0.3s ease-out;
     }
 
-    /* --- Preview Area Styling --- */
     #bento-preview-wrapper {
         width: 100%;
         height: 100%;
@@ -169,17 +166,10 @@ export function createBentoModalHTML(): string {
                 <h2 class="text-xl font-bold text-white mb-4 flex-shrink-0">Customize</h2>
                 <div class="space-y-2 overflow-y-auto overflow-x-hidden">
                     
-                    <!-- NEW "About" Accordion -->
-                    <div class="bg-dark-layer-1 rounded-lg">
-                        <div class="bento-accordion-header p-3 cursor-pointer">
-                            <div class="flex justify-between items-center">
-                                <h3 class="font-semibold text-white">About</h3>
-                                <svg class="w-4 h-4 text-gray-400 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                            </div>
-                        </div>
-                        <div class="bento-accordion-content">
-                            <div id="bento-about-accordion-content" class="p-3 border-t border-dark-divider-3"></div>
-                        </div>
+                    <!-- UPDATED: "About" Section is now static -->
+                    <div class="bg-dark-layer-1 rounded-lg p-3">
+                        <h3 class="font-semibold text-white mb-3">About</h3>
+                        <div id="bento-about-content-container"></div>
                     </div>
 
                     <!-- History Accordion -->

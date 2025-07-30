@@ -582,7 +582,8 @@ function populateAccordion() {
         }
     };
 
-    const aboutContent = document.getElementById('bento-about-accordion-content');
+    // UPDATED: Changed ID to reflect new static container for "About" section
+    const aboutContent = document.getElementById('bento-about-content-container');
     const historyContent = document.getElementById('bento-history-accordion-content');
     const recordsContent = document.getElementById('bento-records-accordion-content');
     const trophiesContent = document.getElementById('bento-trophies-accordion-content');
@@ -603,15 +604,13 @@ function populateAccordion() {
         }
     };
 
-    // --- NEW: Populate "About" section ---
+    // Populate "About" section (now static)
     if (aboutContent) {
         aboutContent.innerHTML = '';
         const aboutContainer = document.createElement('div');
         aboutContainer.className = 'space-y-3';
 
-        // --- CHANGE START ---
-
-        // Username Input (Moved up and restyled for alignment)
+        // Username Input
         const usernameRow = document.createElement('div');
         usernameRow.className = 'flex w-full items-center justify-between rounded-lg px-2 py-[5px] text-label-1 dark:text-dark-label-1';
         usernameRow.innerHTML = `
@@ -639,8 +638,6 @@ function populateAccordion() {
         }
         overrideCheckboxStyle(avatarCheckbox);
         aboutContainer.appendChild(avatarCheckbox);
-        
-        // --- CHANGE END ---
         
         aboutContent.appendChild(aboutContainer);
 
@@ -899,9 +896,8 @@ function populateAccordion() {
         });
     }
 
-    // --- Set final calculated width ---
-    const PADDING_AND_SCROLLBAR_BUFFER = 90; // Panel's L/R padding (32px) + scrollbar buffer (20px)
-    const MIN_WIDTH = 380; // Minimum width to prevent the panel from becoming too narrow
+    const PADDING_AND_SCROLLBAR_BUFFER = 90;
+    const MIN_WIDTH = 380;
     const finalPanelWidth = maxContentWidth + PADDING_AND_SCROLLBAR_BUFFER;
 
     const modal = document.getElementById('bento-modal');
@@ -909,7 +905,6 @@ function populateAccordion() {
         modal.style.setProperty('--left-panel-width', `${Math.max(finalPanelWidth, MIN_WIDTH)}px`);
     }
 
-    // Clean up the offscreen container
     const offscreenContainer = document.getElementById('bento-offscreen-container');
     if (offscreenContainer) {
         document.body.removeChild(offscreenContainer);
