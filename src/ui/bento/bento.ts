@@ -688,7 +688,9 @@ function populateAccordion() {
         `;
         aboutContainer.appendChild(usernameRow);
 
-        const hasAvatar = !!avatarUrlCache;
+        const isDefaultAvatar = avatarUrlCache.includes('default_avatar.jpg');
+        const shouldBeCheckedByDefault = !!avatarUrlCache && !isDefaultAvatar;
+
         const avatarCheckbox = createCheckbox(
             'bento-checkbox-display-avatar',
             'Avatar',
@@ -696,14 +698,9 @@ function populateAccordion() {
             'true',
             'bento-about-checkbox',
             undefined, 
-            hasAvatar
+            shouldBeCheckedByDefault
         );
-        if (!hasAvatar) {
-            avatarCheckbox.style.opacity = '0.5';
-            avatarCheckbox.style.pointerEvents = 'none';
-            const button = avatarCheckbox.querySelector('button');
-            if (button) button.disabled = true;
-        }
+        
         overrideCheckboxStyle(avatarCheckbox);
         aboutContainer.appendChild(avatarCheckbox);
         
@@ -795,9 +792,9 @@ function populateAccordion() {
         endDateInput.value = todayString;
 
         if (startDateInput.min && oneYearAgo < new Date(startDateInput.min)) {
-             startDateInput.value = startDateInput.min;
+            startDateInput.value = startDateInput.min;
         } else {
-             startDateInput.value = oneYearAgo.toISOString().split('T')[0];
+            startDateInput.value = oneYearAgo.toISOString().split('T')[0];
         }
         
         startDateInput.addEventListener('change', () => {
@@ -1102,8 +1099,9 @@ function scrapeAvatarUrl(): string {
     // The selector targets the image within the specified div structure.
     const avatarImg = document.querySelector('.relative.flex.h-20.w-20.shrink-0 img') as HTMLImageElement;
     
-    // Check if the image element exists, has a src, and is not the default avatar.
-    if (avatarImg && avatarImg.src && !avatarImg.src.includes('default_avatar.jpg')) {
+    // Check if the image element exists and has a src. The check for the default
+    // avatar has been removed to allow any avatar to be used.
+    if (avatarImg && avatarImg.src) {
         return avatarImg.src;
     }
     
