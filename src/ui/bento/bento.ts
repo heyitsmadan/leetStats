@@ -654,7 +654,7 @@ function populateAccordion() {
         }
     };
 
-    const aboutContent = document.getElementById('bento-about-content-container');
+    const aboutContent = document.getElementById('bento-about-accordion-content');
     const historyContent = document.getElementById('bento-history-accordion-content');
     const recordsContent = document.getElementById('bento-records-accordion-content');
     const trophiesContent = document.getElementById('bento-trophies-accordion-content');

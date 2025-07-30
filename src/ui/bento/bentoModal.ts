@@ -172,10 +172,17 @@ export function createBentoModalHTML(): string {
                 <h2 class="text-xl font-bold text-label-1 dark:text-dark-label-1 mb-4 flex-shrink-0">Customize</h2>
                 <div class="space-y-2 overflow-y-auto overflow-x-hidden">
                     
-                    <!-- UPDATED: "About" Section is now static -->
-                    <div class="bg-layer-1 dark:bg-dark-layer-1 rounded-lg p-3">
-                        <h3 class="font-semibold text-label-1 dark:text-dark-label-1 mb-3">About</h3>
-                        <div id="bento-about-content-container"></div>
+                    <!-- About Accordion -->
+                    <div class="bg-layer-1 dark:bg-dark-layer-1 rounded-lg">
+                        <div class="bento-accordion-header p-3 cursor-pointer">
+                            <div class="flex justify-between items-center">
+                                <h3 class="font-semibold text-label-1 dark:text-dark-label-1">About</h3>
+                                <svg class="w-4 h-4 text-label-3 dark:text-dark-label-3 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                            </div>
+                        </div>
+                        <div class="bento-accordion-content">
+                            <div id="bento-about-accordion-content" class="p-3 border-t border-divider-3 dark:border-dark-divider-3"></div>
+                        </div>
                     </div>
 
                     <!-- History Accordion -->
