@@ -139,19 +139,25 @@ async function renderBentoPreview(generationToken: number) {
         offscreenContainer.style.width = `${RENDER_WIDTH}px`;
         offscreenContainer.style.height = 'auto';
 
-        const avatarImgHtml = (avatarUrlCache && shouldDisplayAvatar) ?
-            `<img src="${avatarUrlCache}" alt="Avatar" style="width: 80px; height: 80px; border-radius: 16px; object-fit: cover;" crossorigin="anonymous" />` :
-            '';
-
         offscreenContainer.innerHTML = `
             <div id="bento-render-node" class="render-safe">
-                <div id="bento-header" style="display: flex; align-items: center; gap: 24px;">
-                    ${avatarImgHtml}
-                    <span>${currentUsername}'s leetStats</span>
-                </div>
+                <div id="bento-header" style="display: flex; align-items: center; gap: 24px;"></div>
                 <div id="bento-grid-wrapper"><div id="bento-grid"></div></div>
                 <div id="bento-footer">made by leetStats</div>
             </div>`;
+
+        const header = offscreenContainer.querySelector('#bento-header')!;
+        if (avatarUrlCache && shouldDisplayAvatar) {
+            const avatarImg = document.createElement('img');
+            avatarImg.src = avatarUrlCache;
+            avatarImg.alt = 'Avatar';
+            avatarImg.style.cssText = 'width: 80px; height: 80px; border-radius: 16px; object-fit: cover;';
+            avatarImg.setAttribute('crossorigin', 'anonymous');
+            header.appendChild(avatarImg);
+        }
+        const titleSpan = document.createElement('span');
+        titleSpan.textContent = `${currentUsername}'s leetStats`;
+        header.appendChild(titleSpan);
 
         const grid = offscreenContainer.querySelector('#bento-grid') !;
 
@@ -487,7 +493,12 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
             const primaryView = (document.querySelector('#bento-history-primary-toggle button[data-state="active"]') as HTMLElement)?.dataset.view || 'Problems Solved';
             const secondaryView = (document.querySelector('#bento-history-secondary-toggle button[data-state="active"]') as HTMLElement)?.dataset.view || 'Difficulty';
 
-            card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">${primaryView}</h3><div class="bento-card-content"><div class="chart-container" style="height: 100%;"><canvas id="bento-history-chart-canvas"></canvas></div></div>`;
+            card.innerHTML = `<div class="bento-card-content"><div class="chart-container" style="height: 100%;"><canvas id="bento-history-chart-canvas"></canvas></div></div>`;
+            const title = document.createElement('h3');
+            title.className = 'bento-card-title';
+            title.style.color = colors.text.primary;
+            title.textContent = primaryView;
+            card.prepend(title);
             const chartContainer = card.querySelector('.chart-container');
 
             const bentoInteractiveFilters: InteractiveChartFilters = {
@@ -529,11 +540,30 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (selectedRecords.length > 0) {
         const card = container.querySelector('#bento-card-records');
         if (card) {
-            let listHtml = '';
+            card.innerHTML = `<h3 class="bento-card-title" style="color: rgb(255, 255, 255);">Records</h3><div class="bento-card-content"><div class="record-list"></div></div>`;
+            const listContainer = card.querySelector('.record-list')!;
             selectedRecords.forEach(r => {
-                listHtml += `<div class="record-item"><span class="record-label">${r.name}</span><div class="record-value"><span>${r.mainStat || r.value}</span><span class="record-context">${r.dateStat || ''}</span></div></div>`;
+                const item = document.createElement('div');
+                item.className = 'record-item';
+
+                const label = document.createElement('span');
+                label.className = 'record-label';
+                label.textContent = r.name;
+
+                const valueContainer = document.createElement('div');
+                valueContainer.className = 'record-value';
+
+                const mainStat = document.createElement('span');
+                mainStat.textContent = String(r.mainStat || r.value || '');
+
+                const context = document.createElement('span');
+                context.className = 'record-context';
+                context.textContent = r.dateStat || '';
+
+                valueContainer.append(mainStat, context);
+                item.append(label, valueContainer);
+                listContainer.appendChild(item);
             });
-            card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">Records</h3><div class="bento-card-content"><div class="record-list">${listHtml}</div></div>`;
         }
     }
 
@@ -541,12 +571,41 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (selectedTrophies.length > 0) {
         const card = container.querySelector('#bento-card-trophies');
         if (card) {
-            const titleAlign = isFullWidth(card) ? '' : '';
-            let listHtml = '';
+            card.innerHTML = `<h3 class="bento-card-title" style="color: rgb(255, 255, 255); '' ">Trophies</h3><div class="bento-card-content" style="display: grid; place-items: center; height: 100%;"><div class="trophy-list"></div></div>`;
+            const listContainer = card.querySelector('.trophy-list')!;
             selectedTrophies.forEach(t => {
-                listHtml += `<div class="trophy-item"><img src="${chrome.runtime.getURL(t.icon)}" alt="${t.title}" class="trophy-icon" /><div class="trophy-details"><div class="trophy-title">${t.title}</div><div class="trophy-subtitle">${t.subtitle}</div>${t.problemSlug !== 'placeholder' ? `<a href="https://leetcode.com/problems/${t.problemSlug}/" target="_blank" class="trophy-problem">${t.problemTitle}</a>` : ''}</div></div>`;
+                const item = document.createElement('div');
+                item.className = 'trophy-item';
+
+                const icon = document.createElement('img');
+                icon.src = chrome.runtime.getURL(t.icon);
+                icon.alt = t.title;
+                icon.className = 'trophy-icon';
+
+                const details = document.createElement('div');
+                details.className = 'trophy-details';
+
+                const title = document.createElement('div');
+                title.className = 'trophy-title';
+                title.textContent = t.title;
+
+                const subtitle = document.createElement('div');
+                subtitle.className = 'trophy-subtitle';
+                subtitle.textContent = t.subtitle;
+
+                details.append(title, subtitle);
+
+                if (t.problemSlug !== 'placeholder') {
+                    const link = document.createElement('a');
+                    link.href = `https://leetcode.com/problems/${t.problemSlug}/`;
+                    link.target = '_blank';
+                    link.className = 'trophy-problem';
+                    link.textContent = t.problemTitle;
+                    details.appendChild(link);
+                }
+                item.append(icon, details);
+                listContainer.appendChild(item);
             });
-            card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary}; ${titleAlign}">Trophies</h3><div class="bento-card-content" style="display: grid; place-items: center; height: 100%;"><div class="trophy-list">${listHtml}</div></div>`;
         }
     }
 
@@ -555,13 +614,61 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
         const card = container.querySelector('#bento-card-milestones');
         if (card) {
             const titleAlign = isFullWidth(card) ? '' : '';
-            let html = `<h3 class="bento-card-title" style="color: ${colors.text.primary}; ${titleAlign}">Milestones</h3><div class="bento-card-content" style="display: grid; place-items: center; height: 100%;"><div class="milestone-timeline"><div class="timeline-line"></div><div class="milestone-list">`;
+            const title = document.createElement('h3');
+            title.className = 'bento-card-title';
+            title.style.color = colors.text.primary;
+            title.textContent = 'Milestones';
+
+            const cardContent = document.createElement('div');
+            cardContent.className = 'bento-card-content';
+            cardContent.style.cssText = 'display: grid; place-items: center; height: 100%;';
+
+            const timeline = document.createElement('div');
+            timeline.className = 'milestone-timeline';
+
+            const line = document.createElement('div');
+            line.className = 'timeline-line';
+
+            const list = document.createElement('div');
+            list.className = 'milestone-list';
+
             selectedMilestones.forEach(m => {
+                const item = document.createElement('div');
+                item.className = 'milestone-item';
+
                 const color = getMilestoneColor(m.type);
-                html += `<div class="milestone-item"><div class="milestone-dot" style="background-color: ${color};"></div><div class="milestone-event" style="color: ${color};">${m.milestone}${getOrdinalSuffix(m.milestone)} ${formatMilestoneType(m.type)}</div><div class="milestone-date">${m.date.toLocaleDateString('en-GB')}</div>${m.problemTitle ? `<a href="https://leetcode.com/problems/${m.problemSlug}/" target="_blank" class="${styles.milestoneProblem}milestone-problem">${m.problemTitle}</a>` : ''}</div>`;
+
+                const dot = document.createElement('div');
+                dot.className = 'milestone-dot';
+                dot.style.backgroundColor = color;
+
+                const event = document.createElement('div');
+                event.className = 'milestone-event';
+                event.style.color = color;
+                event.textContent = `${m.milestone}${getOrdinalSuffix(m.milestone)} ${formatMilestoneType(m.type)}`;
+
+                const date = document.createElement('div');
+                date.className = 'milestone-date';
+                date.textContent = m.date.toLocaleDateString('en-GB');
+
+                item.append(dot, event, date);
+
+                if (m.problemTitle) {
+                    const link = document.createElement('a');
+                    link.href = `https://leetcode.com/problems/${m.problemSlug}/`;
+                    link.target = '_blank';
+                    link.className = `${styles.milestoneProblem} milestone-problem`;
+                    link.textContent = m.problemTitle;
+                    item.appendChild(link);
+                }
+
+                list.appendChild(item);
             });
-            html += `</div></div></div>`;
-            card.innerHTML = html;
+
+            timeline.append(line, list);
+            cardContent.appendChild(timeline);
+            card.append(title, cardContent);
+
         }
     }
 
@@ -569,41 +676,61 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
         const card = container.querySelector('#bento-card-skills');
         if (card) {
             const gridStyle = `display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 24px; align-items: center; width: 100%;`;
-            const headerStyle = `${gridStyle} padding: 8px 0; border-bottom: 1px solid ${colors.background.secondarySection}; font-size: 16px; color: ${colors.text.subtle}; font-weight: 600;`;
-            const rowStyle = `${gridStyle} padding: 8px 0; border-bottom: 1px solid ${colors.background.secondarySection}; font-size: 18px;`;
-            const lastRowStyle = `${gridStyle} padding: 8px 0; border-bottom: none; font-size: 18px;`;
 
-            let html = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">Skills</h3><div class="bento-card-content" style="width: 100%;"><div class="skills-table" style="width: 100%;">`;
-            html += `<div class="skills-header" style="${headerStyle}">
-                        <div class="skill-cell" style="text-align: left;"></div>
-                        <div class="skill-cell" style="text-align: center;">Problems<br>Solved</div>
-                        <div class="skill-cell" style="text-align: center;">Average<br>Attempts</div>
-                        <div class="skill-cell" style="text-align: center;">First Ace<br>Rate</div>
-                     </div>`;
+            card.innerHTML = `<h3 class="bento-card-title" style="color: rgb(255, 255, 255);">Skills</h3><div class="bento-card-content" style="width: 100%;"><div class="skills-table" style="width: 100%;"></div></div>`;
+            const table = card.querySelector('.skills-table')!;
+            
+            const headerStyle = `display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 24px; align-items: center; width: 100%; padding: 8px 0; border-bottom: 1px solid ${colors.background.secondarySection}; font-size: 16px; color: ${colors.text.subtle}; font-weight: 600;`;
+            const header = document.createElement('div');
+            header.className = 'skills-header';
+            header.style.cssText = headerStyle;
+            header.innerHTML = `
+                <div class="skill-cell" style="text-align: left;"></div>
+                <div class="skill-cell" style="text-align: center;">Problems<br>Solved</div>
+                <div class="skill-cell" style="text-align: center;">Average<br>Attempts</div>
+                <div class="skill-cell" style="text-align: center;">First Ace<br>Rate</div>
+            `;
+            table.appendChild(header);
+
+            const rowStyle = `display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 24px; align-items: center; width: 100%; padding: 8px 0; border-bottom: 1px solid ${colors.background.secondarySection}; font-size: 18px;`;
+            const lastRowStyle = `display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr; gap: 24px; align-items: center; width: 100%; padding: 8px 0; border-bottom: none; font-size: 18px;`;
 
             skills.forEach((skill: string, index: number) => {
                 const metrics = skillData.metrics;
-                const solved = metrics.problemsSolved[skill] || 0;
-                const avgTries = metrics.avgTries[skill];
-                const firstAce = metrics.firstAceRate[skill] || 0;
-                const currentRowStyle = index === skills.length - 1 ? lastRowStyle : rowStyle;
+                const row = document.createElement('div');
+                row.className = 'skill-row';
+                row.style.cssText = index === skills.length - 1 ? lastRowStyle : rowStyle;
+                
+                const nameCell = document.createElement('div');
+                nameCell.className = 'skill-cell';
+                nameCell.style.cssText = 'text-align: left; font-weight: 600;';
+                nameCell.textContent = formatTopicName(skill);
+                
+                const solvedCell = document.createElement('div');
+                solvedCell.className = 'skill-cell';
+                solvedCell.style.textAlign = 'center';
+                solvedCell.textContent = (metrics.problemsSolved[skill] || 0).toString();
 
-                html += `<div class="skill-row" style="${currentRowStyle}">
-                            <div class="skill-cell" style="text-align: left; font-weight: 600;">${formatTopicName(skill)}</div>
-                            <div class="skill-cell" style="text-align: center;">${solved}</div>
-                            <div class="skill-cell" style="text-align: center;">${avgTries === Infinity ? '∞' : avgTries.toFixed(1)}</div>
-                            <div class="skill-cell" style="text-align: center;">${firstAce.toFixed(0)}%</div>
-                         </div>`;
+                const avgTriesCell = document.createElement('div');
+                avgTriesCell.className = 'skill-cell';
+                avgTriesCell.style.textAlign = 'center';
+                avgTriesCell.textContent = metrics.avgTries[skill] === Infinity ? '∞' : metrics.avgTries[skill].toFixed(1);
+
+                const firstAceCell = document.createElement('div');
+                firstAceCell.className = 'skill-cell';
+                firstAceCell.style.textAlign = 'center';
+                firstAceCell.textContent = `${(metrics.firstAceRate[skill] || 0).toFixed(0)}%`;
+
+                row.append(nameCell, solvedCell, avgTriesCell, firstAceCell);
+                table.appendChild(row);
             });
-            html += `</div></div>`;
-            card.innerHTML = html;
         }
     }
 
     if (activities.includes("Progress Over Time")) {
         const card = container.querySelector('#bento-card-progressTracker');
         if (card) {
-            card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">Progress Over Time</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-progress-tracker-canvas"></canvas></div></div>`;
+            card.innerHTML = `<h3 class="bento-card-title" style="color: rgb(255, 255, 255);">Progress Over Time</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-progress-tracker-canvas"></canvas></div></div>`;
             const chartContainer = card.querySelector('.chart-container');
             if (chartContainer) {
                 const maxTicks = isFullWidth(card) ? 6 : 3;
@@ -619,7 +746,7 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
             const clockView = (document.querySelector('#bento-coding-clock-toggle button[data-state="active"]') as HTMLElement)?.dataset.view || 'HourOfDay';
             const title = 'Coding Frequency'
 
-            card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">${title}</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-coding-clock-canvas"></canvas></div></div>`;
+            card.innerHTML = `<h3 class="bento-card-title" style="color: rgb(255, 255, 255);">Coding Frequency</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-coding-clock-canvas"></canvas></div></div>`;
             const chartContainer = card.querySelector('.chart-container');
 
             if (chartContainer) {
@@ -644,7 +771,7 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
         const card = container.querySelector('#bento-card-submissionSignature');
         if (card) {
             const titleAlign = isFullWidth(card) ? '' : '';
-            card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary}; ${titleAlign}">Submission Breakdown</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-submission-signature-canvas"></canvas></div></div>`;
+            card.innerHTML = `<h3 class="bento-card-title" style="color: rgb(255, 255, 255); ">Submission Breakdown</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-submission-signature-canvas"></canvas></div></div>`;
             const chartContainer = card.querySelector('.chart-container');
             if (chartContainer) {
                 const stats = getSubmissionSignatureStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All' });
@@ -660,7 +787,7 @@ async function renderComponentContent(container: HTMLElement, selections: any, s
     if (activities.includes("Language Stats")) {
         const card = container.querySelector('#bento-card-languageStats');
         if (card) {
-            card.innerHTML = `<h3 class="bento-card-title" style="color: ${colors.text.primary};">Language Stats</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-language-stats-canvas"></canvas></div></div>`;
+            card.innerHTML = `<h3 class="bento-card-title" style="color: rgb(255, 255, 255);">Language Stats</h3><div class="bento-card-content"><div class="chart-container"><canvas id="bento-language-stats-canvas"></canvas></div></div>`;
             const chartContainer = card.querySelector('.chart-container');
             if (chartContainer) {
                 const stats = getLanguageStats(processedDataCache, { timeRange: 'All Time', difficulty: 'All' });
@@ -712,34 +839,51 @@ export function initializeBentoGenerator(data: ProcessedData, username: string) 
     }
 
     copyBtn.addEventListener('click', async () => {
-        if (!currentPreviewBlob) return;
+    if (!currentPreviewBlob) return;
 
-        const originalContent = copyBtn.innerHTML;
+    // Store the original child nodes to safely restore them later.
+    const originalChildNodes = Array.from(copyBtn.childNodes);
 
-        try {
-            const clipboardItem = new ClipboardItem({ 'image/png': currentPreviewBlob });
-            await navigator.clipboard.write([clipboardItem]);
+    try {
+        const clipboardItem = new ClipboardItem({ 'image/png': currentPreviewBlob });
+        await navigator.clipboard.write([clipboardItem]);
 
-            copyBtn.innerHTML = `
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-green-s dark:text-dark-green-s">
-                    <polyline points="20 6 9 17 4 12"></polyline>
-                </svg>
-            `;
+        // Safely clear the button and add a success icon.
+        copyBtn.innerHTML = ''; // Clear existing content.
 
-            setTimeout(() => {
-                copyBtn.innerHTML = originalContent;
-            }, 1500);
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        svg.setAttribute('width', '20');
+        svg.setAttribute('height', '20');
+        svg.setAttribute('viewBox', '0 0 20 20');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('stroke-width', '2');
+        svg.setAttribute('stroke-linecap', 'round');
+        svg.setAttribute('stroke-linejoin', 'round');
+        svg.setAttribute('class', 'text-green-s dark:text-dark-green-s');
+        const polyline = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+        polyline.setAttribute('points', '20 6 9 17 4 12');
+        svg.appendChild(polyline);
+        copyBtn.appendChild(svg);
 
-        } catch (err) {
-            const buttonSpan = copyBtn.querySelector('span');
-            if (buttonSpan) {
-                buttonSpan.textContent = 'Failed!';
-                setTimeout(() => {
-                    copyBtn.innerHTML = originalContent;
-                }, 2500);
-            }
-        }
-    });
+        setTimeout(() => {
+            // Safely restore the original button content.
+            copyBtn.innerHTML = '';
+            originalChildNodes.forEach(node => copyBtn.appendChild(node.cloneNode(true)));
+        }, 1500);
+
+    } catch (err) {
+        // Safely update button text on failure.
+        copyBtn.textContent = 'Failed!';
+        
+        setTimeout(() => {
+            // Safely restore the original button content.
+            copyBtn.innerHTML = '';
+            originalChildNodes.forEach(node => copyBtn.appendChild(node.cloneNode(true)));
+        }, 2500);
+    }
+});
 
     downloadBtn.addEventListener('click', () => {
         if (!currentPreviewBlob) return;
@@ -817,10 +961,18 @@ function populateAccordion() {
 
         const usernameRow = document.createElement('div');
         usernameRow.className = 'flex w-full items-center justify-between rounded-lg px-2 py-[5px] text-label-1 dark:text-dark-label-1';
-        usernameRow.innerHTML = `
-            <label for="bento-username-input" class="text-md">Name</label>
-            <input type="text" id="bento-username-input" value="${usernameCache}" class="bg-layer-0 dark:bg-dark-layer-0 rounded p-1 text-sm text-label-1 dark:text-dark-label-1 border border-divider-3 dark:border-dark-divider-3 w-48 text-left focus:outline-none focus:ring-1 focus:ring-brand-orange">
-        `;
+        const nameLabel = document.createElement('label');
+        nameLabel.htmlFor = 'bento-username-input';
+        nameLabel.className = 'text-md';
+        nameLabel.textContent = 'Name';
+
+        const nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.id = 'bento-username-input';
+        nameInput.value = usernameCache;
+        nameInput.className = 'bg-layer-0 dark:bg-dark-layer-0 rounded p-1 text-sm text-label-1 dark:text-dark-label-1 border border-divider-3 dark:border-dark-divider-3 w-48 text-left focus:outline-none focus:ring-1 focus:ring-brand-orange';
+        
+        usernameRow.append(nameLabel, nameInput);
         aboutContainer.appendChild(usernameRow);
 
         const isDefaultAvatar = avatarUrlCache.includes('default_avatar.jpg');
@@ -1046,11 +1198,20 @@ function populateAccordion() {
                 metricsContainer.className = 'flex flex-shrink-0 justify-end text-center text-sm items-center text-label-2 dark:text-dark-label-2';
                 metricsContainer.style.width = '200px';
                 metricsContainer.style.pointerEvents = 'none';
-                metricsContainer.innerHTML = `
-                    <span class="w-1/3">${problemsSolved[topic] || 0}</span>
-                    <span class="w-1/3">${avgTries[topic] === Infinity ? '∞' : avgTries[topic]?.toFixed(1) || '0.0'}</span>
-                    <span class="w-1/3">${firstAceRate[topic]?.toFixed(0) || '0'}%</span>
-                `;
+                const solvedSpan = document.createElement('span');
+                solvedSpan.className = 'w-1/3';
+                solvedSpan.textContent = (problemsSolved[topic] || 0).toString();
+
+                const avgTriesSpan = document.createElement('span');
+                avgTriesSpan.className = 'w-1/3';
+                avgTriesSpan.textContent = avgTries[topic] === Infinity ? '∞' : avgTries[topic]?.toFixed(1) || '0.0';
+
+                const firstAceRateSpan = document.createElement('span');
+                firstAceRateSpan.className = 'w-1/3';
+                firstAceRateSpan.textContent = `${firstAceRate[topic]?.toFixed(0) || '0'}%`;
+
+                metricsContainer.append(solvedSpan, avgTriesSpan, firstAceRateSpan);
+
                 checkboxRow.appendChild(metricsContainer);
                 measureAndTrackWidth(checkboxRow);
                 skillsContent.appendChild(checkboxRow);
@@ -1130,20 +1291,40 @@ function createCheckbox(id: string, text: string, dataAttribute: string, dataVal
     button.setAttribute('role', 'checkbox');
     button.dataset[dataAttribute] = dataValue;
 
-    const checkmarkSpanHTML = `
-        <span data-state="checked" class="flex items-center justify-center text-current" style="pointer-events: none;">
-            <div class="relative before:block before:h-3 before:w-3 h-2 w-2 text-[8px]">
-                <svg aria-hidden="true" focusable="false" data-prefix="far" data-icon="check" class="svg-inline--fa fa-check absolute left-1/2 top-1/2 h-[1em] -translate-x-1/2 -translate-y-1/2 align-[-0.125em]" role="img" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512">
-                    <path fill="currentColor" d="M441 103c9.4 9.4 9.4 24.6 0 33.9L177 401c-9.4 9.4-24.6 9.4-33.9 0L7 265c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l119 119L407 103c9.4-9.4 24.6-9.4 33.9 0z"></path>
-                </svg>
-            </div>
-        </span>
-    `;
+    const createCheckmark = () => {
+    const span = document.createElement('span');
+    span.dataset.state = 'checked';
+    span.className = 'flex items-center justify-center text-current';
+    span.style.pointerEvents = 'none';
+
+    const div = document.createElement('div');
+    div.className = 'relative before:block before:h-3 before:w-3 h-2 w-2 text-[8px]';
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('focusable', 'false');
+    svg.setAttribute('data-prefix', 'far');
+    svg.setAttribute('data-icon', 'check');
+    svg.setAttribute('class', 'svg-inline--fa fa-check absolute left-1/2 top-1/2 h-[1em] -translate-x-1/2 -translate-y-1/2 align-[-0.125em]');
+    svg.setAttribute('role', 'img');
+    svg.setAttribute('viewBox', '0 0 448 512');
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('fill', 'currentColor');
+    path.setAttribute('d', 'M441 103c9.4 9.4 9.4 24.6 0 33.9L177 401c-9.4 9.4-24.6 9.4-33.9 0L7 265c-9.4-9.4-9.4-24.6 0-33.9s24.6-9.4 33.9 0l119 119L407 103c9.4-9.4 24.6-9.4 33.9 0z');
+
+    svg.appendChild(path);
+    div.appendChild(svg);
+    span.appendChild(div);
+
+    return span;
+};
+
 
     if (defaultChecked) {
         button.setAttribute('aria-checked', 'true');
         button.dataset.state = 'checked';
-        button.innerHTML = checkmarkSpanHTML;
+        button.appendChild(createCheckmark());
     } else {
         button.setAttribute('aria-checked', 'false');
         button.dataset.state = 'unchecked';
@@ -1167,7 +1348,7 @@ function createCheckbox(id: string, text: string, dataAttribute: string, dataVal
         if (newStateIsChecked) {
             button.setAttribute('aria-checked', 'true');
             button.dataset.state = 'checked';
-            button.innerHTML = checkmarkSpanHTML;
+            button.appendChild(createCheckmark());
         } else {
             button.setAttribute('aria-checked', 'false');
             button.dataset.state = 'unchecked';

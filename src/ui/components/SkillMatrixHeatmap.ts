@@ -298,7 +298,8 @@ export function renderOrUpdateSkillMatrixHeatmap(
       const cell = document.createElement('td');
       cell.colSpan = 5;
       cell.className = 'p-0 bg-layer-1 dark:bg-dark-layer-1';
-      cell.innerHTML = getChartRowHtml(topic, currentChartOptions); // UNSAFE_VAR_ASSIGNMENT
+      const chartContent = getChartRowHtml(topic, currentChartOptions);
+      cell.appendChild(chartContent);
       newRow.appendChild(cell);
 
       topicRow.insertAdjacentElement('afterend', newRow);
@@ -319,82 +320,170 @@ export function renderOrUpdateSkillMatrixHeatmap(
   }
 
   /** Generates the HTML for an expanded chart row. */
-  function getChartRowHtml(topic: string, currentOpts: { metric: 'problemsSolved' | 'avgTries' | 'firstAceRate', view: 'Daily' | 'Monthly' | 'Yearly', split: boolean }): string {
-    const metricLabels = {
-      problemsSolved: 'Problems Solved',
-      avgTries: 'Average Attempts',
-      firstAceRate: 'First Ace Rate'
-    };
-    const metrics: ('problemsSolved' | 'avgTries' | 'firstAceRate')[] = ['problemsSolved', 'avgTries', 'firstAceRate'];
+  /** Generates the HTML for an expanded chart row. */
+function getChartRowHtml(topic: string, currentOpts: { metric: 'problemsSolved' | 'avgTries' | 'firstAceRate', view: 'Daily' | 'Monthly' | 'Yearly', split: boolean }): DocumentFragment {
+  const fragment = document.createDocumentFragment();
+  const svgNS = 'http://www.w3.org/2000/svg';
 
-    const metricOptionsHtml = metrics.map(metric => {
+  const metricLabels = {
+    problemsSolved: 'Problems Solved',
+    avgTries: 'Average Attempts',
+    firstAceRate: 'First Ace Rate'
+  };
+  const metrics: ('problemsSolved' | 'avgTries' | 'firstAceRate')[] = ['problemsSolved', 'avgTries', 'firstAceRate'];
+
+  const expandableContent = document.createElement('div');
+  expandableContent.className = 'expandable-content';
+
+  const containerDiv = document.createElement('div');
+  containerDiv.className = 'p-4 border-t-2 border-divider-3 dark:border-dark-divider-3';
+
+  // --- Controls Header ---
+  const controlsHeader = document.createElement('div');
+  controlsHeader.className = 'flex justify-between items-center mb-4 flex-wrap gap-2';
+
+  // --- Metric Dropdown ---
+  const metricDropdownContainer = document.createElement('div');
+  metricDropdownContainer.className = 'ml-[21px]';
+
+  const relativeDiv = document.createElement('div');
+  relativeDiv.className = 'relative';
+  relativeDiv.dataset.headlessuiState = '';
+
+  const metricButton = document.createElement('button');
+  metricButton.className = 'metric-selector flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3';
+  metricButton.dataset.topic = topic;
+  metricButton.type = 'button';
+  metricButton.setAttribute('aria-haspopup', 'listbox');
+  metricButton.setAttribute('aria-expanded', 'false');
+
+  const buttonSpan = document.createElement('span');
+  buttonSpan.className = 'whitespace-nowrap';
+  buttonSpan.textContent = metricLabels[currentOpts.metric];
+
+  const buttonSvg = document.createElementNS(svgNS, 'svg');
+  buttonSvg.setAttribute('viewBox', '0 0 24 24');
+  buttonSvg.setAttribute('width', '1em');
+  buttonSvg.setAttribute('height', '1em');
+  buttonSvg.setAttribute('fill', 'currentColor');
+  buttonSvg.setAttribute('class', 'pointer-events-none ml-3 w-4 h-4');
+  const buttonPath = document.createElementNS(svgNS, 'path');
+  buttonPath.setAttribute('fill-rule', 'evenodd');
+  buttonPath.setAttribute('d', 'M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z');
+  buttonPath.setAttribute('clip-rule', 'evenodd');
+  buttonSvg.appendChild(buttonPath);
+  metricButton.append(buttonSpan, buttonSvg);
+
+  const metricOptionsDiv = document.createElement('div');
+  metricOptionsDiv.className = 'metric-options hidden z-dropdown absolute max-h-56 overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 left-0 mt-2 shadow-level3 dark:shadow-dark-level3';
+  metricOptionsDiv.style.filter = 'drop-shadow(rgba(0, 0, 0, 0.04) 0px 1px 3px) drop-shadow(rgba(0, 0, 0, 0.12) 0px 6px 16px)';
+  
+  metrics.forEach(metric => {
       const isSelected = currentOpts.metric === metric;
-      return `
-        <div class="relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 ${isSelected ? 'rounded bg-fill-3 dark:bg-dark-fill-3' : ''}" data-value="${metric}">
-          <div class="flex h-5 flex-1 items-center pr-2 ${isSelected ? 'font-medium' : ''}">
-            <div class="whitespace-nowrap">${metricLabels[metric]}</div>
-          </div>
-          <span class="text-blue dark:text-dark-blue flex items-center pr-2 ${isSelected ? 'visible' : 'invisible'}">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg>
-          </span>
-        </div>
-      `;
-    }).join('');
+      const optionDiv = document.createElement('div');
+      optionDiv.className = `relative flex h-8 cursor-pointer select-none py-1.5 pl-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 ${isSelected ? 'rounded bg-fill-3 dark:bg-dark-fill-3' : ''}`;
+      optionDiv.dataset.value = metric;
+      
+      const innerDiv = document.createElement('div');
+      innerDiv.className = `flex h-5 flex-1 items-center pr-2 ${isSelected ? 'font-medium' : ''}`;
+      const labelDiv = document.createElement('div');
+      labelDiv.className = 'whitespace-nowrap';
+      labelDiv.textContent = metricLabels[metric];
+      innerDiv.appendChild(labelDiv);
 
-    return `
-      <td colspan="5" class="p-0 bg-layer-1 dark:bg-dark-layer-1">
-        <div class="expandable-content">
-          <div class="p-4 border-t-2 border-divider-3 dark:border-dark-divider-3">
-            <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-              <div class="ml-[21px]">
-                <div class="relative" data-headlessui-state>
-                  <button class="flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3 metric-selector" data-topic="${topic}" type="button" aria-haspopup="listbox" aria-expanded="false">
-                    <span class="whitespace-nowrap">${metricLabels[currentOpts.metric]}</span>
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="pointer-events-none ml-3 w-4 h-4" aria-hidden="true"><path fill-rule="evenodd" d="M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z" clip-rule="evenodd"></path></svg>
-                  </button>
-                  <div class="hidden z-dropdown absolute max-h-56 overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 left-0 mt-2 shadow-level3 dark:shadow-dark-level3 metric-options" style="filter: drop-shadow(rgba(0, 0, 0, 0.04) 0px 1px 3px) drop-shadow(rgba(0, 0, 0, 0.12) 0px 6px 16px);">${metricOptionsHtml}</div>
-                </div>
-              </div>
-              <div class="flex gap-2 flex-wrap">
-                <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
-                  <button class="chart-view-btn whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs" data-view="Daily" data-topic="${topic}" data-state="${currentOpts.view === 'Daily' ? 'active' : 'inactive'}">Daily</button>
-                  <button class="chart-view-btn whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs" data-view="Monthly" data-topic="${topic}" data-state="${currentOpts.view === 'Monthly' ? 'active' : 'inactive'}">Monthly</button>
-                  <button class="chart-view-btn whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs" data-view="Yearly" data-topic="${topic}" data-state="${currentOpts.view === 'Yearly' ? 'active' : 'inactive'}">Yearly</button>
-                </div>
-                <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
-                  <button class="difficulty-toggle whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs" data-topic="${topic}" data-state="${!currentOpts.split ? 'active' : 'inactive'}">Aggregate</button>
-                  <button class="difficulty-toggle whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs" data-topic="${topic}" data-state="${currentOpts.split ? 'active' : 'inactive'}">Split</button>
-                </div>
-              </div>
-            </div>
-            <div class="relative h-60 w-full bg-layer-1 dark:bg-dark-layer-1">
-              <canvas id="skill-chart-${topic.replace(/\s+/g, '-')}" class="w-full h-full"></canvas>
-              <div id="tooltip-${topic.replace(/\s+/g, '-')}" class="chart-tooltip"></div>
-            </div>
-          </div>
-        </div>
-      </td>
-      <style>
-        .expandable-content { max-height: 0; overflow: hidden; transition: max-height 0.4s ease, opacity 0.4s ease; }
-        .chart-tooltip {
-          position: absolute; top: 0; left: 0; background: ${colors.background.section}; border: 2px solid ${colors.background.empty};
-          border-radius: 8px; padding: 12px; font-size: 13px; color: ${colors.text.primary};
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); z-index: 1000; width: max-content;
-          max-width: 300px; opacity: 0; pointer-events: none;
-          transition: opacity 0.2s ease, transform 0.15s ease-out;
-        }
-        .tooltip-header { font-weight: 500; margin-bottom: 8px; color: ${colors.text.primary}; }
-        .tooltip-subheader { margin-bottom: 12px; font-size: 12px; color: ${colors.text.subtle}; }
-        .tooltip-subheader-value { font-weight: 500; color: ${colors.text.primary}; margin-left: 6px; }
-        .tooltip-divider { border-top: 1px solid ${colors.background.secondarySection}; margin: 10px 0; }
-        .tooltip-breakdown-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
-        .tooltip-breakdown-item { display: flex; align-items: center; justify-content: space-between; font-size: 12px; gap: 16px; }
-        .tooltip-breakdown-label { display: flex; align-items: center; gap: 8px; color: ${colors.text.subtle}; }
-        .tooltip-breakdown-value { font-weight: 500; color: ${colors.text.primary}; }
-        .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
-      </style>
-    `;
-  }
+      const checkSpan = document.createElement('span');
+      checkSpan.className = `text-blue dark:text-dark-blue flex items-center pr-2 ${isSelected ? 'visible' : 'invisible'}`;
+      const checkSvg = document.createElementNS(svgNS, 'svg');
+      checkSvg.setAttribute('viewBox', '0 0 24 24');
+      checkSvg.setAttribute('width', '1em');
+      checkSvg.setAttribute('height', '1em');
+      checkSvg.setAttribute('fill', 'currentColor');
+      checkSvg.setAttribute('class', 'w-4 h-4');
+      const checkPath = document.createElementNS(svgNS, 'path');
+      checkPath.setAttribute('fill-rule', 'evenodd');
+      checkPath.setAttribute('d', 'M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z');
+      checkPath.setAttribute('clip-rule', 'evenodd');
+      checkSvg.appendChild(checkPath);
+      checkSpan.appendChild(checkSvg);
+
+      optionDiv.append(innerDiv, checkSpan);
+      metricOptionsDiv.appendChild(optionDiv);
+  });
+
+  relativeDiv.append(metricButton, metricOptionsDiv);
+  metricDropdownContainer.appendChild(relativeDiv);
+
+  // --- Toggles ---
+  const togglesContainer = document.createElement('div');
+  togglesContainer.className = 'flex gap-2 flex-wrap';
+
+  const createToggleGroup = (buttons: {label: string, value: string}[], activeValue: string, buttonClass: string, dataType: 'view' | 'value') => {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]';
+      buttons.forEach(btnInfo => {
+          const button = document.createElement('button');
+          button.className = `${buttonClass} whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs`;
+          button.dataset.topic = topic;
+          button.dataset[dataType] = btnInfo.value;
+          button.dataset.state = activeValue === btnInfo.value ? 'active' : 'inactive';
+          button.textContent = btnInfo.label;
+          wrapper.appendChild(button);
+      });
+      return wrapper;
+  };
+  
+  const viewToggles = createToggleGroup(
+      [{ label: 'Daily', value: 'Daily'}, { label: 'Monthly', value: 'Monthly'}, { label: 'Yearly', value: 'Yearly'}],
+      currentOpts.view, 'chart-view-btn', 'view'
+  );
+
+  const difficultyToggles = createToggleGroup(
+      [{ label: 'Aggregate', value: 'aggregate'}, { label: 'Split', value: 'split'}],
+      currentOpts.split ? 'split' : 'aggregate', 'difficulty-toggle', 'value'
+  );
+
+  togglesContainer.append(viewToggles, difficultyToggles);
+  controlsHeader.append(metricDropdownContainer, togglesContainer);
+
+  // --- Chart Canvas ---
+  const chartContainer = document.createElement('div');
+  chartContainer.className = 'relative h-60 w-full bg-layer-1 dark:bg-dark-layer-1';
+  const canvas = document.createElement('canvas');
+  canvas.id = `skill-chart-${topic.replace(/\s+/g, '-')}`;
+  canvas.className = 'w-full h-full';
+  const tooltipDiv = document.createElement('div');
+  tooltipDiv.id = `tooltip-${topic.replace(/\s+/g, '-')}`;
+  tooltipDiv.className = 'chart-tooltip';
+  chartContainer.append(canvas, tooltipDiv);
+  
+  containerDiv.append(controlsHeader, chartContainer);
+  expandableContent.appendChild(containerDiv);
+
+  // --- Style block ---
+  const styleEl = document.createElement('style');
+  styleEl.textContent = `
+    .expandable-content { max-height: 0; overflow: hidden; transition: max-height 0.4s ease, opacity 0.4s ease; }
+    .chart-tooltip {
+      position: absolute; top: 0; left: 0; background: ${colors.background.section}; border: 2px solid ${colors.background.empty};
+      border-radius: 8px; padding: 12px; font-size: 13px; color: ${colors.text.primary};
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); z-index: 1000; width: max-content;
+      max-width: 300px; opacity: 0; pointer-events: none;
+      transition: opacity 0.2s ease, transform 0.15s ease-out;
+    }
+    .tooltip-header { font-weight: 500; margin-bottom: 8px; color: ${colors.text.primary}; }
+    .tooltip-subheader { margin-bottom: 12px; font-size: 12px; color: ${colors.text.subtle}; }
+    .tooltip-subheader-value { font-weight: 500; color: ${colors.text.primary}; margin-left: 6px; }
+    .tooltip-divider { border-top: 1px solid ${colors.background.secondarySection}; margin: 10px 0; }
+    .tooltip-breakdown-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
+    .tooltip-breakdown-item { display: flex; align-items: center; justify-content: space-between; font-size: 12px; gap: 16px; }
+    .tooltip-breakdown-label { display: flex; align-items: center; gap: 8px; color: ${colors.text.subtle}; }
+    .tooltip-breakdown-value { font-weight: 500; color: ${colors.text.primary}; }
+    .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+  `;
+    
+  fragment.append(expandableContent, styleEl);
+  return fragment;
+}
 
   /** Adds event listeners to the chart control buttons in an expanded row. */
   function addChartControlListeners(row: HTMLElement, topic: string) {
@@ -455,21 +544,21 @@ export function renderOrUpdateSkillMatrixHeatmap(
       });
     });
 
-    row.querySelectorAll('.difficulty-toggle').forEach(el => {
-      el.addEventListener('click', e => {
-        const button = e.currentTarget as HTMLButtonElement;
-        const isAggregate = button.textContent?.trim() === 'Aggregate';
-        const opts = chartOptions.get(topic)!;
-        opts.split = !isAggregate;
-        chartOptions.set(topic, opts);
+    // --- WITH THIS ---
+row.querySelectorAll('.difficulty-toggle').forEach(el => {
+  el.addEventListener('click', e => {
+    const button = e.currentTarget as HTMLButtonElement;
+    const value = button.dataset.value;
+    const opts = chartOptions.get(topic)!;
+    opts.split = value === 'split';
+    chartOptions.set(topic, opts);
 
-        button.parentElement?.querySelectorAll('button').forEach(btn => {
-          const btnIsAggregate = btn.textContent?.trim() === 'Aggregate';
-          btn.setAttribute('data-state', (btnIsAggregate === isAggregate) ? 'active' : 'inactive');
-        });
-        renderChart(topic);
-      });
+    button.parentElement?.querySelectorAll('button').forEach(btn => {
+      btn.setAttribute('data-state', btn === button ? 'active' : 'inactive');
     });
+    renderChart(topic);
+  });
+});
   }
 
   /** Renders a line chart for a specific topic. */

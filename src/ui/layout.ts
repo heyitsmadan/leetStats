@@ -408,7 +408,7 @@ function renderLegacySection(processedData: ProcessedData) {
         }
         const contextSpan = document.createElement('span');
         contextSpan.className = styles.recordContext;
-        contextSpan.innerHTML = record.dateStat || '&nbsp;';
+        contextSpan.textContent = record.dateStat || '\u00A0';
         valueContainer.appendChild(contextSpan);
         item.appendChild(valueContainer);
         recordsList.appendChild(item);
@@ -658,162 +658,232 @@ function createStatsPaneWithGrid(username: string): HTMLElement {
     const statsPane = document.createElement('div');
     statsPane.id = 'lc-stats-pane-grid';
     statsPane.className = 'w-full';
-    statsPane.innerHTML = `
-    <div class="space-y-4">
-        <!-- INTERACTIVE CHART SECTION -->
-        <div class="rounded-lg p-4">
-            <div class="${styles.sectionHeader}">History</div>
-            <div class="mt-4" id="interactive-chart-container"></div>
-        </div>
-        <div class="border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b"></div>
+    const createEl = (tag: string, className?: string, id?: string) => {
+        const el = document.createElement(tag);
+        if (className) el.className = className;
+        if (id) el.id = id;
+        return el;
+    };
+
+    const createDropdownOption = (value: string, text: string, isSelected: boolean) => {
+        const option = createEl('div', `relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded ${isSelected ? 'bg-fill-3 dark:bg-dark-fill-3 font-medium' : ''}`);
+        option.dataset.value = value;
+        option.setAttribute('role', 'option');
         
-        <!-- LEGACY SECTION -->
-        <div class="rounded-lg p-4">
-            <div id="legacy-section" class="min-h-96"></div>
-        </div>
-        <div class="border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b"></div>
+        const textDiv = createEl('div', 'flex-1 whitespace-nowrap');
+        textDiv.textContent = text;
+        option.appendChild(textDiv);
 
-        <!-- HEADER + FILTERS -->
-        <div class="flex items-center justify-between p-4 bg-layer-1 dark:bg-dark-layer-1 rounded-lg">
-            <h2 class="${styles.sectionHeader}">Activity</h2>
-            <div class="flex items-center space-x-4">
-                <!-- Time Range Dropdown -->
-                <div class="relative">
-                    <button id="time-range-dropdown-btn" class="flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3" type="button" aria-haspopup="listbox" aria-expanded="false">
-                        <span class="whitespace-nowrap">All Time</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="pointer-events-none ml-3 w-4 h-4" aria-hidden="true"><path fill-rule="evenodd" d="M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z" clip-rule="evenodd"></path></svg>
-                    </button>
-                    <div id="time-range-dropdown-options" class="stats-dropdown-options hidden z-dropdown absolute max-h-56 w-full min-w-max overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 right-0 mt-2 shadow-level3 dark:shadow-dark-level3" role="listbox">
-                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded bg-fill-3 dark:bg-dark-fill-3 font-medium" data-value="All Time" role="option">
-                            <div class="flex-1 whitespace-nowrap">All Time</div>
-                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 visible"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg></span>
-                        </div>
-                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded" data-value="Last 30 Days" role="option">
-                            <div class="flex-1 whitespace-nowrap">Last 30 Days</div>
-                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 invisible"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg></span>
-                        </div>
-                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded" data-value="Last 90 Days" role="option">
-                            <div class="flex-1 whitespace-nowrap">Last 90 Days</div>
-                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 invisible"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg></span>
-                        </div>
-                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded" data-value="Last 365 Days" role="option">
-                            <div class="flex-1 whitespace-nowrap">Last 365 Days</div>
-                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 invisible"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg></span>
-                        </div>
-                    </div>
-                </div>
+        const checkSpan = createEl('span', `check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 ${isSelected ? 'visible' : 'invisible'}`);
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+svg.setAttribute('viewBox', '0 0 24 24');
+svg.setAttribute('width', '1em');
+svg.setAttribute('height', '1em');
+svg.setAttribute('fill', 'currentColor');
+svg.classList.add('w-4', 'h-4');
+const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+path.setAttribute('fill-rule', 'evenodd');
+path.setAttribute('d', 'M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 01.143-1.052z');
+path.setAttribute('clip-rule', 'evenodd');
+svg.appendChild(path);
+checkSpan.appendChild(svg);
+        option.appendChild(checkSpan);
+        return option;
+    };
+    
+    const createToggleBtn = (id: string, text: string, state: 'active' | 'inactive') => {
+        const btn = createEl('button', 'whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs', id) as HTMLButtonElement;
+        btn.dataset.state = state;
+        btn.textContent = text;
+        return btn;
+    };
+    
+    const mainContainer = createEl('div', 'space-y-4');
+    
+    // Interactive Chart Section
+    const interactiveSection = createEl('div', 'rounded-lg p-4');
+    const interactiveHeader = createEl('div', styles.sectionHeader);
+    interactiveHeader.textContent = 'History';
+    const interactiveContainer = createEl('div', 'mt-4', 'interactive-chart-container');
+    interactiveSection.append(interactiveHeader, interactiveContainer);
+    
+    // Divider
+    const divider1 = createEl('div', 'border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b');
+    
+    // Legacy Section
+    const legacySection = createEl('div', 'rounded-lg p-4');
+    const legacyContainer = createEl('div', 'min-h-96', 'legacy-section');
+    legacySection.appendChild(legacyContainer);
 
-                <!-- Difficulty Dropdown -->
-                <div class="relative">
-                    <button id="difficulty-dropdown-btn" class="flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3" type="button" aria-haspopup="listbox" aria-expanded="false">
-                        <span class="whitespace-nowrap">All</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="pointer-events-none ml-3 w-4 h-4" aria-hidden="true"><path fill-rule="evenodd" d="M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z" clip-rule="evenodd"></path></svg>
-                    </button>
-                    <div id="difficulty-dropdown-options" class="stats-dropdown-options hidden z-dropdown absolute max-h-56 w-full min-w-max overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 right-0 mt-2 shadow-level3 dark:shadow-dark-level3" role="listbox">
-                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded bg-fill-3 dark:bg-dark-fill-3 font-medium" data-value="All" role="option">
-                            <div class="flex-1 whitespace-nowrap">All</div>
-                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 visible"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg></span>
-                        </div>
-                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded" data-value="Easy" role="option">
-                            <div class="flex-1 whitespace-nowrap">Easy</div>
-                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 invisible"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg></span>
-                        </div>
-                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded" data-value="Medium" role="option">
-                            <div class="flex-1 whitespace-nowrap">Medium</div>
-                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 invisible"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg></span>
-                        </div>
-                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded" data-value="Hard" role="option">
-                            <div class="flex-1 whitespace-nowrap">Hard</div>
-                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 invisible"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    // Divider
+    const divider2 = createEl('div', 'border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b');
+    
+    // Filters Header
+    const filtersHeader = createEl('div', 'flex items-center justify-between p-4 bg-layer-1 dark:bg-dark-layer-1 rounded-lg');
+    const activityHeader = createEl('h2', styles.sectionHeader);
+    activityHeader.textContent = 'Activity';
+    const filtersContainer = createEl('div', 'flex items-center space-x-4');
+    
+    // Time Range Dropdown
+    const timeDropdownContainer = createEl('div', 'relative');
+    const timeBtn = createEl('button', 'flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3', 'time-range-dropdown-btn') as HTMLButtonElement;
+    timeBtn.type = 'button';
+    const timeBtnSpan = document.createElement('span');
+timeBtnSpan.className = 'whitespace-nowrap';
+timeBtnSpan.textContent = 'All Time';
+const timeBtnSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+timeBtnSvg.setAttribute('viewBox', '0 0 24 24');
+timeBtnSvg.setAttribute('width', '1em');
+timeBtnSvg.setAttribute('height', '1em');
+timeBtnSvg.setAttribute('fill', 'currentColor');
+timeBtnSvg.setAttribute('aria-hidden', 'true');
+timeBtnSvg.classList.add('pointer-events-none', 'ml-3', 'w-4', 'h-4');
+const timeBtnPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+timeBtnPath.setAttribute('fill-rule', 'evenodd');
+timeBtnPath.setAttribute('d', 'M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z');
+timeBtnPath.setAttribute('clip-rule', 'evenodd');
+timeBtnSvg.appendChild(timeBtnPath);
+timeBtn.append(timeBtnSpan, timeBtnSvg);
+    const timeOptions = createEl('div', 'stats-dropdown-options hidden z-dropdown absolute max-h-56 w-full min-w-max overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 right-0 mt-2 shadow-level3 dark:shadow-dark-level3', 'time-range-dropdown-options');
+    timeOptions.append(
+        createDropdownOption('All Time', 'All Time', true),
+        createDropdownOption('Last 30 Days', 'Last 30 Days', false),
+        createDropdownOption('Last 90 Days', 'Last 90 Days', false),
+        createDropdownOption('Last 365 Days', 'Last 365 Days', false)
+    );
+    timeDropdownContainer.append(timeBtn, timeOptions);
 
-        <!-- CHARTS GRID -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- TOP-LEFT: CODING CLOCK -->
-            <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-                <div class="flex justify-between items-center mb-4">
-                    <div class="${styles.subSectionHeader}">Coding Frequency</div>
-                    <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
-                        <button id="day-view-btn" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Daily</button>
-                        <button id="hour-view-btn" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Hourly</button>
-                    </div>
-                </div>
-                <div class="mt-4 relative h-64 w-full">
-                    <canvas id="coding-clock-chart"></canvas>
-                </div>
-            </div>
-            
-            <!-- TOP-RIGHT: CUMULATIVE PROGRESS -->
-            <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-                <div class="flex justify-between items-center mb-4">
-                    <div class="${styles.subSectionHeader}">Progress Tracker</div>
-                    <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
-                        <button id="daily-view-btn" data-view="Daily" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Daily</button>
-                        <button id="monthly-view-btn" data-view="Monthly" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Monthly</button>
-                        <button id="yearly-view-btn" data-view="Yearly" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Yearly</button>
-                    </div>
-                </div>
-                <div class="mt-4 relative h-64 w-full">
-                    <canvas id="cumulative-chart"></canvas>
-                </div>
-            </div>
+    // Difficulty Dropdown
+    const diffDropdownContainer = createEl('div', 'relative');
+    const diffBtn = createEl('button', 'flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3', 'difficulty-dropdown-btn') as HTMLButtonElement;
+    diffBtn.type = 'button';
+    const diffBtnSpan = document.createElement('span');
+diffBtnSpan.className = 'whitespace-nowrap';
+diffBtnSpan.textContent = 'All';
+const diffBtnSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+diffBtnSvg.setAttribute('viewBox', '0 0 24 24');
+diffBtnSvg.setAttribute('width', '1em');
+diffBtnSvg.setAttribute('height', '1em');
+diffBtnSvg.setAttribute('fill', 'currentColor');
+diffBtnSvg.setAttribute('aria-hidden', 'true');
+diffBtnSvg.classList.add('pointer-events-none', 'ml-3', 'w-4', 'h-4');
+const diffBtnPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+diffBtnPath.setAttribute('fill-rule', 'evenodd');
+diffBtnPath.setAttribute('d', 'M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z');
+diffBtnPath.setAttribute('clip-rule', 'evenodd');
+diffBtnSvg.appendChild(diffBtnPath);
+diffBtn.append(diffBtnSpan, diffBtnSvg);
+    const diffOptions = createEl('div', 'stats-dropdown-options hidden z-dropdown absolute max-h-56 w-full min-w-max overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 right-0 mt-2 shadow-level3 dark:shadow-dark-level3', 'difficulty-dropdown-options');
+    diffOptions.append(
+        createDropdownOption('All', 'All', true),
+        createDropdownOption('Easy', 'Easy', false),
+        createDropdownOption('Medium', 'Medium', false),
+        createDropdownOption('Hard', 'Hard', false)
+    );
+    diffDropdownContainer.append(diffBtn, diffOptions);
 
-            <!-- BOTTOM-LEFT: SUBMISSION BREAKDOWN -->
-            <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-                <div class="${styles.subSectionHeader}">Submission Breakdown</div>
-                <div class="mt-4 relative h-64 w-full">
-                    <canvas id="submission-signature-chart"></canvas>
-                </div>
-            </div>
+    filtersContainer.append(timeDropdownContainer, diffDropdownContainer);
+    filtersHeader.append(activityHeader, filtersContainer);
 
-            <!-- BOTTOM-RIGHT: LANGUAGE STATS -->
-            <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-                <div class="${styles.subSectionHeader}">Language Stats</div>
-                <div class="mt-4 relative h-64 w-full">
-                    <canvas id="language-stats-chart"></canvas>
-                </div>
-            </div>
-        </div>
-        
-        <!-- SKILL MATRIX SECTION -->
-        <div class="border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b"></div>
-        <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-            <div class="flex justify-between items-center mb-4">
-                <div class="${styles.sectionHeader}">Skills</div>
-                <div class="relative">
-                    <button id="skill-matrix-time-filter-btn" class="flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3" type="button" aria-haspopup="listbox" aria-expanded="false">
-                        <span class="whitespace-nowrap">All Time</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="pointer-events-none ml-3 w-4 h-4" aria-hidden="true"><path fill-rule="evenodd" d="M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z" clip-rule="evenodd"></path></svg>
-                    </button>
-                    <div id="skill-matrix-time-filter-options" class="stats-dropdown-options hidden z-dropdown absolute max-h-56 w-full min-w-max overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 right-0 mt-2 shadow-level3 dark:shadow-dark-level3" role="listbox">
-                         <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded bg-fill-3 dark:bg-dark-fill-3 font-medium" data-value="All Time" role="option">
-                            <div class="flex-1 whitespace-nowrap">All Time</div>
-                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 visible"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg></span>
-                        </div>
-                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded" data-value="Last 365 Days" role="option">
-                            <div class="flex-1 whitespace-nowrap">Last 365 Days</div>
-                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 invisible"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg></span>
-                        </div>
-                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded" data-value="Last 90 Days" role="option">
-                            <div class="flex-1 whitespace-nowrap">Last 90 Days</div>
-                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 invisible"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg></span>
-                        </div>
-                        <div class="relative flex h-8 cursor-pointer select-none items-center py-1.5 pl-2 pr-2 text-label-2 dark:text-dark-label-2 hover:text-label-1 dark:hover:text-dark-label-1 rounded" data-value="Last 30 Days" role="option">
-                            <div class="flex-1 whitespace-nowrap">Last 30 Days</div>
-                            <span class="check-icon-span text-blue dark:text-dark-blue flex items-center pl-2 invisible"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="1em" height="1em" fill="currentColor" class="w-4 h-4"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"></path></svg></span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="mt-4" id="skill-matrix-container"></div>
-        </div>
-    </div>
-    ${createBentoModalHTML()} 
-    `;
+    // Charts Grid
+    const chartsGrid = createEl('div', 'grid grid-cols-1 md:grid-cols-2 gap-4');
+
+    // Coding Clock
+    const clockContainer = createEl('div', 'rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4');
+    const clockHeader = createEl('div', 'flex justify-between items-center mb-4');
+    const clockTitle = createEl('div', styles.subSectionHeader);
+    clockTitle.textContent = 'Coding Frequency';
+    const clockToggle = createEl('div', 'text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]');
+    clockToggle.append(createToggleBtn('day-view-btn', 'Daily', 'active'), createToggleBtn('hour-view-btn', 'Hourly', 'inactive'));
+    clockHeader.append(clockTitle, clockToggle);
+    const clockCanvasContainer = createEl('div', 'mt-4 relative h-64 w-full');
+    clockCanvasContainer.appendChild(createEl('canvas', '', 'coding-clock-chart'));
+    clockContainer.append(clockHeader, clockCanvasContainer);
+
+    // Cumulative Progress
+    const cumulativeContainer = createEl('div', 'rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4');
+    const cumulativeHeader = createEl('div', 'flex justify-between items-center mb-4');
+    const cumulativeTitle = createEl('div', styles.subSectionHeader);
+    cumulativeTitle.textContent = 'Progress Tracker';
+    const cumulativeToggle = createEl('div', 'text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]');
+    cumulativeToggle.append(
+        createToggleBtn('daily-view-btn', 'Daily', 'inactive'),
+        createToggleBtn('monthly-view-btn', 'Monthly', 'active'),
+        createToggleBtn('yearly-view-btn', 'Yearly', 'inactive')
+    );
+    cumulativeHeader.append(cumulativeTitle, cumulativeToggle);
+    const cumulativeCanvasContainer = createEl('div', 'mt-4 relative h-64 w-full');
+    cumulativeCanvasContainer.appendChild(createEl('canvas', '', 'cumulative-chart'));
+    cumulativeContainer.append(cumulativeHeader, cumulativeCanvasContainer);
+    
+    // Submission Breakdown
+    const submissionContainer = createEl('div', 'rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4');
+    const submissionHeader = createEl('div', styles.subSectionHeader);
+    submissionHeader.textContent = 'Submission Breakdown';
+    const submissionCanvasContainer = createEl('div', 'mt-4 relative h-64 w-full');
+    submissionCanvasContainer.appendChild(createEl('canvas', '', 'submission-signature-chart'));
+    submissionContainer.append(submissionHeader, submissionCanvasContainer);
+
+    // Language Stats
+    const langContainer = createEl('div', 'rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4');
+    const langHeader = createEl('div', styles.subSectionHeader);
+    langHeader.textContent = 'Language Stats';
+    const langCanvasContainer = createEl('div', 'mt-4 relative h-64 w-full');
+    langCanvasContainer.appendChild(createEl('canvas', '', 'language-stats-chart'));
+    langContainer.append(langHeader, langCanvasContainer);
+
+    chartsGrid.append(clockContainer, cumulativeContainer, submissionContainer, langContainer);
+
+    // Skill Matrix Section
+    const divider3 = createEl('div', 'border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b');
+    const skillSection = createEl('div', 'rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4');
+    const skillHeaderContainer = createEl('div', 'flex justify-between items-center mb-4');
+    const skillHeader = createEl('div', styles.sectionHeader);
+    skillHeader.textContent = 'Skills';
+    const skillDropdownContainer = createEl('div', 'relative');
+    const skillBtn = createEl('button', 'flex cursor-pointer items-center rounded px-3 py-1.5 text-left focus:outline-none whitespace-nowrap bg-fill-3 dark:bg-dark-fill-3 text-label-2 dark:text-dark-label-2 hover:bg-fill-2 dark:hover:bg-dark-fill-2 active:bg-fill-3 dark:active:bg-dark-fill-3', 'skill-matrix-time-filter-btn') as HTMLButtonElement;
+    skillBtn.type = 'button';
+    const skillBtnSpan = document.createElement('span');
+skillBtnSpan.className = 'whitespace-nowrap';
+skillBtnSpan.textContent = 'All Time';
+const skillBtnSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+skillBtnSvg.setAttribute('viewBox', '0 0 24 24');
+skillBtnSvg.setAttribute('width', '1em');
+skillBtnSvg.setAttribute('height', '1em');
+skillBtnSvg.setAttribute('fill', 'currentColor');
+skillBtnSvg.setAttribute('aria-hidden', 'true');
+skillBtnSvg.classList.add('pointer-events-none', 'ml-3', 'w-4', 'h-4');
+const skillBtnPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+skillBtnPath.setAttribute('fill-rule', 'evenodd');
+skillBtnPath.setAttribute('d', 'M4.929 7.913l7.078 7.057 7.064-7.057a1 1 0 111.414 1.414l-7.77 7.764a1 1 0 01-1.415 0L3.515 9.328a1 1 0 011.414-1.414z');
+skillBtnPath.setAttribute('clip-rule', 'evenodd');
+skillBtnSvg.appendChild(skillBtnPath);
+skillBtn.append(skillBtnSpan, skillBtnSvg);
+    const skillOptions = createEl('div', 'stats-dropdown-options hidden z-dropdown absolute max-h-56 w-full min-w-max overflow-auto rounded-lg p-2 focus:outline-none bg-overlay-3 dark:bg-dark-overlay-3 right-0 mt-2 shadow-level3 dark:shadow-dark-level3', 'skill-matrix-time-filter-options');
+    skillOptions.append(
+        createDropdownOption('All Time', 'All Time', true),
+        createDropdownOption('Last 365 Days', 'Last 365 Days', false),
+        createDropdownOption('Last 90 Days', 'Last 90 Days', false),
+        createDropdownOption('Last 30 Days', 'Last 30 Days', false)
+    );
+    skillDropdownContainer.append(skillBtn, skillOptions);
+    skillHeaderContainer.append(skillHeader, skillDropdownContainer);
+    const skillMatrixContainer = createEl('div', 'mt-4', 'skill-matrix-container');
+    skillSection.append(skillHeaderContainer, skillMatrixContainer);
+
+    // Append all sections to the main container
+    mainContainer.append(interactiveSection, divider1, legacySection, divider2, filtersHeader, chartsGrid, divider3, skillSection);
+    
+    // Append the dynamically created main container to the statsPane
+    statsPane.appendChild(mainContainer);
+
+    // Safely parse and append the Bento Modal HTML
+    const bentoHtml = createBentoModalHTML();
+    const parser = new DOMParser();
+    const bentoDoc = parser.parseFromString(bentoHtml, 'text/html');
+    while (bentoDoc.body.firstChild) {
+        statsPane.appendChild(bentoDoc.body.firstChild);
+    }
     return statsPane;
 }
 

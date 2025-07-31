@@ -2,9 +2,7 @@ import * as d3 from 'd3';
 import { Chart, registerables } from 'chart.js';
 import type {
   InteractiveChartData,
-  BrushChartData,
   InteractiveChartFilters,
-  TooltipData,
   ProcessedData
 } from '../../types';
 import { getInteractiveChartStats, getBrushChartData, getTooltipData } from '../../analysis/stats/getInteractiveChartStats';
@@ -25,40 +23,75 @@ export function renderOrUpdateInteractiveChart(
   existingInstance?: InteractiveChartInstance,
   config: { isBentoMode?: boolean; scales?: any } = {}
 ): InteractiveChartInstance {
-
   if (existingInstance) {
     existingInstance.destroy();
   }
 
-  // Conditionally create HTML structure based on mode
-  if (config.isBentoMode) {
-    container.innerHTML = `
-      <div class="interactive-chart-container" style="height: 100%; width: 100%;">
-        <div class="main-chart-container" style="height: 100%;">
-          <canvas id="main-chart"></canvas>
-        </div>
-      </div>
-    `;
-  } else {
-    container.innerHTML = `
-      <div class="interactive-chart-container">
-        <div class="flex justify-between items-center mb-4">
-          <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
-            <button id="primary-problems" data-view="Problems Solved" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Problems Solved</button>
-            <button id="primary-submissions" data-view="Submissions" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Submissions</button>
-          </div>
-          <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
-            <button id="secondary-language" data-view="Language" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Language</button>
-            <button id="secondary-difficulty" data-view="Difficulty" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Difficulty</button>
-            <button id="secondary-status" data-view="Status" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Status</button>
-          </div>
-        </div>
-        <div class="main-chart-container mb-4" style="height: 400px;"><canvas id="main-chart"></canvas></div>
-        <div class="navigator-container" style="height: 80px; width: 100%; min-width: 300px;"><svg id="brush-chart" width="100%" height="100%"></svg></div>
-        <div id="chart-tooltip" class="chart-tooltip"></div>
-      </div>
-    `;
+  // --- START OF CHANGES ---
+  // Safely clear the container before adding new elements
+  while (container.firstChild) {
+    container.removeChild(container.firstChild);
   }
+
+  // Conditionally create HTML structure based on mode using safe DOM methods
+  if (config.isBentoMode) {
+    const chartContainer = createElement('div', {
+      className: 'interactive-chart-container',
+      style: { height: '100%', width: '100%' },
+    });
+    const mainChartContainer = createElement('div', {
+      className: 'main-chart-container',
+      style: { height: '100%' },
+    });
+    const mainChartCanvas = createElement('canvas', { id: 'main-chart' });
+
+    mainChartContainer.appendChild(mainChartCanvas);
+    chartContainer.appendChild(mainChartContainer);
+    container.appendChild(chartContainer);
+  } else {
+    const chartContainer = createElement('div', { className: 'interactive-chart-container' });
+
+    const topBar = createElement('div', { className: 'flex justify-between items-center mb-4' });
+
+    // Primary buttons
+    const primaryButtonsContainer = createElement('div', { className: 'text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]' });
+    const btnClasses = 'whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs';
+    
+    primaryButtonsContainer.appendChild(createElement('button', { id: 'primary-problems', 'data-view': 'Problems Solved', 'data-state': 'active', className: btnClasses, textContent: 'Problems Solved' }));
+    primaryButtonsContainer.appendChild(createElement('button', { id: 'primary-submissions', 'data-view': 'Submissions', 'data-state': 'inactive', className: btnClasses, textContent: 'Submissions' }));
+
+    // Secondary buttons
+    const secondaryButtonsContainer = createElement('div', { className: 'text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]' });
+    secondaryButtonsContainer.appendChild(createElement('button', { id: 'secondary-language', 'data-view': 'Language', 'data-state': 'inactive', className: btnClasses, textContent: 'Language' }));
+    secondaryButtonsContainer.appendChild(createElement('button', { id: 'secondary-difficulty', 'data-view': 'Difficulty', 'data-state': 'active', className: btnClasses, textContent: 'Difficulty' }));
+    secondaryButtonsContainer.appendChild(createElement('button', { id: 'secondary-status', 'data-view': 'Status', 'data-state': 'inactive', className: btnClasses, textContent: 'Status' }));
+    
+    topBar.appendChild(primaryButtonsContainer);
+    topBar.appendChild(secondaryButtonsContainer);
+
+    // Main chart area
+    const mainChartContainer = createElement('div', { className: 'main-chart-container mb-4', style: { height: '400px' }});
+    mainChartContainer.appendChild(createElement('canvas', { id: 'main-chart' }));
+    
+    // Navigator area
+    const navigatorContainer = createElement('div', { className: 'navigator-container', style: { height: '80px', width: '100%', minWidth: '300px' }});
+    const brushChartSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    brushChartSvg.id = 'brush-chart';
+    brushChartSvg.setAttribute('width', '100%');
+    brushChartSvg.setAttribute('height', '100%');
+    navigatorContainer.appendChild(brushChartSvg);
+    
+    // Tooltip
+    const tooltip = createElement('div', { id: 'chart-tooltip', className: 'chart-tooltip' });
+    
+    // Assemble the chart
+    chartContainer.appendChild(topBar);
+    chartContainer.appendChild(mainChartContainer);
+    chartContainer.appendChild(navigatorContainer);
+    chartContainer.appendChild(tooltip);
+    container.appendChild(chartContainer);
+  }
+  // --- END OF CHANGES ---
 
   const style = document.createElement('style');
   style.textContent = `
@@ -497,4 +530,31 @@ export function renderOrUpdateInteractiveChart(
       if (style.parentNode) style.parentNode.removeChild(style);
     }
   };
+}
+
+function createElement<K extends keyof HTMLElementTagNameMap>(
+  tag: K,
+  options: {
+    id?: string;
+    className?: string;
+    style?: Partial<CSSStyleDeclaration>;
+    'data-view'?: string;
+    'data-state'?: string;
+    textContent?: string;
+    attributes?: Record<string, string>;
+  }
+): HTMLElementTagNameMap[K] {
+  const element = document.createElement(tag);
+  if (options.id) element.id = options.id;
+  if (options.className) element.className = options.className;
+  if (options.style) Object.assign(element.style, options.style);
+  if (options.textContent) element.textContent = options.textContent;
+  if (options['data-view']) element.dataset.view = options['data-view'];
+  if (options['data-state']) element.dataset.state = options['data-state'];
+  if (options.attributes) {
+    for (const [key, value] of Object.entries(options.attributes)) {
+      element.setAttribute(key, value);
+    }
+  }
+  return element;
 }
