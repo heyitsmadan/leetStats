@@ -352,7 +352,7 @@ function formatDateLabel(dateStr: string, aggregationLevel: 'Daily' | 'Monthly' 
   } else {
     // FIX: Safely parse 'YYYY-MM-DD' to avoid timezone issues and output 'DD-MM-YYYY'
     const [year, month, day] = dateStr.split('-').map(Number);
-    return `${String(day).padStart(2, '0')}-${String(month).padStart(2, '0')}-${year}`;
+    return `${String(day).padStart(2, '0')}/${String(month).padStart(2, '0')}/${String(year).slice(-2)}`;
   }
 }
 
@@ -368,9 +368,10 @@ function getTimeRangeCutoff(timeRange: string): Date {
 
 function getDateRangeFromLabel(label: string, level: 'Daily' | 'Monthly' | 'Yearly'): { start: Date; end: Date } {
   if (level === 'Daily') {
-    const [day, month, year] = label.split('-').map(Number);
-    const start = new Date(year, month - 1, day);
-    const end = new Date(year, month - 1, day, 23, 59, 59, 999);
+    const [day, month, shortYear] = label.split('/').map(Number);
+const year = shortYear + 2000;
+const start = new Date(year, month - 1, day);
+const end = new Date(year, month - 1, day, 23, 59, 59, 999);
     return { start, end };
   } else if (level === 'Monthly') {
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];

@@ -252,7 +252,7 @@ export function renderOrUpdateInteractiveChart(
       .tickFormat((domainValue, index) => {
         const date = domainValue as Date;
         const daysDiff = (xScale.domain()[1].getTime() - xScale.domain()[0].getTime()) / (1000 * 60 * 60 * 24);
-        if (daysDiff <= 90) return d3.timeFormat("%d-%m")(date);
+        if (daysDiff <= 90) return d3.timeFormat("%d/%m/%y")(date);
         else if (daysDiff <= 1095) return d3.timeFormat("%b %y")(date);
         else return d3.timeFormat("%Y")(date);
       });
@@ -343,14 +343,15 @@ export function renderOrUpdateInteractiveChart(
     
     let tooltipHeaderDate = tooltipData.date;
     if (currentChartData.aggregationLevel === 'Daily') {
-        const [day, month, year] = tooltipData.date.split('-').map(Number);
-        const getOrdinalSuffix = (d: number) => {
-            if (d > 3 && d < 21) return 'th';
-            switch (d % 10) { case 1: return "st"; case 2: return "nd"; case 3: return "rd"; default: return "th"; }
-        };
-        const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-        tooltipHeaderDate = `${day}${getOrdinalSuffix(day)} ${monthNames[month - 1]} ${year}`;
-    }
+    const [day, month, shortYear] = tooltipData.date.split('/').map(Number);
+    const year = shortYear + 2000;
+    const getOrdinalSuffix = (d: number) => {
+        if (d > 3 && d < 21) return 'th';
+        switch (d % 10) { case 1: return "st"; case 2: return "nd"; case 3: return "rd"; default: return "th"; }
+    };
+    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    tooltipHeaderDate = `${day}${getOrdinalSuffix(day)} ${monthNames[month - 1]} ${year}`;
+}
 
     let innerHtml = `<div class="tooltip-header">${tooltipHeaderDate}</div>`;
     if (currentFilters.primaryView === 'Problems Solved') {
