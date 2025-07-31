@@ -6,7 +6,7 @@ export class FetchLoader {
     private progressTextElement: HTMLElement | null = null;
     private progressBarFillElement: HTMLElement | null = null;
     private progressBarWrapper: HTMLElement | null = null;
-    private firstTimeMessageElement: HTMLElement | null = null; // Element for the new message
+    private firstTimeMessageElement: HTMLElement | null = null;
 
     constructor() {
         this.injectStyles();
@@ -17,8 +17,10 @@ export class FetchLoader {
      * Injects a stylesheet into the document head to handle dynamic theme switching
      * for the loader component. This is done only once.
      */
-    private injectStyles() {
-        if (document.getElementById('leetstats-loader-styles')) return;
+    private injectStyles(): void {
+        if (document.getElementById('leetstats-loader-styles')) {
+            return;
+        }
 
         const styleSheet = document.createElement('style');
         styleSheet.id = 'leetstats-loader-styles';
@@ -32,7 +34,7 @@ export class FetchLoader {
                 --loader-border: rgb(229, 229, 229);
                 --loader-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
                 --loader-progress-bg: rgb(235, 235, 235);
-                --loader-progress-fill: ${colors.status.accepted}; /* Assumes this is a theme-agnostic color like green */
+                --loader-progress-fill: ${colors.status.accepted};
             }
 
             .dark {
@@ -52,11 +54,7 @@ export class FetchLoader {
                 transition: transform 0.4s ease-in-out, background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
             }
             
-            #leetstats-loader-text {
-                color: var(--loader-text-subtle);
-                transition: color 0.3s ease;
-            }
-
+            #leetstats-loader-text,
             #leetstats-loader-first-time-message {
                 color: var(--loader-text-subtle);
                 transition: color 0.3s ease;
@@ -78,18 +76,17 @@ export class FetchLoader {
      * Helper function for pluralization.
      */
     private pluralize(count: number, singular: string, plural?: string): string {
-        const pluralForm = plural || singular + 's';
+        const pluralForm = plural || `${singular}s`;
         return `${count} ${count === 1 ? singular : pluralForm}`;
     }
 
     /**
-     * Creates the loader's DOM elements. Theming is now handled by the injected stylesheet.
+     * Creates the loader's DOM elements.
      */
-    private create() {
+    private create(): void {
         this.loaderElement = document.createElement('div');
         this.loaderElement.id = 'leetstats-loader';
         
-        // Apply styles that are NOT theme-dependent via inline styles.
         Object.assign(this.loaderElement.style, {
             position: 'fixed',
             bottom: '20px',
@@ -109,7 +106,7 @@ export class FetchLoader {
         this.progressTextElement.style.marginBottom = '10px';
 
         this.progressBarWrapper = document.createElement('div');
-        this.progressBarWrapper.id = 'leetstats-loader-progress-wrapper'; // Added ID for styling
+        this.progressBarWrapper.id = 'leetstats-loader-progress-wrapper';
         Object.assign(this.progressBarWrapper.style, {
             height: '8px',
             width: '100%',
@@ -126,32 +123,29 @@ export class FetchLoader {
             transition: 'width 0.3s ease',
         });
 
-        // Create the new message element
         this.firstTimeMessageElement = document.createElement('div');
         this.firstTimeMessageElement.id = 'leetstats-loader-first-time-message';
         this.firstTimeMessageElement.textContent = "initial load is slow; future ones are much faster";
-        // New code
-Object.assign(this.firstTimeMessageElement.style, {
-    textAlign: 'right',
-    marginTop: '8px',
-    fontSize: '11px',
-    fontStyle: 'italic',
-    display: 'none', // Initially hidden
-});
+        Object.assign(this.firstTimeMessageElement.style, {
+            textAlign: 'right',
+            marginTop: '8px',
+            fontSize: '11px',
+            fontStyle: 'italic',
+            display: 'none',
+        });
 
         this.progressBarWrapper.appendChild(this.progressBarFillElement);
         this.loaderElement.appendChild(this.progressTextElement);
         this.loaderElement.appendChild(this.progressBarWrapper);
-        this.loaderElement.appendChild(this.firstTimeMessageElement); // Add message to loader
+        this.loaderElement.appendChild(this.firstTimeMessageElement);
     }
 
     /**
      * Appends the loader to the DOM and animates it into view.
      */
-    public show() {
+    public show(): void {
         if (!this.loaderElement) return;
 
-        // Show progress bar and message
         if (this.progressBarWrapper) {
             this.progressBarWrapper.style.display = 'block';
         }
@@ -173,10 +167,10 @@ Object.assign(this.firstTimeMessageElement.style, {
     /**
      * Updates the progress text and bar width.
      * @param totalFetched The total number of all submissions fetched so far.
-     * @param acceptedFetched The total number of accepted submissions fetched so far for the progress bar.
-     * @param totalAccepted The grand total of accepted submissions for progress bar calculation.
+     * @param acceptedFetched The total number of accepted submissions fetched so far.
+     * @param totalAccepted The grand total of accepted submissions for progress calculation.
      */
-    public update(totalFetched: number, acceptedFetched: number, totalAccepted: number) {
+    public update(totalFetched: number, acceptedFetched: number, totalAccepted: number): void {
         if (!this.progressTextElement || !this.progressBarFillElement) return;
 
         this.progressTextElement.textContent = `Fetched ${this.pluralize(totalFetched, 'submission')}...`;
@@ -186,14 +180,14 @@ Object.assign(this.firstTimeMessageElement.style, {
     }
 
     /**
-     * Sets the bar to 100% and then animates the loader out of view without a final message.
+     * Sets the bar to 100% and then animates the loader out of view.
      */
-    public complete() {
+    public complete(): void {
         if (!this.progressBarFillElement || !this.loaderElement) return;
 
+        // Animate out after 1 second to let user see completion.
         setTimeout(() => {
             if (this.loaderElement) {
-                // ADD THE LINE HERE
                 if (this.firstTimeMessageElement) {
                     this.firstTimeMessageElement.style.display = 'none';
                 }
@@ -204,6 +198,7 @@ Object.assign(this.firstTimeMessageElement.style, {
 
         this.progressBarFillElement.style.width = '100%';
 
+        // Animate out after 0.5 seconds (this will run before the 1s timeout).
         setTimeout(() => {
             if (this.loaderElement) {
                 this.loaderElement.style.transform = 'translateY(200%)';
@@ -213,21 +208,18 @@ Object.assign(this.firstTimeMessageElement.style, {
     }
 
     /**
-     * Displays an error message and then hides the loader, without the progress bar.
+     * Displays an error message and then hides the loader.
      * @param errorMessage The error message to show.
      */
-    public error(errorMessage: string) {
+    public error(errorMessage: string): void {
         if (!this.progressTextElement || !this.progressBarWrapper || !this.loaderElement) return;
         
-        // Hide the first time message on error
         if (this.firstTimeMessageElement) {
             this.firstTimeMessageElement.style.display = 'none';
         }
 
         this.progressTextElement.textContent = errorMessage;
-        
         this.progressBarWrapper.style.display = 'none';
-        
         this.progressTextElement.style.marginBottom = '0';
 
         setTimeout(() => {

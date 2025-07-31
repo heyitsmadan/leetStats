@@ -4,7 +4,6 @@ import { getSubmissionSignatureStats } from '../../analysis/stats/getSubmissionS
 import { getLanguageStats } from '../../analysis/stats/getLanguageStats';
 import { getCumulativeStats } from '../../analysis/stats/getCumulativeStats';
 import { getCodingClockStats } from '../../analysis/stats/getCodingClockStats';
-import { getInteractiveChartStats } from '../../analysis/stats/getInteractiveChartStats';
 import { getSkillMatrixStats } from '../../analysis/stats/getSkillMatrixStats';
 import { getSolvedStats } from '../../analysis/stats/getSolvedStats';
 import { renderOrUpdateDoughnutChart } from '../components/DoughnutChart';

@@ -1,16 +1,18 @@
-// src/types.ts
+// =================================================================
+// RAW API & CACHE TYPES
+// =================================================================
 
-// The shape of a single submission object from the LeetCode API
+/** The shape of a single submission object from the LeetCode API. */
 export interface RawSubmission {
   id: string;
   title: string;
   titleSlug: string;
-  status: number; // You could use a string literal type here too: 'AC', 'WA', etc.
+  status: number;
   lang: string;
   timestamp: string;
 }
 
-// The shape of the API response for the submission list
+/** The shape of the API response for the submission list. */
 export interface SubmissionListResponse {
   data: {
     submissionList: {
@@ -20,56 +22,100 @@ export interface SubmissionListResponse {
   };
 }
 
-// The shape of the problem metadata object from the API and for caching
+/** The shape of the problem metadata object from the API and for caching. */
 export interface ProblemMetadata {
   slug: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
   topics: string[];
 }
 
-// src/types.ts - Update the CachedSubmissions interface
+/** The shape of the cached submissions object. */
 export interface CachedSubmissions {
   submissions: RawSubmission[];
-  latestFetchedSubmissionId: string; // Changed from latestFetchedTimestamp
+  latestFetchedSubmissionId: string;
 }
 
-
+/** The shape of the cached metadata object. */
 export interface CachedMetadata {
   [slug: string]: ProblemMetadata;
 }
 
-// --- Filter Types ---
+/** The shape of the API response for the user submission stats. */
+export interface UserSubmissionsGraphQLResponse {
+  data: {
+    matchedUser: {
+      submitStatsGlobal: {
+        acSubmissionNum: {
+          difficulty: 'All' | 'Easy' | 'Medium' | 'Hard';
+          submissions: number;
+        }[];
+      };
+    };
+  };
+}
+
+// =================================================================
+// FILTER & VIEW TYPES
+// =================================================================
+
 export type Difficulty = 'All' | 'Easy' | 'Medium' | 'Hard';
 export type TimeRange = 'All Time' | 'Last 30 Days' | 'Last 90 Days' | 'Last 365 Days';
 export type ClockView = 'HourOfDay' | 'DayOfWeek';
-export type CumulativeView = 'Daily' | 'Monthly' | 'Yearly'; // <-- ADD THIS
+export type CumulativeView = 'Daily' | 'Monthly' | 'Yearly';
+export type AggregationLevel = 'Daily' | 'Monthly' | 'Yearly';
 
-// --- Processed Data Shapes ---
+// =================================================================
+// PROCESSED DATA & SHARED TYPES
+// =================================================================
+
+/** A submission object after being processed (e.g., date string converted to Date object). */
 export interface ProcessedSubmission extends RawSubmission {
   date: Date;
   metadata?: ProblemMetadata;
 }
 
+/** The main processed data object used throughout the application. */
 export interface ProcessedData {
   submissions: ProcessedSubmission[];
   problemMap: Map<string, ProcessedSubmission[]>;
 }
 
-// For the new Cumulative Chart // <-- ADD THIS SECTION
-export interface CumulativeChartStats {
-    labels: string[];
-    datasets: {
-        label: string; // e.g., 'Total Submissions', 'Easy Solved'
-        data: number[];
-        borderColor: string;
-        fill: boolean;
-        tension: number; // For bezier curves
-    }[];
+/** Represents a single point in a time series chart. */
+export interface TimeSeriesPoint {
+  date: string;
+  value: number;
+  easy?: number;
+  medium?: number;
+  hard?: number;
 }
 
-// Add these interfaces to your existing types.ts
+/** A type for the loader controls to pass around. */
+export interface ILoader {
+  show: () => void;
+  update: (totalFetched: number, acceptedFetched: number, totalAccepted: number) => void;
+  complete: (finalMessage?: string) => void;
+  error: (errorMessage: string) => void;
+}
 
-// Add this to your existing TrophyData interface
+// =================================================================
+// CUMULATIVE CHART TYPES
+// =================================================================
+
+export interface CumulativeChartStats {
+  labels: string[];
+  datasets: {
+    label: string;
+    data: number[];
+    borderColor: string;
+    fill: boolean;
+    tension: number;
+  }[];
+}
+
+// =================================================================
+// LEGACY STATS (TROPHIES, MILESTONES, RECORDS)
+// =================================================================
+
 export interface TrophyData {
   id: string;
   title: string;
@@ -79,7 +125,7 @@ export interface TrophyData {
   icon: string;
   stat: number;
   personalNote?: string;
-  achieved: boolean; // Add this new field
+  achieved: boolean;
 }
 
 export interface MilestoneData {
@@ -93,15 +139,13 @@ export interface MilestoneData {
 
 export interface RecordData {
   name: string;
-  value?: string | number;  // Make this optional since some records use mainStat/dateStat instead
+  value?: string | number;
   subStats?: { easy: number; medium: number; hard: number };
   isHighlight?: boolean;
   chartId?: string;
-  mainStat?: string;  // Add this line
-  dateStat?: string;  // Add this line
+  mainStat?: string;
+  dateStat?: string;
 }
-
-
 
 export interface LegacyStats {
   trophies: TrophyData[];
@@ -109,46 +153,10 @@ export interface LegacyStats {
   records: RecordData[];
 }
 
-// Add these interfaces to your existing types.ts
+// =================================================================
+// INTERACTIVE CHART (MAIN BAR CHART + BRUSH)
+// =================================================================
 
-export interface SkillMatrixData {
-  topics: string[];
-  metrics: {
-    problemsSolved: { [topic: string]: number };
-    avgTries: { [topic: string]: number };
-    firstAceRate: { [topic: string]: number };
-  };
-  timeSeriesData: {
-    [topic: string]: {
-      problemsSolved: TimeSeriesPoint[];
-      avgTries: TimeSeriesPoint[];
-      firstAceRate: TimeSeriesPoint[];
-    };
-  };
-  timeRangeStart: string; 
-}
-
-export interface TimeSeriesPoint {
-  date: string;
-  value: number;
-  easy?: number;
-  medium?: number;
-  hard?: number;
-}
-
-export interface SkillMatrixOptions {
-  timeRange: 'Last 30 Days' | 'Last 90 Days' | 'Last 365 Days' | 'All Time';
-  chartView: 'Daily' | 'Monthly' | 'Yearly';
-  showDifficultySplit: boolean;
-  selectedMetric: 'problemsSolved' | 'avgTries' | 'firstAceRate'; // ✅ CHANGED: Replace acceptanceRate
-}
-
-// Add these interfaces to your existing types.ts
-
-// Add this to your existing types if not present
-export type AggregationLevel = 'Daily' | 'Monthly' | 'Yearly';
-
-// Update InteractiveChartData interface
 export interface InteractiveChartData {
   labels: string[];
   datasets: {
@@ -184,24 +192,30 @@ export interface TooltipData {
   acceptanceRate?: number;
 }
 
-// The shape of the API response for the user submission stats
-export interface UserSubmissionsGraphQLResponse {
-  data: {
-    matchedUser: {
-      submitStatsGlobal: {
-        acSubmissionNum: {
-          difficulty: 'All' | 'Easy' | 'Medium' | 'Hard';
-          submissions: number;
-        }[];
-      };
+// =================================================================
+// SKILL MATRIX
+// =================================================================
+
+export interface SkillMatrixData {
+  topics: string[];
+  metrics: {
+    problemsSolved: { [topic: string]: number };
+    avgTries: { [topic: string]: number };
+    firstAceRate: { [topic: string]: number };
+  };
+  timeSeriesData: {
+    [topic: string]: {
+      problemsSolved: TimeSeriesPoint[];
+      avgTries: TimeSeriesPoint[];
+      firstAceRate: TimeSeriesPoint[];
     };
   };
+  timeRangeStart: string;
 }
 
-// A type for the loader controls to pass around
-export interface ILoader {
-    show: () => void;
-    update: (totalFetched: number, acceptedFetched: number, totalAccepted: number) => void;
-    complete: (finalMessage?: string) => void;
-    error: (errorMessage: string) => void;
+export interface SkillMatrixOptions {
+  timeRange: 'Last 30 Days' | 'Last 90 Days' | 'Last 365 Days' | 'All Time';
+  chartView: 'Daily' | 'Monthly' | 'Yearly';
+  showDifficultySplit: boolean;
+  selectedMetric: 'problemsSolved' | 'avgTries' | 'firstAceRate';
 }

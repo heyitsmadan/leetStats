@@ -1,15 +1,18 @@
-import type { ProcessedData, LegacyStats, TrophyData, MilestoneData, RecordData, ProcessedSubmission, Difficulty, TimeRange } from '../../types';
+import type { ProcessedData, LegacyStats, TrophyData, MilestoneData, RecordData, ProcessedSubmission } from '../../types';
 
 /**
- * Main function to calculate all legacy stats.
- * REFACTOR: Sorts all submissions by date once at the top level to avoid
- * repetitive sorting in the various helper functions.
+ * Main function to calculate all legacy stats. Sorts all submissions by date
+ * once at the top level to avoid repetitive sorting in helper functions.
+ * @param processedData The main processed data object.
+ * @returns A LegacyStats object or null if no submissions exist.
  */
 export function getLegacyStats(processedData: ProcessedData): LegacyStats | null {
-  const allSubmissions = processedData.submissions;
-  if (!allSubmissions.length) return null;
+  const { submissions } = processedData;
+  if (!submissions.length) {
+    return null;
+  }
 
-  const sortedSubmissions = [...allSubmissions].sort((a, b) => a.date.getTime() - b.date.getTime());
+  const sortedSubmissions = [...submissions].sort((a, b) => a.date.getTime() - b.date.getTime());
 
   const trophies = calculateTrophies(processedData, sortedSubmissions);
   const milestones = calculateMilestones(sortedSubmissions);
@@ -18,34 +21,35 @@ export function getLegacyStats(processedData: ProcessedData): LegacyStats | null
   return { trophies, milestones, records };
 }
 
-// Helper function for pluralization (unchanged).
+/**
+ * Helper function for pluralizing words based on a count.
+ * @param count The number to check.
+ * @param singular The singular form of the word.
+ * @param plural The optional plural form of the word.
+ * @returns The formatted pluralized string.
+ */
 function pluralize(count: number, singular: string, plural?: string): string {
   const pluralForm = plural || singular + 's';
   return `${count} ${count === 1 ? singular : pluralForm}`;
 }
 
 /**
- * Calculates user trophies.
- * REFACTOR:
- * - Trophies are now sorted with achieved ones first.
- * - Unachieved trophies have improved cryptic subtitles.
- * - Unachieved trophies use a greyscale version of their real icon.
- * - Added thresholds for unlocking certain trophies.
+ * Calculates user trophies based on their submission history.
+ * Trophies are sorted with achieved ones first.
+ * @param processedData The main processed data object.
+ * @param sortedSubmissions A chronologically sorted array of submissions.
+ * @returns An array of TrophyData objects.
  */
 function calculateTrophies(processedData: ProcessedData, sortedSubmissions: ProcessedSubmission[]): TrophyData[] {
   const trophies: TrophyData[] = [];
-
-  // Define paths to your SVG assets
   const trophySvgs = {
     first_blood: 'assets/trophies/first_blood.svg',
     easy_trap: 'assets/trophies/easy_trap.svg',
     white_whale: 'assets/trophies/white_whale.svg',
     nemesis: 'assets/trophies/nemesis.svg',
     phoenix: 'assets/trophies/phoenix.svg',
-    locked: 'assets/trophies/trophy_locked.svg', // Your generic locked trophy SVG
+    locked: 'assets/trophies/trophy_locked.svg',
   };
-
-  // Subtitles for unachieved trophies, hinting at the challenge.
   const unachievedTrophySubtitles = {
     'first_blood': 'For the first taste of triumph.',
     'easy_trap': "For the 'Easy' problem that fought back the hardest.",
@@ -54,22 +58,20 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
     'phoenix': 'For the return no one saw coming.'
   };
 
-  // Use the pre-grouped `problemMap` to build problem-specific stats.
   const problemStats = new Map();
   for (const [slug, subs] of processedData.problemMap) {
     const firstAcceptedSub = subs.find(sub => sub.status === 10);
-    const acceptedCount = firstAcceptedSub ? subs.filter(sub => sub.status === 10).length : 0;
     problemStats.set(slug, {
       allSubmissions: subs,
       submissions: subs.length,
-      accepted: acceptedCount,
+      accepted: firstAcceptedSub ? subs.filter(sub => sub.status === 10).length : 0,
       firstSubmission: subs[0].date,
       firstAccepted: firstAcceptedSub?.date,
       difficulty: subs[0].metadata?.difficulty,
     });
   }
 
-  // 1. First Blood - First problem solved (No threshold)
+  // 1. First Blood
   const firstAccepted = sortedSubmissions.find(s => s.status === 10);
   if (firstAccepted) {
     trophies.push({
@@ -78,26 +80,16 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
       subtitle: 'Your very first solved problem',
       problemTitle: firstAccepted.title,
       problemSlug: firstAccepted.titleSlug,
-      icon: trophySvgs.first_blood, // <-- SVG Path
+      icon: trophySvgs.first_blood,
       stat: 1,
       personalNote: `...oh, my sweet summer child`,
       achieved: true
     });
   } else {
-    trophies.push({
-      id: 'first_blood',
-      title: 'First Blood',
-      subtitle: unachievedTrophySubtitles.first_blood,
-      problemTitle: '',
-      problemSlug: 'placeholder',
-      icon: trophySvgs.locked, // <-- Locked SVG Path
-      stat: 0,
-      personalNote: '',
-      achieved: false
-    });
+    trophies.push({ id: 'first_blood', title: 'First Blood', subtitle: unachievedTrophySubtitles.first_blood, problemTitle: '', problemSlug: 'placeholder', icon: trophySvgs.locked, stat: 0, personalNote: '', achieved: false });
   }
 
-  // 2. Easy Trap - Easy with most failed attempts (Threshold: 4)
+  // 2. Easy Trap
   let maxFailedEasy = 0;
   let trapProblem: any = null;
   for (const [slug, stats] of problemStats) {
@@ -107,7 +99,6 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
       trapProblem = { slug, title: stats.allSubmissions[0].title };
     }
   }
-
   if (trapProblem && maxFailedEasy >= 4) {
     trophies.push({
       id: 'easy_trap',
@@ -115,26 +106,16 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
       subtitle: `${pluralize(maxFailedEasy, 'failed attempt')} on an "Easy" problem`,
       problemTitle: trapProblem.title || trapProblem.slug,
       problemSlug: trapProblem.slug,
-      icon: trophySvgs.easy_trap, // <-- SVG Path
+      icon: trophySvgs.easy_trap,
       stat: maxFailedEasy,
       personalNote: `...we won't tell anybody`,
       achieved: true
     });
   } else {
-    trophies.push({
-      id: 'easy_trap',
-      title: 'Easy Trap',
-      subtitle: unachievedTrophySubtitles.easy_trap,
-      problemTitle: '',
-      problemSlug: 'placeholder',
-      icon: trophySvgs.locked, // <-- Locked SVG Path
-      stat: 0,
-      personalNote: '',
-      achieved: false
-    });
+    trophies.push({ id: 'easy_trap', title: 'Easy Trap', subtitle: unachievedTrophySubtitles.easy_trap, problemTitle: '', problemSlug: 'placeholder', icon: trophySvgs.locked, stat: 0, personalNote: '', achieved: false });
   }
 
-  // 3. White Whale - Most submissions, never solved (Threshold: 5)
+  // 3. White Whale
   let maxSubmissionsUnsolved = 0;
   let whaleProblem: any = null;
   for (const [slug, stats] of problemStats) {
@@ -143,7 +124,6 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
       whaleProblem = { slug, title: stats.allSubmissions[0].title };
     }
   }
-
   if (whaleProblem && maxSubmissionsUnsolved >= 5) {
     trophies.push({
       id: 'white_whale',
@@ -151,26 +131,16 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
       subtitle: `${pluralize(maxSubmissionsUnsolved, 'attempt')} and counting`,
       problemTitle: whaleProblem.title || whaleProblem.slug,
       problemSlug: whaleProblem.slug,
-      icon: trophySvgs.white_whale, // <-- SVG Path
+      icon: trophySvgs.white_whale,
       stat: maxSubmissionsUnsolved,
       personalNote: `...one day, Captain Ahab`,
       achieved: true
     });
   } else {
-    trophies.push({
-      id: 'white_whale',
-      title: 'White Whale',
-      subtitle: unachievedTrophySubtitles.white_whale,
-      problemTitle: '',
-      problemSlug: 'placeholder',
-      icon: trophySvgs.locked, // <-- Locked SVG Path
-      stat: 0,
-      personalNote: '',
-      achieved: false
-    });
+    trophies.push({ id: 'white_whale', title: 'White Whale', subtitle: unachievedTrophySubtitles.white_whale, problemTitle: '', problemSlug: 'placeholder', icon: trophySvgs.locked, stat: 0, personalNote: '', achieved: false });
   }
 
-  // 4. Nemesis - Eventually solved with most failed submissions (Threshold: 6)
+  // 4. Nemesis
   let maxFailedSubmissions = 0;
   let nemesisProblem: any = null;
   for (const [slug, stats] of problemStats) {
@@ -180,7 +150,6 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
       nemesisProblem = { slug, failedSubmissions, title: stats.allSubmissions[0].title };
     }
   }
-
   if (nemesisProblem && nemesisProblem.failedSubmissions >= 6) {
     trophies.push({
       id: 'nemesis',
@@ -188,26 +157,16 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
       subtitle: `Endured ${pluralize(nemesisProblem.failedSubmissions, 'failed attempt')}`,
       problemTitle: nemesisProblem.title || nemesisProblem.slug,
       problemSlug: nemesisProblem.slug,
-      icon: trophySvgs.nemesis, // <-- SVG Path
+      icon: trophySvgs.nemesis,
       stat: nemesisProblem.failedSubmissions,
       personalNote: `...there were tears`,
       achieved: true
     });
   } else {
-    trophies.push({
-      id: 'nemesis',
-      title: 'Nemesis',
-      subtitle: unachievedTrophySubtitles.nemesis,
-      problemTitle: '',
-      problemSlug: 'placeholder',
-      icon: trophySvgs.locked, // <-- Locked SVG Path
-      stat: 0,
-      personalNote: '',
-      achieved: false
-    });
+    trophies.push({ id: 'nemesis', title: 'Nemesis', subtitle: unachievedTrophySubtitles.nemesis, problemTitle: '', problemSlug: 'placeholder', icon: trophySvgs.locked, stat: 0, personalNote: '', achieved: false });
   }
 
-  // 5. The Phoenix - Biggest time gap between first submission and acceptance (Threshold: 30 days)
+  // 5. The Phoenix
   let maxTimeGap = 0;
   let phoenixProblem: any = null;
   for (const [slug, stats] of problemStats) {
@@ -219,53 +178,35 @@ function calculateTrophies(processedData: ProcessedData, sortedSubmissions: Proc
       }
     }
   }
-
   const days = Math.floor(maxTimeGap / (1000 * 60 * 60 * 24));
   if (phoenixProblem && days >= 30) {
-      trophies.push({
-        id: 'phoenix',
-        title: 'The Phoenix',
-        subtitle: `Rose from the ashes after ${pluralize(days, 'day')}`,
-        problemTitle: phoenixProblem.title || phoenixProblem.slug,
-        problemSlug: phoenixProblem.slug,
-        icon: trophySvgs.phoenix, // <-- SVG Path
-        stat: days,
-        personalNote: `...we are so back`,
-        achieved: true
-      });
-  } else {
     trophies.push({
       id: 'phoenix',
       title: 'The Phoenix',
-      subtitle: unachievedTrophySubtitles.phoenix,
-      problemTitle: '',
-      problemSlug: 'placeholder',
-      icon: trophySvgs.locked, // <-- Locked SVG Path
-      stat: 0,
-      personalNote: '',
-      achieved: false
+      subtitle: `Rose from the ashes after ${pluralize(days, 'day')}`,
+      problemTitle: phoenixProblem.title || phoenixProblem.slug,
+      problemSlug: phoenixProblem.slug,
+      icon: trophySvgs.phoenix,
+      stat: days,
+      personalNote: `...we are so back`,
+      achieved: true
     });
+  } else {
+    trophies.push({ id: 'phoenix', title: 'The Phoenix', subtitle: unachievedTrophySubtitles.phoenix, problemTitle: '', problemSlug: 'placeholder', icon: trophySvgs.locked, stat: 0, personalNote: '', achieved: false });
   }
 
-  // Sort the trophies: achieved first, then unachieved.
   trophies.sort((a, b) => Number(b.achieved) - Number(a.achieved));
-
   return trophies;
 }
 
-
-
-
-
 /**
- * Calculates user milestones.
- * REFACTOR: Uses the pre-sorted submissions array and removes the redundant final sort,
- * as milestones are generated in chronological order.
+ * Calculates user milestones based on submission counts.
+ * @param sortedSubmissions A chronologically sorted array of submissions.
+ * @returns An array of MilestoneData objects.
  */
 function calculateMilestones(sortedSubmissions: ProcessedSubmission[]): MilestoneData[] {
   const milestones: MilestoneData[] = [];
   const milestoneNumbers = [1, 10, 50, 100, 500, 1000, 2000, 3000, 4000, 5000];
-
   let totalSubmissions = 0;
   let problemsSolved = new Set<string>();
   let easyCount = 0;
@@ -274,44 +215,29 @@ function calculateMilestones(sortedSubmissions: ProcessedSubmission[]): Mileston
 
   for (const sub of sortedSubmissions) {
     totalSubmissions++;
-
     if (milestoneNumbers.includes(totalSubmissions)) {
-      milestones.push({
-        type: 'submissions',
-        milestone: totalSubmissions,
-        date: sub.date,
-        problemTitle: sub.title,
-        problemSlug: sub.titleSlug,
-        submissionId: sub.id
-      });
+      milestones.push({ type: 'submissions', milestone: totalSubmissions, date: sub.date, problemTitle: sub.title, problemSlug: sub.titleSlug, submissionId: sub.id });
     }
 
     if (sub.status === 10 && !problemsSolved.has(sub.titleSlug)) {
       problemsSolved.add(sub.titleSlug);
       const solvedCount = problemsSolved.size;
-
       if (milestoneNumbers.includes(solvedCount)) {
-        milestones.push({
-          type: 'problems_solved',
-          milestone: solvedCount,
-          date: sub.date,
-          problemTitle: sub.title,
-          problemSlug: sub.titleSlug,
-          submissionId: sub.id
-        });
+        milestones.push({ type: 'problems_solved', milestone: solvedCount, date: sub.date, problemTitle: sub.title, problemSlug: sub.titleSlug, submissionId: sub.id });
       }
 
-      if (sub.metadata?.difficulty === 'Easy') {
+      const difficulty = sub.metadata?.difficulty;
+      if (difficulty === 'Easy') {
         easyCount++;
         if (milestoneNumbers.includes(easyCount)) {
           milestones.push({ type: 'easy', milestone: easyCount, date: sub.date, problemTitle: sub.title, problemSlug: sub.titleSlug, submissionId: sub.id });
         }
-      } else if (sub.metadata?.difficulty === 'Medium') {
+      } else if (difficulty === 'Medium') {
         mediumCount++;
         if (milestoneNumbers.includes(mediumCount)) {
           milestones.push({ type: 'medium', milestone: mediumCount, date: sub.date, problemTitle: sub.title, problemSlug: sub.titleSlug, submissionId: sub.id });
         }
-      } else if (sub.metadata?.difficulty === 'Hard') {
+      } else if (difficulty === 'Hard') {
         hardCount++;
         if (milestoneNumbers.includes(hardCount)) {
           milestones.push({ type: 'hard', milestone: hardCount, date: sub.date, problemTitle: sub.title, problemSlug: sub.titleSlug, submissionId: sub.id });
@@ -319,21 +245,20 @@ function calculateMilestones(sortedSubmissions: ProcessedSubmission[]): Mileston
       }
     }
   }
-
   return milestones;
 }
 
 /**
- * Calculates user records.
- * REFACTOR: Passes the pre-sorted submissions array to its helper functions.
+ * Calculates user records like streaks, breaks, and best periods.
+ * @param processedData The main processed data object.
+ * @param sortedSubmissions A chronologically sorted array of submissions.
+ * @returns An array of RecordData objects.
  */
 function calculateRecords(processedData: ProcessedData, sortedSubmissions: any[]): RecordData[] {
   const records: RecordData[] = [];
 
   // 1. One Shot Solves
-  let firstTryEasy = 0;
-  let firstTryMedium = 0;
-  let firstTryHard = 0;
+  let firstTryEasy = 0, firstTryMedium = 0, firstTryHard = 0;
   for (const [slug, subs] of processedData.problemMap) {
     if (subs[0].status === 10) {
       const difficulty = subs[0].metadata?.difficulty;
@@ -346,15 +271,10 @@ function calculateRecords(processedData: ProcessedData, sortedSubmissions: any[]
   if (oneShotSolves > 0) {
     let totalUniqueSolved = 0;
     for (const subs of processedData.problemMap.values()) {
-        if (subs.some(s => s.status === 10)) totalUniqueSolved++;
+      if (subs.some(s => s.status === 10)) totalUniqueSolved++;
     }
     const percentage = totalUniqueSolved > 0 ? Math.round((oneShotSolves / totalUniqueSolved) * 100) : 0;
-    records.push({
-        name: 'One Shot Solves',
-        value: oneShotSolves,
-        subStats: { easy: firstTryEasy, medium: firstTryMedium, hard: firstTryHard },
-        dateStat: `~${percentage}% of solved problems`
-    });
+    records.push({ name: 'One Shot Solves', value: oneShotSolves, subStats: { easy: firstTryEasy, medium: firstTryMedium, hard: firstTryHard }, dateStat: `~${percentage}% of solved problems` });
   } else {
     records.push({ name: 'One Shot Solves', mainStat: '—', dateStat: '&nbsp;' });
   }
@@ -362,11 +282,7 @@ function calculateRecords(processedData: ProcessedData, sortedSubmissions: any[]
   // 2. Longest Streak
   const streakData = calculateLongestStreak(sortedSubmissions);
   if (streakData.length > 0) {
-    records.push({
-        name: 'Longest Streak',
-        mainStat: pluralize(streakData.length, 'day'), // This already ensures it's in days
-        dateStat: `ending on ${formatDate(streakData.endDate)}`
-    });
+    records.push({ name: 'Longest Streak', mainStat: pluralize(streakData.length, 'day'), dateStat: `ending on ${formatDate(streakData.endDate)}` });
   } else {
     records.push({ name: 'Longest Streak', mainStat: '—', dateStat: '&nbsp;' });
   }
@@ -374,11 +290,7 @@ function calculateRecords(processedData: ProcessedData, sortedSubmissions: any[]
   // 3. Longest Break
   const breakData = calculateLongestBreak(sortedSubmissions);
   if (breakData.breakInMs > 0) {
-    records.push({
-        name: 'Longest Break',
-        mainStat: formatDuration(breakData.breakInMs), // Uses the new, more detailed formatter
-        dateStat: `on ${formatDate(breakData.date)}`
-    });
+    records.push({ name: 'Longest Break', mainStat: formatDuration(breakData.breakInMs), dateStat: `on ${formatDate(breakData.date)}` });
   } else {
     records.push({ name: 'Longest Break', mainStat: '—', dateStat: '&nbsp;' });
   }
@@ -389,20 +301,15 @@ function calculateRecords(processedData: ProcessedData, sortedSubmissions: any[]
     const dateKey = sub.date.toDateString();
     dayMap.set(dateKey, (dayMap.get(dateKey) || 0) + 1);
   }
-  let busiestDay = '';
-  let maxDaySubmissions = 0;
+  let busiestDay = '', maxDaySubmissions = 0;
   for (const [date, count] of dayMap) {
     if (count > maxDaySubmissions) {
-        maxDaySubmissions = count;
-        busiestDay = date;
+      maxDaySubmissions = count;
+      busiestDay = date;
     }
   }
   if (maxDaySubmissions > 0) {
-    records.push({
-        name: 'Busiest Day',
-        mainStat: pluralize(maxDaySubmissions, 'submission'),
-        dateStat: `on ${formatDate(new Date(busiestDay))}`
-    });
+    records.push({ name: 'Busiest Day', mainStat: pluralize(maxDaySubmissions, 'submission'), dateStat: `on ${formatDate(new Date(busiestDay))}` });
   } else {
     records.push({ name: 'Busiest Day', mainStat: '—', dateStat: '&nbsp;' });
   }
@@ -410,17 +317,17 @@ function calculateRecords(processedData: ProcessedData, sortedSubmissions: any[]
   // 5-7. Best Periods
   const bestPeriods = calculateBestPeriods(sortedSubmissions);
   if (bestPeriods.bestDay.count > 0) {
-    records.push({ name: 'Best Day', mainStat: `${pluralize(bestPeriods.bestDay.count, 'problem')} solved`, dateStat: `on ${formatDate(bestPeriods.bestDay.date)}`});
+    records.push({ name: 'Best Day', mainStat: `${pluralize(bestPeriods.bestDay.count, 'problem')} solved`, dateStat: `on ${formatDate(bestPeriods.bestDay.date)}` });
   } else {
     records.push({ name: 'Best Day', mainStat: '—', dateStat: '&nbsp;' });
   }
   if (bestPeriods.bestMonth.count > 0) {
-    records.push({ name: 'Best Month', mainStat: `${pluralize(bestPeriods.bestMonth.count, 'problem')} solved`, dateStat: `in ${formatMonthYear(bestPeriods.bestMonth.date)}`});
+    records.push({ name: 'Best Month', mainStat: `${pluralize(bestPeriods.bestMonth.count, 'problem')} solved`, dateStat: `in ${formatMonthYear(bestPeriods.bestMonth.date)}` });
   } else {
     records.push({ name: 'Best Month', mainStat: '—', dateStat: '&nbsp;' });
   }
   if (bestPeriods.bestYear.count > 0) {
-    records.push({ name: 'Best Year', mainStat: `${pluralize(bestPeriods.bestYear.count, 'problem')} solved`, dateStat: `in ${bestPeriods.bestYear.date.getFullYear()}`});
+    records.push({ name: 'Best Year', mainStat: `${pluralize(bestPeriods.bestYear.count, 'problem')} solved`, dateStat: `in ${bestPeriods.bestYear.date.getFullYear()}` });
   } else {
     records.push({ name: 'Best Year', mainStat: '—', dateStat: '&nbsp;' });
   }
@@ -428,8 +335,11 @@ function calculateRecords(processedData: ProcessedData, sortedSubmissions: any[]
   return records;
 }
 
-
-// Helper function to format date as day/month/year (unchanged).
+/**
+ * Formats a date object as DD/MM/YYYY.
+ * @param date The date to format.
+ * @returns The formatted date string.
+ */
 function formatDate(date: Date): string {
   const day = date.getDate().toString().padStart(2, '0');
   const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -437,26 +347,31 @@ function formatDate(date: Date): string {
   return `${day}/${month}/${year}`;
 }
 
-// Helper function to format month/year (unchanged).
+/**
+ * Formats a date object as "Mon YYYY".
+ * @param date The date to format.
+ * @returns The formatted month and year string.
+ */
 function formatMonthYear(date: Date): string {
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
   return `${months[date.getMonth()]} ${date.getFullYear()}`;
 }
 
 /**
- * Helper to calculate longest submission streak.
- * REFACTOR: Uses the pre-sorted submissions array.
+ * Calculates the longest submission streak in days.
+ * @param sortedSubmissions A chronologically sorted array of submissions.
+ * @returns An object with the streak length and its end date.
  */
 function calculateLongestStreak(sortedSubmissions: any[]): { length: number; endDate: Date } {
-  let currentStreak = 0;
-  let maxStreak = 0;
+  if (sortedSubmissions.length === 0) {
+    return { length: 0, endDate: new Date() };
+  }
+  let currentStreak = 0, maxStreak = 0;
   let lastDate: Date | null = null;
-  let maxStreakEndDate: Date = new Date();
-  let currentStreakEndDate: Date = new Date();
+  let maxStreakEndDate = new Date(), currentStreakEndDate = new Date();
 
   for (const sub of sortedSubmissions) {
     const currentDate = new Date(sub.date.getFullYear(), sub.date.getMonth(), sub.date.getDate());
-
     if (lastDate) {
       const dayDiff = Math.floor((currentDate.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24));
       if (dayDiff === 1) {
@@ -474,7 +389,6 @@ function calculateLongestStreak(sortedSubmissions: any[]): { length: number; end
       currentStreak = 1;
       currentStreakEndDate = currentDate;
     }
-
     lastDate = currentDate;
   }
 
@@ -482,19 +396,18 @@ function calculateLongestStreak(sortedSubmissions: any[]): { length: number; end
     maxStreak = currentStreak;
     maxStreakEndDate = currentStreakEndDate;
   }
-
   return { length: maxStreak, endDate: maxStreakEndDate };
 }
 
 /**
- * Helper to calculate longest break.
- * REFACTOR: Uses the pre-sorted submissions array.
+ * Calculates the longest break between submissions.
+ * @param sortedSubmissions A chronologically sorted array of submissions.
+ * @returns An object with the break duration in milliseconds and its start date.
  */
 function calculateLongestBreak(sortedSubmissions: any[]): { breakInMs: number; date: Date } {
   if (sortedSubmissions.length < 2) {
     return { breakInMs: 0, date: new Date() };
   }
-
   let maxBreak = 0;
   let breakStartDate: Date = sortedSubmissions[0].date;
 
@@ -505,14 +418,16 @@ function calculateLongestBreak(sortedSubmissions: any[]): { breakInMs: number; d
       breakStartDate = sortedSubmissions[i - 1].date;
     }
   }
-
   return { breakInMs: maxBreak, date: breakStartDate };
 }
 
-// Helper to calculate best periods (unchanged).
+/**
+ * Calculates the best day, month, and year based on the number of unique problems solved.
+ * @param submissions An array of submission objects.
+ * @returns An object containing the best day, month, and year.
+ */
 function calculateBestPeriods(submissions: any[]) {
   const acceptedSubs = submissions.filter(sub => sub.status === 10);
-
   const dayMap = new Map<string, Set<string>>();
   const monthMap = new Map<string, Set<string>>();
   const yearMap = new Map<string, Set<string>>();
@@ -558,11 +473,13 @@ function calculateBestPeriods(submissions: any[]) {
   return { bestDay, bestMonth, bestYear };
 }
 
-// Helper function to format duration (unchanged).
+/**
+ * Formats a duration in milliseconds into a human-readable string (e.g., "1 year and 2 months").
+ * @param ms The duration in milliseconds.
+ * @returns The formatted duration string.
+ */
 function formatDuration(ms: number): string {
-  if (ms < 1000) {
-    return '0 seconds';
-  }
+  if (ms < 1000) return '0 seconds';
 
   const seconds = Math.floor(ms / 1000);
   const minutes = Math.floor(seconds / 60);
@@ -578,31 +495,19 @@ function formatDuration(ms: number): string {
     { value: seconds % 60, unit: 'second' },
   ];
 
-  // Handle months separately for better accuracy
   if (days > 30) {
-      const months = Math.floor(days / 30.44);
-      timeParts[0] = { value: Math.floor(months / 12), unit: 'year' };
-      timeParts.splice(1, 1, { value: months % 12, unit: 'month' });
-      timeParts[2] = { value: days % 30, unit: 'day' };
+    const months = Math.floor(days / 30.44);
+    timeParts[0] = { value: Math.floor(months / 12), unit: 'year' };
+    timeParts.splice(1, 1, { value: months % 12, unit: 'month' });
+    timeParts[2] = { value: days % 30, unit: 'day' };
   }
 
   const nonZeroParts = timeParts.filter(part => part.value > 0);
+  if (nonZeroParts.length === 0) return '0 seconds';
+  if (nonZeroParts[0].unit === 'second') return pluralize(nonZeroParts[0].value, 'second');
 
-  if (nonZeroParts.length === 0) {
-    return '0 seconds';
-  }
-
-  // If the largest unit is seconds, just show that.
-  if (nonZeroParts[0].unit === 'second') {
-    return pluralize(nonZeroParts[0].value, 'second');
-  }
-
-  // Take the two largest non-zero parts.
   const partsToShow = nonZeroParts.slice(0, 2);
-
-  if (partsToShow.length === 1) {
-    return pluralize(partsToShow[0].value, partsToShow[0].unit);
-  }
+  if (partsToShow.length === 1) return pluralize(partsToShow[0].value, partsToShow[0].unit);
 
   return `${pluralize(partsToShow[0].value, partsToShow[0].unit)} and ${pluralize(partsToShow[1].value, partsToShow[1].unit)}`;
 }

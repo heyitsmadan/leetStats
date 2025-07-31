@@ -26,37 +26,37 @@ export function renderOrUpdateMiniBarChart(
         backgroundColor: [
           colors.problems.easy,
           colors.problems.medium,
-          colors.problems.hard
+          colors.problems.hard,
         ],
         borderColor: [
           colors.problems.easy,
           colors.problems.medium,
-          colors.problems.hard
+          colors.problems.hard,
         ],
-        borderWidth: 1
-      }]
+        borderWidth: 1,
+      }, ],
     },
     options: {
-  responsive: true,
-  maintainAspectRatio: false,
-  plugins: {
-    legend: {
-      display: false
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false,
+        },
+        tooltip: {
+          enabled: false, // Disable tooltips
+        },
+      },
+      scales: {
+        x: {
+          display: false,
+        },
+        y: {
+          display: false,
+          beginAtZero: true,
+        },
+      },
     },
-    tooltip: {
-      enabled: false // Disable tooltips
-    }
-  },
-  scales: {
-    x: {
-      display: false
-    },
-    y: {
-      display: false,
-      beginAtZero: true
-    }
-  }
-}
   };
 
   const chart = new Chart(canvas, config);
@@ -65,6 +65,6 @@ export function renderOrUpdateMiniBarChart(
     chart,
     destroy() {
       chart.destroy();
-    }
+    },
   };
 }

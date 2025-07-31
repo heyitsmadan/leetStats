@@ -28,11 +28,15 @@ export function getSolvedStats(processedData: ProcessedData): SolvedStats {
   for (const subs of problemMap.values()) {
     const wasSolved = subs.some(s => s.status === 10);
     if (wasSolved) {
-      // All submissions for a problem have the same difficulty.
+      // All submissions for a given problem have the same difficulty.
       const difficulty = subs[0].metadata?.difficulty;
-      if (difficulty === 'Easy') easySolved++;
-      else if (difficulty === 'Medium') mediumSolved++;
-      else if (difficulty === 'Hard') hardSolved++;
+      if (difficulty === 'Easy') {
+        easySolved++;
+      } else if (difficulty === 'Medium') {
+        mediumSolved++;
+      } else if (difficulty === 'Hard') {
+        hardSolved++;
+      }
     }
   }
 
