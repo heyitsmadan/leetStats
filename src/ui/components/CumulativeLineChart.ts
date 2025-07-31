@@ -7,10 +7,14 @@ export type CumulativeLineChartInstance = Chart<'line', number[], string>;
 function getOrdinalSuffix(day: number): string {
     if (day > 3 && day < 21) return 'th';
     switch (day % 10) {
-        case 1: return "st";
-        case 2: return "nd";
-        case 3: return "rd";
-        default: return "th";
+        case 1:
+            return "st";
+        case 2:
+            return "nd";
+        case 3:
+            return "rd";
+        default:
+            return "th";
     }
 }
 
@@ -29,22 +33,76 @@ function getOrCreateTooltip(chart: Chart): HTMLElement {
         const style = document.createElement('style');
         style.textContent = `
             .chart-tooltip {
-                position: absolute; top: 0; left: 0; background: ${colors.background.section}; border: 2px solid ${colors.background.empty};
-                border-radius: 8px; padding: 12px; font-size: 13px; color: ${colors.text.primary};
-                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); z-index: 1000; width: max-content;
-                max-width: 300px; opacity: 0; pointer-events: none;
+                position: absolute;
+                top: 0;
+                left: 0;
+                background: ${colors.background.section};
+                border: 2px solid ${colors.background.empty};
+                border-radius: 8px;
+                padding: 12px;
+                font-size: 13px;
+                color: ${colors.text.primary};
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+                z-index: 1000;
+                width: max-content;
+                max-width: 300px;
+                opacity: 0;
+                pointer-events: none;
                 transition: opacity 0.2s ease, transform 0.15s ease-out;
             }
-            .tooltip-header { font-weight: 500; margin-bottom: 8px; color: ${colors.text.primary}; }
-            .tooltip-subheader { margin-bottom: 4px; font-size: 12px; color: ${colors.text.subtle}; }
-            .tooltip-subheader:last-of-type { margin-bottom: 12px; }
-            .tooltip-subheader-value { font-weight: 500; color: ${colors.text.primary}; margin-left: 6px; }
-            .tooltip-divider { border-top: 1px solid ${colors.background.secondarySection}; margin: 10px 0; }
-            .tooltip-breakdown-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
-            .tooltip-breakdown-item { display: flex; align-items: center; justify-content: space-between; font-size: 12px; gap: 16px}
-            .tooltip-breakdown-label { display: flex; align-items: center; gap: 8px; color: ${colors.text.subtle}; }
-            .tooltip-breakdown-value { font-weight: 500; color: ${colors.text.primary}; }
-            .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+            .tooltip-header { 
+                font-weight: 500; 
+                margin-bottom: 8px; 
+                color: ${colors.text.primary}; 
+            }
+            .tooltip-subheader { 
+                margin-bottom: 4px; 
+                font-size: 12px; 
+                color: ${colors.text.subtle}; 
+            }
+            .tooltip-subheader:last-of-type { 
+                margin-bottom: 12px; 
+            }
+            .tooltip-subheader-value { 
+                font-weight: 500; 
+                color: ${colors.text.primary}; 
+                margin-left: 6px; 
+            }
+            .tooltip-divider { 
+                border-top: 1px solid ${colors.background.secondarySection}; 
+                margin: 10px 0; 
+            }
+            .tooltip-breakdown-list { 
+                list-style: none; 
+                padding: 0; 
+                margin: 0; 
+                display: flex; 
+                flex-direction: column; 
+                gap: 5px; 
+            }
+            .tooltip-breakdown-item { 
+                display: flex; 
+                align-items: center; 
+                justify-content: space-between; 
+                font-size: 12px; 
+                gap: 16px
+            }
+            .tooltip-breakdown-label { 
+                display: flex; 
+                align-items: center; 
+                gap: 8px; 
+                color: ${colors.text.subtle}; 
+            }
+            .tooltip-breakdown-value { 
+                font-weight: 500; 
+                color: ${colors.text.primary}; 
+            }
+            .status-dot { 
+                display: inline-block; 
+                width: 8px; 
+                height: 8px; 
+                border-radius: 50%; 
+            }
         `;
         document.head.appendChild(style);
     }
@@ -59,7 +117,9 @@ export function renderOrUpdateCumulativeLineChart(
     config: { isInteractive?: boolean; hidePoints?: boolean, tickFontSize?: number, maxTicksLimit?: number } = { isInteractive: true }
 ): CumulativeLineChartInstance {
     const canvas = container.querySelector('canvas') as HTMLCanvasElement;
-    if (!canvas) throw new Error('Canvas element not found in the container.');
+    if (!canvas) {
+        throw new Error('Canvas element not found in the container.');
+    }
 
     const processedChartData = {
         ...chartData,
@@ -81,7 +141,9 @@ export function renderOrUpdateCumulativeLineChart(
         }
 
         const dataIndex = tooltipModel.dataPoints[0]?.dataIndex;
-        if (dataIndex === undefined) return;
+        if (dataIndex === undefined) {
+            return;
+        }
 
         const rawLabel = tooltipModel.title?.[0] || '';
         const datasets = context.chart.config.data.datasets;
@@ -96,9 +158,12 @@ export function renderOrUpdateCumulativeLineChart(
             const day = date.getDate();
             formattedDate = `${day}${getOrdinalSuffix(day)} ${date.toLocaleString('default', { month: 'long' })} ${date.getFullYear()}`;
         }
-        
-        let totalSubmissions = 0, easy = 0, medium = 0, hard = 0;
-        
+
+        let totalSubmissions = 0,
+            easy = 0,
+            medium = 0,
+            hard = 0;
+
         datasets.forEach(dataset => {
             const value = (dataset.data[dataIndex] as number) || 0;
             if (dataset.label === 'Total Submissions') totalSubmissions = value;
@@ -119,18 +184,25 @@ export function renderOrUpdateCumulativeLineChart(
         innerHtml += `</ul>`;
         tooltipEl.innerHTML = innerHtml;
 
-        // FIXED: Reverted to original transform-based positioning for animation
         const parentContainer = context.chart.canvas.parentNode as HTMLElement;
         let newLeft = tooltipModel.caretX + 15;
         let newTop = tooltipModel.caretY;
-        if (newLeft + tooltipEl.offsetWidth > parentContainer.offsetWidth) newLeft = tooltipModel.caretX - tooltipEl.offsetWidth - 15;
-        if (newTop + tooltipEl.offsetHeight > parentContainer.offsetHeight) newTop = parentContainer.offsetHeight - tooltipEl.offsetHeight;
-        if (newLeft < 0) newLeft = 0;
-        if (newTop < 0) newTop = 0;
+        if (newLeft + tooltipEl.offsetWidth > parentContainer.offsetWidth) {
+            newLeft = tooltipModel.caretX - tooltipEl.offsetWidth - 15;
+        }
+        if (newTop + tooltipEl.offsetHeight > parentContainer.offsetHeight) {
+            newTop = parentContainer.offsetHeight - tooltipEl.offsetHeight;
+        }
+        if (newLeft < 0) {
+            newLeft = 0;
+        }
+        if (newTop < 0) {
+            newTop = 0;
+        }
         tooltipEl.style.opacity = '1';
         tooltipEl.style.transform = `translate(${newLeft}px, ${newTop}px)`;
     };
-    
+
     const options: ChartOptions<'line'> = {
         responsive: true,
         maintainAspectRatio: false,
@@ -139,9 +211,9 @@ export function renderOrUpdateCumulativeLineChart(
         },
         events: config.isInteractive ? ['mousemove', 'mouseout', 'click', 'touchstart', 'touchmove'] : [],
         scales: {
-            x: { 
-                grid: { display: false }, 
-                ticks: { 
+            x: {
+                grid: { display: false },
+                ticks: {
                     color: colors.text.subtle,
                     maxTicksLimit: config.maxTicksLimit ?? (config.isInteractive ? 5 : 3),
                     font: {
@@ -162,13 +234,13 @@ export function renderOrUpdateCumulativeLineChart(
                                 return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
                         }
                     }
-                } 
+                }
             },
-            y: { 
-                beginAtZero: true, 
-                grid: { display: false }, 
-                ticks: { 
-                    color: colors.text.subtle, 
+            y: {
+                beginAtZero: true,
+                grid: { display: false },
+                ticks: {
+                    color: colors.text.subtle,
                     precision: 0,
                     font: {
                         size: config.tickFontSize,
@@ -179,16 +251,16 @@ export function renderOrUpdateCumulativeLineChart(
         },
         plugins: {
             legend: { display: false },
-            tooltip: { 
-                enabled: false, 
-                external: config.isInteractive ? handleTooltip : undefined, 
-                mode: 'index', 
-                intersect: false 
+            tooltip: {
+                enabled: false,
+                external: config.isInteractive ? handleTooltip : undefined,
+                mode: 'index',
+                intersect: false
             },
         },
-        interaction: { 
-            mode: config.isInteractive ? 'index' : 'nearest', 
-            intersect: false 
+        interaction: {
+            mode: config.isInteractive ? 'index' : 'nearest',
+            intersect: false
         },
     };
 
@@ -200,7 +272,7 @@ export function renderOrUpdateCumulativeLineChart(
 
     if (existingChart) {
         existingChart.data = chartConfig.data;
-        existingChart.options = chartConfig.options!;
+        existingChart.options = chartConfig.options !;
         existingChart.update();
         return existingChart;
     }

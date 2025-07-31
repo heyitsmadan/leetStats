@@ -1,5 +1,3 @@
-// src/analysis/stats/getCumulativeStats.ts
-
 import type { ProcessedData, Difficulty, TimeRange, CumulativeView, CumulativeChartStats } from '../../types';
 import { Chart, TimeScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler } from 'chart.js';
 import 'chartjs-adapter-date-fns';
@@ -10,7 +8,7 @@ Chart.register(TimeScale, LinearScale, PointElement, LineElement, Tooltip, Legen
 // Helper to generate a complete date range based on the view (Daily, Monthly, Yearly)
 const generateDateRange = (startDate: Date, endDate: Date, view: CumulativeView): Date[] => {
     const dates: Date[] = [];
-    let current = new Date(startDate); // Use the provided start date directly
+    let current = new Date(startDate);
 
     while (current <= endDate) {
         dates.push(new Date(current));
@@ -71,9 +69,6 @@ export function getCumulativeStats(
             break;
     }
 
-    // Filter submissions to only those relevant for the calculations
-    const relevantSubmissions = allSubmissions.filter(sub => sub.date >= chartStartDate);
-
     // Group submissions by the chosen time view
     const groupedData = new Map<string, {
         submissions: number;
@@ -103,15 +98,20 @@ export function getCumulativeStats(
 
         if (sub.status === 10 && sub.metadata) {
             switch (sub.metadata.difficulty) {
-                case 'Easy': group.easySolved.add(sub.titleSlug); break;
-                case 'Medium': group.mediumSolved.add(sub.titleSlug); break;
-                case 'Hard': group.hardSolved.add(sub.titleSlug); break;
+                case 'Easy':
+                    group.easySolved.add(sub.titleSlug);
+                    break;
+                case 'Medium':
+                    group.mediumSolved.add(sub.titleSlug);
+                    break;
+                case 'Hard':
+                    group.hardSolved.add(sub.titleSlug);
+                    break;
             }
         }
     }
 
-    // *** FIX: Normalize the start date for the range generator ***
-    // This ensures the generated dates align with the keys in groupedData.
+    // Normalize the start date for the range generator
     let normalizedChartStartDate = new Date(chartStartDate);
     if (cumulativeView === 'Monthly') {
         normalizedChartStartDate.setDate(1);
@@ -119,9 +119,9 @@ export function getCumulativeStats(
         normalizedChartStartDate.setDate(1);
         normalizedChartStartDate.setMonth(0);
     }
-    
+
     const allDatesInRange = generateDateRange(normalizedChartStartDate, chartEndDate, cumulativeView);
-    
+
     // Calculate cumulative values *before* the chart's start date to begin the lines correctly
     const submissionsBeforeStart = allSubmissions.filter(sub => sub.date < normalizedChartStartDate);
     let cumulativeSubmissions = submissionsBeforeStart.length;
@@ -153,15 +153,13 @@ export function getCumulativeStats(
         hardData.push(solvedHard.size);
     }
 
-    const datasets = [
-        {
-            label: 'Total Submissions',
-            data: totalSubmissionsData,
-            borderColor: colors.background.empty, // *** FIX: Reverted to original color ***
-            fill: false,
-            tension: 0.4,
-        }
-    ];
+    const datasets = [{
+        label: 'Total Submissions',
+        data: totalSubmissionsData,
+        borderColor: colors.background.empty,
+        fill: false,
+        tension: 0.4,
+    }];
 
     if (difficulty === 'All' || difficulty === 'Easy') {
         datasets.push({ label: 'Easy Solved', data: easyData, borderColor: colors.problems.easy, fill: false, tension: 0.4 });

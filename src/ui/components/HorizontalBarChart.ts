@@ -36,17 +36,65 @@ function getOrCreateTooltip(chart: Chart): HTMLElement {
                 pointer-events: none;
                 transition: opacity 0.2s ease, transform 0.15s ease-out;
             }
-            .tooltip-header { font-weight: 500; margin-bottom: 8px; color: ${colors.text.primary}; }
-            .tooltip-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px; }
-            .tooltip-label { color: ${colors.text.subtle}; }
-            .tooltip-value { font-weight: 500; color: ${colors.text.primary}; }
-            .tooltip-divider { border-top: 1px solid ${colors.background.secondarySection}; margin: 10px 0; }
-            .tooltip-breakdown-header { font-size: 12px; color: ${colors.text.subtle}; margin-bottom: 8px; }
-            .tooltip-breakdown-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
-            .tooltip-breakdown-item { display: flex; align-items: center; justify-content: space-between; font-size: 12px; gap: 16px}
-            .tooltip-breakdown-label { display: flex; align-items: center; gap: 8px; color: ${colors.text.subtle}; }
-            .tooltip-breakdown-value { font-weight: 500; color: ${colors.text.primary}; }
-            .status-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; }
+            .tooltip-header { 
+                font-weight: 500; 
+                margin-bottom: 8px; 
+                color: ${colors.text.primary}; 
+            }
+            .tooltip-row { 
+                display: flex; 
+                justify-content: space-between; 
+                align-items: center; 
+                margin-bottom: 6px; 
+                font-size: 12px; 
+            }
+            .tooltip-label { 
+                color: ${colors.text.subtle}; 
+            }
+            .tooltip-value { 
+                font-weight: 500; 
+                color: ${colors.text.primary}; 
+            }
+            .tooltip-divider { 
+                border-top: 1px solid ${colors.background.secondarySection}; 
+                margin: 10px 0; 
+            }
+            .tooltip-breakdown-header { 
+                font-size: 12px; 
+                color: ${colors.text.subtle}; 
+                margin-bottom: 8px; 
+            }
+            .tooltip-breakdown-list { 
+                list-style: none; 
+                padding: 0; 
+                margin: 0; 
+                display: flex; 
+                flex-direction: column; 
+                gap: 5px; 
+            }
+            .tooltip-breakdown-item { 
+                display: flex; 
+                align-items: center; 
+                justify-content: space-between; 
+                font-size: 12px; 
+                gap: 16px
+            }
+            .tooltip-breakdown-label { 
+                display: flex; 
+                align-items: center; 
+                gap: 8px; 
+                color: ${colors.text.subtle}; 
+            }
+            .tooltip-breakdown-value { 
+                font-weight: 500; 
+                color: ${colors.text.primary}; 
+            }
+            .status-dot { 
+                display: inline-block; 
+                width: 8px; 
+                height: 8px; 
+                border-radius: 50%; 
+            }
         `;
         document.head.appendChild(style);
     }
@@ -62,8 +110,10 @@ export function renderOrUpdateHorizontalBarChart(
     config: { isInteractive?: boolean } = { isInteractive: true }
 ): HorizontalBarChartInstance {
     const canvas = container.querySelector('canvas') as HTMLCanvasElement;
-    if (!canvas) throw new Error('Canvas element not found in the container.');
-    
+    if (!canvas) {
+        throw new Error('Canvas element not found in the container.');
+    }
+
     const chartData: ChartData<'bar'> = {
         labels: data.labels,
         datasets: data.datasets,
@@ -84,7 +134,9 @@ export function renderOrUpdateHorizontalBarChart(
         }
 
         const dataIndex = tooltipModel.dataPoints[0]?.dataIndex;
-        if (dataIndex === undefined) return;
+        if (dataIndex === undefined) {
+            return;
+        }
 
         const tooltipData = data.tooltipsData[dataIndex];
         const breakdown = tooltipData.solvedBreakdown;
@@ -92,7 +144,7 @@ export function renderOrUpdateHorizontalBarChart(
         let innerHtml = `<div class="tooltip-header">${tooltipData.label}</div>`;
         innerHtml += `<div class="tooltip-row"><span class="tooltip-label">Total Submissions</span><span class="tooltip-value">${tooltipData.totalSubmissions}</span></div>`;
         innerHtml += `<div class="tooltip-row"><span class="tooltip-label">Acceptance Rate</span><span class="tooltip-value">${tooltipData.acceptanceRate}</span></div>`;
-        
+
         if (filters.difficulty === 'All' && breakdown) {
             innerHtml += `<div class="tooltip-divider"></div>`;
             innerHtml += `<div class="tooltip-breakdown-header">Problems Solved</div>`;
@@ -111,73 +163,48 @@ export function renderOrUpdateHorizontalBarChart(
 
         tooltipEl.innerHTML = innerHtml;
 
-        // FIXED: Reverted to original complex transform-based positioning for animation
         const activeElement = context.tooltip.dataPoints[0]?.element as BarElement;
-        if (!activeElement) return;
-
-        const wasHidden = tooltipEl.style.opacity !== '1';
-        if (wasHidden) {
-            tooltipEl.style.visibility = 'hidden';
-            tooltipEl.style.opacity = '1';
+        if (!activeElement) {
+            return;
         }
+
         const tooltipWidth = tooltipEl.offsetWidth;
         const tooltipHeight = tooltipEl.offsetHeight;
-        if (wasHidden) {
-            tooltipEl.style.visibility = 'visible';
-            tooltipEl.style.opacity = '0';
-        }
-
         const chartContainer = context.chart.canvas.parentNode as HTMLElement;
-        const containerRect = chartContainer.getBoundingClientRect();
         const desiredOffset = 15;
-
-        let newLeft: number;
-        let newTop: number;
 
         const totalValue = context.chart.data.datasets.reduce((sum, dataset) => sum + (Number(dataset.data[dataIndex]) || 0), 0);
         const barEndPixelPosition = context.chart.scales.x.getPixelForValue(totalValue);
-        const barStartPixelPosition = context.chart.scales.x.getPixelForValue(0);
 
-        const posRight = {
-            left: barEndPixelPosition + desiredOffset,
-            top: activeElement.y - tooltipHeight / 2
-        };
+        let newLeft = barEndPixelPosition + desiredOffset;
+        let newTop = activeElement.y - tooltipHeight / 2;
 
-        const posBelow = {
-            left: barStartPixelPosition + (barEndPixelPosition - barStartPixelPosition) / 2 - tooltipWidth / 2,
-            top: activeElement.y + (activeElement as any).height / 2 + desiredOffset
-        };
+        if (newLeft + tooltipWidth > chartContainer.offsetWidth) {
+            const barStartPixelPosition = context.chart.scales.x.getPixelForValue(0);
+            const posBelow = {
+                left: barStartPixelPosition + (barEndPixelPosition - barStartPixelPosition) / 2 - tooltipWidth / 2,
+                top: activeElement.y + (activeElement as any).height / 2 + desiredOffset
+            };
+            const posAbove = {
+                left: posBelow.left,
+                top: activeElement.y - (activeElement as any).height / 2 - tooltipHeight - desiredOffset
+            };
 
-        const posAbove = {
-            left: posBelow.left,
-            top: activeElement.y - (activeElement as any).height / 2 - tooltipHeight - desiredOffset
-        };
-
-        newLeft = posRight.left;
-        newTop = posRight.top;
-
-        if (containerRect.left + newLeft + tooltipWidth > window.innerWidth) {
             newLeft = posAbove.left;
             newTop = posAbove.top;
 
-            if (containerRect.top + newTop < 0) {
+            if (newTop < 0) {
                 newLeft = posBelow.left;
                 newTop = posBelow.top;
             }
         }
 
-        if (containerRect.left + newLeft < 0) {
-            newLeft = -containerRect.left;
-        } else if (containerRect.left + newLeft + tooltipWidth > window.innerWidth) {
-            newLeft = window.innerWidth - tooltipWidth - containerRect.left;
-        }
+        if (newLeft < 0) newLeft = 0;
+        if (newTop < 0) newTop = 0;
+        if (newLeft + tooltipWidth > chartContainer.offsetWidth) newLeft = chartContainer.offsetWidth - tooltipWidth;
+        if (newTop + tooltipHeight > chartContainer.offsetHeight) newTop = chartContainer.offsetHeight - tooltipHeight;
 
-        if (containerRect.top + newTop < 0) {
-            newTop = -containerRect.top;
-        } else if (containerRect.top + newTop + tooltipHeight > window.innerHeight) {
-            newTop = window.innerHeight - tooltipHeight - containerRect.top;
-        }
-        
+
         tooltipEl.style.opacity = '1';
         tooltipEl.style.transform = `translate(${newLeft}px, ${newTop}px)`;
     };
@@ -205,8 +232,8 @@ export function renderOrUpdateHorizontalBarChart(
         scales: {
             x: {
                 stacked: true,
-                ticks: { 
-                    color: colors.text.subtle, 
+                ticks: {
+                    color: colors.text.subtle,
                     precision: 0,
                     font: {
                         size: config.isInteractive ? 12 : 16
@@ -217,7 +244,7 @@ export function renderOrUpdateHorizontalBarChart(
             },
             y: {
                 stacked: true,
-                ticks: { color: colors.text.subtle, font: { size: 12} },
+                ticks: { color: colors.text.subtle, font: { size: 12 } },
                 grid: { display: false }
             },
         },

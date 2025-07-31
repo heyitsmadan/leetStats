@@ -36,11 +36,33 @@ function getOrCreateTooltip(chart: Chart): HTMLElement {
                 pointer-events: none;
                 transition: opacity 0.2s ease, transform 0.15s ease-out;
             }
-            .tooltip-header { font-weight: 500; margin-bottom: 8px; color: ${colors.text.primary}; }
-            .tooltip-breakdown-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 5px; }
-            .tooltip-breakdown-item { display: flex; align-items: center; justify-content: space-between; font-size: 12px; gap: 16px}
-            .tooltip-breakdown-label { color: ${colors.text.subtle}; }
-            .tooltip-breakdown-value { font-weight: 500; color: ${colors.text.primary}; }
+            .tooltip-header { 
+                font-weight: 500; 
+                margin-bottom: 8px; 
+                color: ${colors.text.primary}; 
+            }
+            .tooltip-breakdown-list { 
+                list-style: none; 
+                padding: 0; 
+                margin: 0; 
+                display: flex; 
+                flex-direction: column; 
+                gap: 5px; 
+            }
+            .tooltip-breakdown-item { 
+                display: flex; 
+                align-items: center; 
+                justify-content: space-between; 
+                font-size: 12px; 
+                gap: 16px
+            }
+            .tooltip-breakdown-label { 
+                color: ${colors.text.subtle}; 
+            }
+            .tooltip-breakdown-value { 
+                font-weight: 500; 
+                color: ${colors.text.primary}; 
+            }
         `;
         document.head.appendChild(style);
     }
@@ -51,7 +73,7 @@ export function renderOrUpdateStackedBarChart(
     container: HTMLElement,
     data: any,
     existingChart?: CodingClockChartInstance,
-    config: { 
+    config: {
         isInteractive?: boolean;
         bentoOptions?: {
             maxTicksLimit?: number;
@@ -59,7 +81,9 @@ export function renderOrUpdateStackedBarChart(
     } = { isInteractive: true }
 ): CodingClockChartInstance {
     const canvas = container.querySelector('canvas') as HTMLCanvasElement;
-    if (!canvas) throw new Error('Canvas element not found in the container.');
+    if (!canvas) {
+        throw new Error('Canvas element not found in the container.');
+    }
 
     const chartData: ChartData<'bar'> = {
         labels: data.labels,
@@ -82,7 +106,9 @@ export function renderOrUpdateStackedBarChart(
         }
 
         const dataIndex = tooltipModel.dataPoints[0]?.dataIndex;
-        if (dataIndex === undefined) return;
+        if (dataIndex === undefined) {
+            return;
+        }
 
         const tooltipData = data.tooltipsData[dataIndex];
 
@@ -95,22 +121,25 @@ export function renderOrUpdateStackedBarChart(
 
         tooltipEl.innerHTML = innerHtml;
 
-        // FIXED: Reverted to original transform-based positioning for animation
         const activeElement = context.tooltip.dataPoints[0]?.element as BarElement & { width: number, x: number };
-        if (!activeElement) return;
+        if (!activeElement) {
+            return;
+        }
 
         const chartContainer = context.chart.canvas.parentNode as HTMLElement;
         const barRightEdgeX = activeElement.x + (activeElement.width / 2);
         const barLeftEdgeX = activeElement.x - (activeElement.width / 2);
         const desiredOffset = 10;
-        
+
         let newLeft = barRightEdgeX + desiredOffset;
         if (newLeft + tooltipEl.offsetWidth > chartContainer.offsetWidth) {
             newLeft = barLeftEdgeX - tooltipEl.offsetWidth - desiredOffset;
         }
 
         let newTop = tooltipModel.caretY - tooltipEl.offsetHeight / 2;
-        if (newTop < 0) newTop = 0;
+        if (newTop < 0) {
+            newTop = 0;
+        }
         if (newTop + tooltipEl.offsetHeight > chartContainer.offsetHeight) {
             newTop = chartContainer.offsetHeight - tooltipEl.offsetHeight;
         }
@@ -141,21 +170,21 @@ export function renderOrUpdateStackedBarChart(
         scales: {
             x: {
                 stacked: true,
-                ticks: { 
+                ticks: {
                     color: colors.text.subtle,
                     font: {
-                        size: config.isInteractive ? 12 : 16 // Larger font for bento
+                        size: config.isInteractive ? 12 : 16
                     }
                 },
                 grid: { display: false }
             },
             y: {
                 stacked: true,
-                ticks: { 
-                    color: colors.text.subtle, 
+                ticks: {
+                    color: colors.text.subtle,
                     precision: 0,
                     font: {
-                        size: config.isInteractive ? 12 : 16 // Larger font for bento
+                        size: config.isInteractive ? 12 : 16
                     },
                     maxTicksLimit: !config.isInteractive ? 5 : undefined
                 },
