@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Privacy Policy - leetStats</title>
+    <style>
+        :root {
+            --page-bg: rgb(26, 26, 26);
+            --container-bg: rgb(40, 40, 40);
+            --text-primary: rgb(239, 241, 244);
+            --text-secondary: rgb(175, 180, 189);
+            --accent-color: rgb(255, 183, 0);
+            --border-color: #353535;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.7;
+            background-color: var(--page-bg);
+            color: var(--text-secondary);
+            margin: 0;
+            padding: 2em;
+        }
+        .container {
+            max-width: 800px;
+            margin: 2em auto;
+            padding: 2em;
+            background-color: var(--container-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+        }
+        h1, h2 {
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 0.5em;
+            font-weight: 600;
+        }
+        h1 {
+            font-size: 2em;
+        }
+        h2 {
+            font-size: 1.5em;
+            margin-top: 2em;
+        }
+        p, li {
+            font-size: 1.1em;
+        }
+        ul {
+            padding-left: 20px;
+        }
+        code {
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-family: "SF Mono", "Fira Code", "Fira Mono", "Roboto Mono", monospace;
+            color: var(--text-primary);
+        }
+        a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .last-updated {
+            font-style: italic;
+            color: var(--text-secondary);
+            margin-bottom: 2em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Privacy Policy for leetStats</h1>
+        <p class="last-updated">Last Updated: July 31, 2025</p>
+
+        <p>
+            Thank you for using leetStats. This Privacy Policy explains what information the extension accesses and how it is handled. Your privacy is our top priority.
+        </p>
+
+        <h2>1. Philosophy: No Server, No Data Collection</h2>
+        <p>
+            leetStats operates entirely within your browser. There is <strong>no server component</strong>. We do not have a database, and we do not collect, store, or transmit any of your personal data to any external location. Everything happens on your own computer.
+        </p>
+
+        <h2>2. Information the Extension Accesses</h2>
+        <p>
+            To provide you with statistics, leetStats needs to access certain information from LeetCode. This is done through LeetCode GraphQL APIs, the same way your browser normally would.
+        </p>
+        <ul>
+            <li>
+                <strong>User Status:</strong> The extension checks if you are logged into LeetCode to activate its features. It will not function if you are logged out.
+            </li>
+            <li>
+                <strong>Submission History:</strong> When you navigate to your own profile page, the extension fetches your submission history (e.g., problem title, language, timestamp, status) via the API. It will not function on any profile page other than your own.
+            </li>
+            <li>
+                <strong>Problem Metadata:</strong> To provide details like problem difficulty and topic tags, the extension fetches metadata for the problems you have solved via the API.
+            </li>
+            <li>
+                <strong>Public Profile Avatar:</strong> To allow you to include your profile picture in the customizable shareable card, the extension reads the public URL of your avatar image directly from the profile page's content when you visit it.
+            </li>
+        </ul>
+        <p>
+            This data is fetched directly from LeetCode's servers or read from the page into your browser and is never seen by us.
+        </p>
+
+        <h2>3. How Information is Stored (Locally)</h2>
+        <p>
+            To improve performance and avoid re-fetching all your data every time you visit your profile, the extension uses your browser's local storage (<code>chrome.storage.local</code>).
+        </p>
+        <ul>
+            <li>
+                <strong>Submission & Metadata Cache:</strong> Your fetched submission history and problem metadata are saved on your computer. This data is stored under a key associated with your LeetCode username, ensuring that if you use multiple LeetCode accounts in the same browser, their data remains separate.
+            </li>
+            <li>
+                <strong>Data Isolation:</strong> This local cache is sandboxed, meaning only the leetStats extension can access it. No other website or extension can read this data.
+            </li>
+        </ul>
+        <p>
+            Clearing your browser's cache or uninstalling the extension will permanently delete this locally stored data.
+        </p>
+
+        <h2>4. Data Fetching and Server Courtesy</h2>
+        <p>
+            All requests to the LeetCode API are made directly from your browser. These requests use your browser's active LeetCode login session (via cookies) to authenticate you, exactly as if you were browsing the site yourself. The extension never has access to your password or any other personal login information.
+        </p>
+        <p>
+            To ensure we do not place an excessive load on LeetCode's servers, the extension automatically includes a small delay between API requests, making the process respectful of their infrastructure.
+        </p>
+        
+        <h2>5. Extension Permissions Explained</h2>
+        <p>
+            Our <code>manifest.json</code> requests the following permissions to function correctly:
+        </p>
+        <ul>
+            <li>
+                <code>storage</code> & <code>unlimitedStorage</code>: Required to save your submission and metadata cache locally in your browser. This makes the extension faster by avoiding re-fetching data. The <code>unlimitedStorage</code> permission specifically ensures that users with a very high number of submissions (e.g., tens of thousands) do not hit the default browser storage limit, which could otherwise prevent the extension from working correctly.
+            </li>
+            <li>
+                <code>https://leetcode.com/*</code>: Required to fetch data from the LeetCode API and to inject the "Stats" tab and its content into the LeetCode profile page.
+            </li>
+        </ul>
+
+        <h2>6. Contact Us</h2>
+        <p>
+            If you have any questions about this Privacy Policy, please feel free to open an issue on our GitHub repository.
+        </p>
+    </div>
+</body>
+</html>
