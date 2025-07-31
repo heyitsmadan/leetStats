@@ -1047,7 +1047,7 @@ export function getSmartCumulativeView(timeRange: TimeRange, processedData: Proc
         );
         const dayDifference = (lastSub.date.getTime() - firstSub.date.getTime()) / (1000 * 3600 * 24);
 
-        if (dayDifference > 365 * 2) {
+        if (dayDifference > 365 * 4) {
             return 'Yearly';
         }
         if (dayDifference > 90) {
