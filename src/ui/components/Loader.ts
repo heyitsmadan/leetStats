@@ -129,7 +129,7 @@ export class FetchLoader {
         // Create the new message element
         this.firstTimeMessageElement = document.createElement('div');
         this.firstTimeMessageElement.id = 'leetstats-loader-first-time-message';
-        this.firstTimeMessageElement.textContent = "don't worry, it takes time only the first time...";
+        this.firstTimeMessageElement.textContent = "initial load is slow; future ones are much faster";
         // New code
 Object.assign(this.firstTimeMessageElement.style, {
     textAlign: 'right',
