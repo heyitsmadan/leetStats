@@ -32,35 +32,34 @@ export function renderOrUpdateInteractiveChart(
 
   // Conditionally create HTML structure based on mode
   if (config.isBentoMode) {
-      container.innerHTML = `
-        <div class="interactive-chart-container" style="height: 100%; width: 100%;">
-          <div class="main-chart-container" style="height: 100%;">
-            <canvas id="main-chart"></canvas>
-          </div>
+    container.innerHTML = `
+      <div class="interactive-chart-container" style="height: 100%; width: 100%;">
+        <div class="main-chart-container" style="height: 100%;">
+          <canvas id="main-chart"></canvas>
         </div>
-      `;
+      </div>
+    `;
   } else {
-      container.innerHTML = `
-        <div class="interactive-chart-container">
-          <div class="flex justify-between items-center mb-4">
-            <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
-              <button id="primary-problems" data-view="Problems Solved" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Problems Solved</button>
-              <button id="primary-submissions" data-view="Submissions" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Submissions</button>
-            </div>
-            <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
-              <button id="secondary-language" data-view="Language" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Language</button>
-              <button id="secondary-difficulty" data-view="Difficulty" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Difficulty</button>
-              <button id="secondary-status" data-view="Status" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Status</button>
-            </div>
+    container.innerHTML = `
+      <div class="interactive-chart-container">
+        <div class="flex justify-between items-center mb-4">
+          <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
+            <button id="primary-problems" data-view="Problems Solved" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Problems Solved</button>
+            <button id="primary-submissions" data-view="Submissions" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Submissions</button>
           </div>
-          <div class="main-chart-container mb-4" style="height: 400px;"><canvas id="main-chart"></canvas></div>
-          <div class="navigator-container" style="height: 80px; width: 100%; min-width: 300px;"><svg id="brush-chart" width="100%" height="100%"></svg></div>
-          <div id="chart-tooltip" class="chart-tooltip"></div>
+          <div class="text-sd-muted-foreground inline-flex items-center justify-center bg-sd-muted rounded-full p-[1px]">
+            <button id="secondary-language" data-view="Language" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Language</button>
+            <button id="secondary-difficulty" data-view="Difficulty" data-state="active" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Difficulty</button>
+            <button id="secondary-status" data-view="Status" data-state="inactive" class="whitespace-nowrap disabled:pointer-events-none disabled:opacity-50 ring-offset-sd-background focus-visible:ring-sd-ring data-[state=active]:text-sd-foreground inline-flex items-center justify-center font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 data-[state=active]:shadow dark:data-[state=active]:bg-sd-accent data-[state=active]:bg-sd-popover rounded-full px-2 py-[5px] text-xs">Status</button>
+          </div>
         </div>
-      `;
+        <div class="main-chart-container mb-4" style="height: 400px;"><canvas id="main-chart"></canvas></div>
+        <div class="navigator-container" style="height: 80px; width: 100%; min-width: 300px;"><svg id="brush-chart" width="100%" height="100%"></svg></div>
+        <div id="chart-tooltip" class="chart-tooltip"></div>
+      </div>
+    `;
   }
 
-  // Add styles using colors from the theme file
   const style = document.createElement('style');
   style.textContent = `
     .interactive-chart-container { font-family: inherit; }
@@ -88,12 +87,9 @@ export function renderOrUpdateInteractiveChart(
   `;
   document.head.appendChild(style);
 
-  // Initialize state and helpers
-  // Force default view to "Problems Solved" to match the default active button.
   let currentFilters: InteractiveChartFilters = { ...initialFilters, primaryView: initialFilters.primaryView || 'Problems Solved' };
   let mainChart: Chart | null = null;
   let currentChartData: InteractiveChartData | null = null;
-  
   let resizeObserver: ResizeObserver | null = null;
   let resizeTimeout: number;
 
@@ -106,16 +102,17 @@ export function renderOrUpdateInteractiveChart(
   function initializeMainChart() {
     const canvas = container.querySelector('#main-chart') as HTMLCanvasElement;
     if (!canvas) return;
+
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
     const chartData = getInteractiveChartStats(processedData, currentFilters);
     if (!chartData) return;
 
     chartData.datasets.forEach(dataset => {
-        (dataset as any).hoverBackgroundColor = dataset.backgroundColor;
+      (dataset as any).hoverBackgroundColor = dataset.backgroundColor;
     });
 
-    // Show legend for Language, Difficulty, and Status views
     const showLegend = ['Language', 'Difficulty', 'Status'].includes(currentFilters.secondaryView);
 
     mainChart = new Chart(ctx, {
@@ -125,38 +122,60 @@ export function renderOrUpdateInteractiveChart(
         datasets: chartData.datasets.map(dataset => ({ ...dataset, maxBarThickness: 30 }))
       },
       options: {
-        responsive: true, maintainAspectRatio: false,
-        interaction: { mode: 'index', intersect: !config.isBentoMode },
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: {
+          mode: 'index',
+          intersect: !config.isBentoMode
+        },
         plugins: {
-          legend: { 
+          legend: {
             display: showLegend,
-            labels: { boxWidth: 12, padding: 15, font: { size: 12 }, color: colors.text.subtle } 
+            labels: {
+              boxWidth: 12,
+              padding: 15,
+              font: { size: 12 },
+              color: colors.text.subtle
+            }
           },
-          tooltip: { enabled: false, external: config.isBentoMode ? undefined : handleTooltip }
+          tooltip: {
+            enabled: false,
+            external: config.isBentoMode ? undefined : handleTooltip
+          }
         },
         scales: {
           x: {
-            stacked: true, grid: { display: false },
-            ticks: { 
-              color: colors.text.subtle, 
-              maxTicksLimit: config.scales?.x?.ticks?.maxTicksLimit ?? (config.isBentoMode ? 8 : 12), 
-              maxRotation: config.scales?.x?.ticks?.maxRotation ?? (config.isBentoMode ? 0 : 45), 
-              minRotation: config.scales?.x?.ticks?.minRotation ?? 0, 
-              font: { size: config.isBentoMode ? 16 : 12 } 
+            stacked: true,
+            grid: { display: false },
+            ticks: {
+              color: colors.text.subtle,
+              maxTicksLimit: config.scales?.x?.ticks?.maxTicksLimit ?? (config.isBentoMode ? 8 : 12),
+              maxRotation: config.scales?.x?.ticks?.maxRotation ?? (config.isBentoMode ? 0 : 45),
+              minRotation: config.scales?.x?.ticks?.minRotation ?? 0,
+              font: { size: config.isBentoMode ? 16 : 12 }
             }
           },
           y: {
-            stacked: true, beginAtZero: true, grid: { display: false },
-            ticks: { 
-                color: colors.text.subtle, 
-                precision: 0, 
-                font: { size: config.isBentoMode ? 16 : 12 },
-                maxTicksLimit: config.isBentoMode ? 5 : undefined
+            stacked: true,
+            beginAtZero: true,
+            grid: { display: false },
+            ticks: {
+              color: colors.text.subtle,
+              precision: 0,
+              font: { size: config.isBentoMode ? 16 : 12 },
+              maxTicksLimit: config.isBentoMode ? 5 : undefined
             }
           }
         },
-        elements: { bar: { borderRadius: 4, borderSkipped: 'bottom' } },
-        animation: { duration: config.isBentoMode ? 0 : 500 }
+        elements: {
+          bar: {
+            borderRadius: 4,
+            borderSkipped: 'bottom'
+          }
+        },
+        animation: {
+          duration: config.isBentoMode ? 0 : 500
+        }
       }
     });
   }
@@ -164,13 +183,16 @@ export function renderOrUpdateInteractiveChart(
   function setupResizeObserver() {
     const chartContainer = container.querySelector('.main-chart-container');
     if (!chartContainer) return;
+
     resizeObserver = new ResizeObserver(entries => {
-        if (entries && entries.length > 0) {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = window.setTimeout(() => {
-                if (entries[0].contentRect.width > 0) initializeBrushChart();
-            }, 150);
-        }
+      if (entries && entries.length > 0) {
+        clearTimeout(resizeTimeout);
+        resizeTimeout = window.setTimeout(() => {
+          if (entries[0].contentRect.width > 0) {
+            initializeBrushChart();
+          }
+        }, 150);
+      }
     });
     resizeObserver.observe(chartContainer);
   }
@@ -181,11 +203,11 @@ export function renderOrUpdateInteractiveChart(
 
     const svg = d3.select(container.querySelector('#brush-chart'));
     const margin = { top: 10, right: 20, bottom: 25, left: 20 };
-    
+
     const chartContainerEl = container.querySelector('.main-chart-container') as HTMLElement;
     if (!chartContainerEl) return;
-    const containerWidth = chartContainerEl.offsetWidth;
 
+    const containerWidth = chartContainerEl.offsetWidth;
     const width = containerWidth - margin.left - margin.right;
     const height = 80 - margin.top - margin.bottom;
 
@@ -194,17 +216,14 @@ export function renderOrUpdateInteractiveChart(
 
     const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
     const defs = g.append("defs");
-    
+
     defs.append("clipPath").attr("id", "navigator-clip").append("rect").attr("width", width).attr("height", height);
     const selectedClip = defs.append("clipPath").attr("id", "selected-area-clip").append("rect").attr("x", 0).attr("y", 0).attr("width", width).attr("height", height);
     const dimmedClip = defs.append("clipPath").attr("id", "dimmed-area-clip");
     dimmedClip.append("rect").attr("class", "dim-left-rect").attr("x", 0).attr("y", 0).attr("width", 0).attr("height", height);
     dimmedClip.append("rect").attr("class", "dim-right-rect").attr("x", width).attr("y", 0).attr("width", 0).attr("height", height);
 
-    const xScale = d3.scaleTime()
-      .domain([brushData.fullTimeRange.start, brushData.fullTimeRange.end])
-      .range([0, width]);
-
+    const xScale = d3.scaleTime().domain([brushData.fullTimeRange.start, brushData.fullTimeRange.end]).range([0, width]);
     const yScale = d3.scaleLinear().domain([0, d3.max(brushData.data) as number]).range([height, 0]);
 
     const area = d3.area<any>()
@@ -223,28 +242,28 @@ export function renderOrUpdateInteractiveChart(
     brush(brushG);
 
     setTimeout(() => {
-        const [minDate, originalMaxDate] = xScale.domain();
-        const today = new Date();
-        const maxDate = new Date(Math.max(originalMaxDate.getTime(), today.getTime()));
-        if (!minDate || !maxDate) {
-            brushG.call(brush.move, [0, width]);
-            selectedClip.attr("x", 0).attr("width", width);
-            dimmedClip.select(".dim-left-rect").attr("width", 0);
-            dimmedClip.select(".dim-right-rect").attr("width", 0);
-            return;
-        }
-        const twelveMonthsAgo = new Date(maxDate);
-        twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
-        const initialStartDate = new Date(Math.max(twelveMonthsAgo.getTime(), minDate.getTime()));
-        const initialEndDate = maxDate;
-        const initialX0 = xScale(initialStartDate);
-        const initialX1 = xScale(initialEndDate);
-        brushG.call(brush.move, [initialX0, initialX1]);
-        selectedClip.attr("x", initialX0).attr("width", initialX1 - initialX0);
-        dimmedClip.select(".dim-left-rect").attr("x", 0).attr("width", initialX0);
-        dimmedClip.select(".dim-right-rect").attr("x", initialX1).attr("width", width - initialX1);
-        currentFilters.brushWindow = [initialStartDate, initialEndDate];
-        updateMainChart();
+      const [minDate, originalMaxDate] = xScale.domain();
+      const today = new Date();
+      const maxDate = new Date(Math.max(originalMaxDate.getTime(), today.getTime()));
+      if (!minDate || !maxDate) {
+        brushG.call(brush.move, [0, width]);
+        selectedClip.attr("x", 0).attr("width", width);
+        dimmedClip.select(".dim-left-rect").attr("width", 0);
+        dimmedClip.select(".dim-right-rect").attr("width", 0);
+        return;
+      }
+      const twelveMonthsAgo = new Date(maxDate);
+      twelveMonthsAgo.setMonth(twelveMonthsAgo.getMonth() - 12);
+      const initialStartDate = new Date(Math.max(twelveMonthsAgo.getTime(), minDate.getTime()));
+      const initialEndDate = maxDate;
+      const initialX0 = xScale(initialStartDate);
+      const initialX1 = xScale(initialEndDate);
+      brushG.call(brush.move, [initialX0, initialX1]);
+      selectedClip.attr("x", initialX0).attr("width", initialX1 - initialX0);
+      dimmedClip.select(".dim-left-rect").attr("x", 0).attr("width", initialX0);
+      dimmedClip.select(".dim-right-rect").attr("x", initialX1).attr("width", width - initialX1);
+      currentFilters.brushWindow = [initialStartDate, initialEndDate];
+      updateMainChart();
     }, 0);
 
     const xAxis = d3.axisBottom(xScale)
@@ -253,8 +272,8 @@ export function renderOrUpdateInteractiveChart(
         const date = domainValue as Date;
         const daysDiff = (xScale.domain()[1].getTime() - xScale.domain()[0].getTime()) / (1000 * 60 * 60 * 24);
         if (daysDiff <= 90) return d3.timeFormat("%d/%m/%y")(date);
-        else if (daysDiff <= 1095) return d3.timeFormat("%b %y")(date);
-        else return d3.timeFormat("%Y")(date);
+        if (daysDiff <= 1095) return d3.timeFormat("%b %y")(date);
+        return d3.timeFormat("%Y")(date);
       });
 
     g.append("g").attr("class", "axis").attr("transform", `translate(0,${height})`).call(xAxis);
@@ -278,18 +297,17 @@ export function renderOrUpdateInteractiveChart(
     if (!mainChart) return;
     currentChartData = getInteractiveChartStats(processedData, currentFilters);
     if (!currentChartData) {
-        mainChart.data.labels = [];
-        mainChart.data.datasets = [];
-        mainChart.update('none');
-        return;
+      mainChart.data.labels = [];
+      mainChart.data.datasets = [];
+      mainChart.update('none');
+      return;
     };
 
     mainChart.data.labels = currentChartData.labels;
     mainChart.data.datasets = currentChartData.datasets;
     if (mainChart.options.plugins?.legend) {
-        // Update legend visibility when filters change
-        const shouldShowLegend =  ['Language', 'Difficulty', 'Status'].includes(currentFilters.secondaryView);
-        mainChart.options.plugins.legend.display = shouldShowLegend;
+      const shouldShowLegend = ['Language', 'Difficulty', 'Status'].includes(currentFilters.secondaryView);
+      mainChart.options.plugins.legend.display = shouldShowLegend;
     }
     mainChart.update('none');
   }
@@ -322,11 +340,11 @@ export function renderOrUpdateInteractiveChart(
     });
   }
 
- function handleTooltip(context: any) {
+  function handleTooltip(context: any) {
     const tooltipEl = container.querySelector('#chart-tooltip') as HTMLElement;
     if (!tooltipEl) return;
-    const tooltipModel = context.tooltip;
 
+    const tooltipModel = context.tooltip;
     if (tooltipModel.opacity === 0) {
       tooltipEl.style.opacity = '0';
       tooltipEl.style.pointerEvents = 'none';
@@ -335,23 +353,28 @@ export function renderOrUpdateInteractiveChart(
 
     const dataIndex = tooltipModel.dataPoints[0]?.dataIndex;
     const label = mainChart?.data.labels?.[dataIndex] as string;
-    
+
     if (dataIndex === undefined || !label || !currentChartData) return;
 
     const tooltipData = getTooltipData(processedData, label, currentFilters, currentChartData.aggregationLevel);
     if (!tooltipData) return;
-    
+
     let tooltipHeaderDate = tooltipData.date;
     if (currentChartData.aggregationLevel === 'Daily') {
-    const [day, month, shortYear] = tooltipData.date.split('/').map(Number);
-    const year = shortYear + 2000;
-    const getOrdinalSuffix = (d: number) => {
+      const [day, month, shortYear] = tooltipData.date.split('/').map(Number);
+      const year = shortYear + 2000;
+      const getOrdinalSuffix = (d: number) => {
         if (d > 3 && d < 21) return 'th';
-        switch (d % 10) { case 1: return "st"; case 2: return "nd"; case 3: return "rd"; default: return "th"; }
-    };
-    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-    tooltipHeaderDate = `${day}${getOrdinalSuffix(day)} ${monthNames[month - 1]} ${year}`;
-}
+        switch (d % 10) {
+          case 1: return "st";
+          case 2: return "nd";
+          case 3: return "rd";
+          default: return "th";
+        }
+      };
+      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      tooltipHeaderDate = `${day}${getOrdinalSuffix(day)} ${monthNames[month - 1]} ${year}`;
+    }
 
     let innerHtml = `<div class="tooltip-header">${tooltipHeaderDate}</div>`;
     if (currentFilters.primaryView === 'Problems Solved') {
@@ -359,6 +382,7 @@ export function renderOrUpdateInteractiveChart(
     } else {
       innerHtml += `<div class="tooltip-subheader">Submissions: <span class="tooltip-subheader-value">${tooltipData.totalSubmissions}</span></div>`;
     }
+
     const hasBreakdown = Object.keys(tooltipData.breakdown).length > 0 || tooltipData.acceptanceRate !== undefined;
     if (hasBreakdown) {
       innerHtml += `<div class="tooltip-divider"></div><ul class="tooltip-breakdown-list">`;
@@ -382,15 +406,15 @@ export function renderOrUpdateInteractiveChart(
       innerHtml += `</ul>`;
     }
     tooltipEl.innerHTML = innerHtml;
-    
+
     const position = context.chart.canvas.getBoundingClientRect();
     const tooltipWidth = tooltipEl.offsetWidth;
     const chartWidth = position.width;
     const activeElement = context.tooltip.dataPoints[0]?.element;
 
     if (!activeElement) {
-        tooltipEl.style.opacity = '0';
-        return;
+      tooltipEl.style.opacity = '0';
+      return;
     }
 
     const barHalfWidth = activeElement.width / 2;
@@ -398,8 +422,9 @@ export function renderOrUpdateInteractiveChart(
     const barLeftEdgeX = activeElement.x - barHalfWidth;
     const desiredOffset = 10;
     let newLeft = barRightEdgeX + desiredOffset;
+
     if (newLeft + tooltipWidth > chartWidth) {
-        newLeft = barLeftEdgeX - tooltipWidth - desiredOffset;
+      newLeft = barLeftEdgeX - tooltipWidth - desiredOffset;
     }
 
     tooltipEl.style.opacity = '1';
