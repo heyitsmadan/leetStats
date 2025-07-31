@@ -2,9 +2,10 @@
   "manifest_version": 3,
   "name": "leetStats",
   "version": "1.0",
-  "description": "Fetches, caches, and analyzes LeetCode submission history using Vite and TS.",
+  "description": "Unlock powerful insights into your LeetCode journey. Visualize your progress with advanced analytics and showcase your stats with a custom, shareable card.",
   "permissions": [
-    "storage"
+    "storage",
+    "unlimitedStorage"
   ],
   "host_permissions": [
     "https://leetcode.com/*"
