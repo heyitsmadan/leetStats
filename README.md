@@ -11,7 +11,7 @@
 ---
 
 <div align="center">
-  <img alt="leetStats Shareable Card" src="https://github.com/user-attachments/assets/31f687d1-7f4c-4dae-8cd1-ef98b5bf8557" />
+  <img alt="leetStats Shareable Card" src="https://github.com/user-attachments/assets/b6653ab7-1cd3-4691-a39b-5a33a8b26b4e" />
 </div>
 
 <p align="center">
@@ -21,16 +21,24 @@
   <a href="https://addons.mozilla.org/en-US/firefox/addon/YOUR_ADDON_ID/">
     <img src="https://img.shields.io/badge/Firefox_Add--ons-v1.0.0-orange?style=for-the-badge&logo=firefox-browser&logoColor=white" alt="Firefox Add-ons">
   </a>
+  <a href="https://microsoftedge.microsoft.com/addons/detail/YOUR_EDGE_ID">
+    <img src="https://img.shields.io/badge/Edge_Add--ons-v1.0.0-blue?style=for-the-badge&logo=microsoft-edge&logoColor=white" alt="Edge Add-ons">
+  </a>
+  <a href="https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID">
+    <img src="https://img.shields.io/badge/Available_for_Brave-v1.0.0-orange?style=for-the-badge&logo=brave&logoColor=white" alt="Available for Brave">
+  </a>
+  <a href="https://addons.opera.com/en/extensions/details/YOUR_OPERA_ID/">
+    <img src="https://img.shields.io/badge/Opera_Addons-v1.0.0-red?style=for-the-badge&logo=opera&logoColor=white" alt="Opera Addons">
+  </a>
   <br />
   <img src="https://img.shields.io/github/license/heyitsmadan/leetStats?style=for-the-badge" alt="License">
-  <img src="https://img.shields.io/github/stars/heyitsmadan/leetStats?style=for-the-badge&logo=github" alt="Stars">
 </p>
 
 ---
 
 ## 🚀 What is leetStats?
 
-**leetStats** is a browser extension that adds a powerful "Stats" tab directly to your [LeetCode](https://leetcode.com/) profile. It transforms your public submission data into a beautiful, interactive dashboard with insightful analytics.
+**leetStats** is a browser extension that adds a powerful "Stats" tab directly to your [LeetCode](https://leetcode.com/) profile. It transforms your submission data into a beautiful, interactive dashboard with insightful analytics.
 
 ---
 
@@ -54,8 +62,8 @@
 | 🏆 **Milestones & Trophies** | A timeline of your key achievements and fun, relatable trophies for your coding journey. |
 | 📈 **In-Depth Analytics**    | Visualize your growth, discover your most productive times, and analyze submission verdicts. |
 | 🧠 **Skills Analysis**       | Granular topic-wise tracking of solved problems, average attempts, and more. |
-| 🖼️ **Custom Share Card**     | Generate a beautiful, bento-style card showcasing your favorite stats. |
-| 🔒 **Privacy-Focused**       | 100% local. No data ever leaves your browser. [Read Privacy Policy](#). |
+| 🖼️ **Custom Shareable Card** | Generate a beautiful, bento-style card showcasing your favorite stats. |
+| 🔒 **Privacy-Focused**       | 100% local. No data ever leaves your browser. [Read Privacy Policy](https://heyitsmadan.github.io/leetStats/privacy.html). |
 
 ---
 
@@ -102,7 +110,9 @@ Install the latest stable version:
 
 - [Chrome Web Store](https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID)
 - [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/YOUR_ADDON_ID/)
-- Also works on Edge, Brave, Opera
+- [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/YOUR_EDGE_ID)
+- [Brave Web Store](https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID)
+- [Opera Addons](https://addons.opera.com/en/extensions/details/YOUR_OPERA_ID/)
 
 ### 🧑‍💻 From Source (Developers)
 
@@ -115,18 +125,20 @@ npm run build
 
 Then load the extension manually:
 
-- **Chrome/Edge**: Go to `chrome://extensions`, enable "Developer mode", and click **Load unpacked** → select the `dist/` folder.
+- **Chrome / Brave**: Go to `chrome://extensions`, enable "Developer mode", and click **Load unpacked** → select the `dist/` folder.
+- **Edge**: Go to `edge://extensions`, enable "Developer mode", and click **Load unpacked** → select the `dist/` folder.
 - **Firefox**: Go to `about:debugging`, click **This Firefox**, then **Load Temporary Add-on** → select `dist/manifest.json`.
+- **Opera**: Go to `opera://extensions`, enable "Developer Mode", then click **Load unpacked extension** and select the `dist/` folder.
 
 ---
 
 ## 💡 How to Use
 
-1. Install the extension.
+1. Install the extension from your preferred store or from source.
 2. Log into your LeetCode account.
-3. Go to your profile page.
-4. Click the new **"Stats"** tab next to "Discuss".
-5. On the first visit, data is fetched and cached locally for faster subsequent loads.
+3. Navigate to your profile page.
+4. The extension will fetch and cache your submission history the first time you open it.
+5. Click the new **"Stats"** tab next to "Discuss" to explore your insights.
 
 ---
 
