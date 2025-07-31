@@ -79,24 +79,71 @@ export function renderProgressRing(container: HTMLElement, data: SolvedStats): v
   const hardPath = describeArc(centerX, centerY, radius, currentAngle - overlap, currentAngle + hardAngle);
 
   // The SVG will fill its container, and preserveAspectRatio will scale it without distortion.
-  container.innerHTML = `
-    <svg viewBox="0 0 ${viewBoxWidth} ${viewBoxHeight}" preserveAspectRatio="xMidYMid meet" style="width: 100%; height: 100%; max-width: 250px; margin: auto;">
-      <defs>
-        <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-          <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="rgba(0,0,0,0.2)" />
-        </filter>
-      </defs>
-      
-      <path d="${describeArc(centerX, centerY, radius, startAngle, startAngle + totalAngle)}" fill="none" stroke="${colors.background.secondarySection}" stroke-width="${strokeWidth}" />
+  // Clear the container and define SVG namespace
+  while (container.firstChild) {
+    container.removeChild(container.firstChild);
+  }
+  const svgNS = "http://www.w3.org/2000/svg";
 
-      <path d="${hardPath}" fill="none" stroke="${colors.problems.hard}" stroke-width="${strokeWidth}" stroke-linecap="round" filter="url(#shadow)" />
-      <path d="${mediumPath}" fill="none" stroke="${colors.problems.medium}" stroke-width="${strokeWidth}" stroke-linecap="round" filter="url(#shadow)" />
-      <path d="${easyPath}" fill="none" stroke="${colors.problems.easy}" stroke-width="${strokeWidth}" stroke-linecap="round" filter="url(#shadow)" />
-      
-      <text x="${centerX}" y="${centerY}" fill="${colors.text.primary}" text-anchor="middle" dominant-baseline="middle" style="font-size: 2rem; font-weight: 600;">${totalSolved}</text>
-      <text x="${centerX}" y="${centerY + 28}" fill="${colors.text.primary}" text-anchor="middle" dominant-baseline="middle" style="color: #9ca3af; font-size: 0.9rem;">${"solved"}</text>
-      
-      <text x="${centerX}" y="${viewBoxHeight - 10}" fill="${colors.text.primary}" text-anchor="middle" style="font-size: 1rem;">${totalSubmissions} submissions</text>
-    </svg>
-  `;
+  // Create SVG element
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${viewBoxWidth} ${viewBoxHeight}`);
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  svg.setAttribute('style', 'width: 100%; height: 100%; max-width: 250px; margin: auto;');
+
+  // Create filter definition
+  const defs = document.createElementNS(svgNS, 'defs');
+  const filter = document.createElementNS(svgNS, 'filter');
+  filter.setAttribute('id', 'shadow');
+  ['x', 'y'].forEach(attr => filter.setAttribute(attr, '-50%'));
+  ['width', 'height'].forEach(attr => filter.setAttribute(attr, '200%'));
+  const feDropShadow = document.createElementNS(svgNS, 'feDropShadow');
+  feDropShadow.setAttribute('dx', '0');
+  feDropShadow.setAttribute('dy', '2');
+  feDropShadow.setAttribute('stdDeviation', '4');
+  feDropShadow.setAttribute('flood-color', 'rgba(0,0,0,0.2)');
+  filter.appendChild(feDropShadow);
+  defs.appendChild(filter);
+  svg.appendChild(defs);
+
+  // Helper to create path elements
+  const createPath = (d: string, stroke: string, hasFilter: boolean) => {
+    const path = document.createElementNS(svgNS, 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', stroke);
+    path.setAttribute('stroke-width', String(strokeWidth));
+    if (hasFilter) {
+      path.setAttribute('stroke-linecap', 'round');
+      path.setAttribute('filter', 'url(#shadow)');
+    }
+    return path;
+  };
+  
+  // Append paths
+  svg.appendChild(createPath(describeArc(centerX, centerY, radius, startAngle, startAngle + totalAngle), colors.background.secondarySection, false));
+  svg.appendChild(createPath(hardPath, colors.problems.hard, true));
+  svg.appendChild(createPath(mediumPath, colors.problems.medium, true));
+  svg.appendChild(createPath(easyPath, colors.problems.easy, true));
+
+  // Helper to create text elements
+  const createText = (y: number, content: string, style: string, baseline: boolean = true) => {
+    const textEl = document.createElementNS(svgNS, 'text');
+    textEl.setAttribute('x', String(centerX));
+    textEl.setAttribute('y', String(y));
+    textEl.setAttribute('fill', colors.text.primary);
+    textEl.setAttribute('text-anchor', 'middle');
+    if (baseline) textEl.setAttribute('dominant-baseline', 'middle');
+    textEl.setAttribute('style', style);
+    textEl.textContent = content;
+    return textEl;
+  };
+
+  // Append text
+  svg.appendChild(createText(centerY, String(totalSolved), 'font-size: 2rem; font-weight: 600;'));
+  svg.appendChild(createText(centerY + 28, 'solved', 'color: #9ca3af; font-size: 0.9rem;'));
+  svg.appendChild(createText(viewBoxHeight - 10, `${totalSubmissions} submissions`, 'font-size: 1rem;', false));
+
+  // Add the completed SVG to the container
+  container.appendChild(svg);
 }

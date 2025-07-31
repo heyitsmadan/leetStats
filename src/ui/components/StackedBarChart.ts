@@ -112,14 +112,44 @@ export function renderOrUpdateStackedBarChart(
 
         const tooltipData = data.tooltipsData[dataIndex];
 
-        let innerHtml = `<div class="tooltip-header">${tooltipData.label}</div>`;
-        innerHtml += `<ul class="tooltip-breakdown-list">`;
-        innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label">Submissions</span><span class="tooltip-breakdown-value">${tooltipData.total}</span></li>`;
-        innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label">Accepted</span><span class="tooltip-breakdown-value">${tooltipData.accepted}</span></li>`;
-        innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label">Acceptance Rate</span><span class="tooltip-breakdown-value">${tooltipData.rate}</span></li>`;
-        innerHtml += `</ul>`;
+        // Clear previous tooltip content safely
+        while (tooltipEl.firstChild) {
+            tooltipEl.removeChild(tooltipEl.firstChild);
+        }
 
-        tooltipEl.innerHTML = innerHtml;
+        // Header
+        const header = document.createElement('div');
+        header.className = 'tooltip-header';
+        header.textContent = tooltipData.label;
+        tooltipEl.appendChild(header);
+
+        // Breakdown List
+        const list = document.createElement('ul');
+        list.className = 'tooltip-breakdown-list';
+
+        // Helper to create a list item
+        const createItem = (labelText: string, valueText: string | number) => {
+            const item = document.createElement('li');
+            item.className = 'tooltip-breakdown-item';
+            
+            const label = document.createElement('span');
+            label.className = 'tooltip-breakdown-label';
+            label.textContent = labelText;
+
+            const value = document.createElement('span');
+            value.className = 'tooltip-breakdown-value';
+            value.textContent = String(valueText);
+
+            item.appendChild(label);
+            item.appendChild(value);
+            return item;
+        };
+
+        list.appendChild(createItem('Submissions', tooltipData.total));
+        list.appendChild(createItem('Accepted', tooltipData.accepted));
+        list.appendChild(createItem('Acceptance Rate', tooltipData.rate));
+        
+        tooltipEl.appendChild(list);
 
         const activeElement = context.tooltip.dataPoints[0]?.element as BarElement & { width: number, x: number };
         if (!activeElement) {

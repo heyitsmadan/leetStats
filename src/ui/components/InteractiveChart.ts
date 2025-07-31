@@ -376,36 +376,84 @@ export function renderOrUpdateInteractiveChart(
       tooltipHeaderDate = `${day}${getOrdinalSuffix(day)} ${monthNames[month - 1]} ${year}`;
     }
 
-    let innerHtml = `<div class="tooltip-header">${tooltipHeaderDate}</div>`;
-    if (currentFilters.primaryView === 'Problems Solved') {
-      innerHtml += `<div class="tooltip-subheader">Problems Solved: <span class="tooltip-subheader-value">${tooltipData.problemsSolved}</span></div>`;
-    } else {
-      innerHtml += `<div class="tooltip-subheader">Submissions: <span class="tooltip-subheader-value">${tooltipData.totalSubmissions}</span></div>`;
+    // Clear previous tooltip content safely
+    while (tooltipEl.firstChild) {
+        tooltipEl.removeChild(tooltipEl.firstChild);
     }
 
+    const createText = (text: string) => document.createTextNode(text);
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'tooltip-header';
+    header.textContent = tooltipHeaderDate;
+    tooltipEl.appendChild(header);
+
+    // Subheader
+    const subheader = document.createElement('div');
+    subheader.className = 'tooltip-subheader';
+    const subheaderValue = document.createElement('span');
+    subheaderValue.className = 'tooltip-subheader-value';
+
+    if (currentFilters.primaryView === 'Problems Solved') {
+        subheader.appendChild(createText('Problems Solved: '));
+        subheaderValue.textContent = String(tooltipData.problemsSolved);
+    } else {
+        subheader.appendChild(createText('Submissions: '));
+        subheaderValue.textContent = String(tooltipData.totalSubmissions);
+    }
+    subheader.appendChild(subheaderValue);
+    tooltipEl.appendChild(subheader);
+
+    // Breakdown Section
     const hasBreakdown = Object.keys(tooltipData.breakdown).length > 0 || tooltipData.acceptanceRate !== undefined;
     if (hasBreakdown) {
-      innerHtml += `<div class="tooltip-divider"></div><ul class="tooltip-breakdown-list">`;
-      if (currentFilters.secondaryView === 'Difficulty') {
-        Object.entries(tooltipData.breakdown).forEach(([key, value]) => {
-          const difficultyKey = key.toLowerCase() as keyof typeof colors.problems;
-          innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems[difficultyKey]};"></span> ${key}</span><span class="tooltip-breakdown-value">${value}</span></li>`;
-        });
-      } else if (currentFilters.secondaryView === 'Language') {
-        Object.entries(tooltipData.breakdown).sort((a, b) => b[1] - a[1]).forEach(([key, value]) => {
-          const dataset = mainChart?.data.datasets.find(d => d.label === key);
-          const color = (dataset?.backgroundColor as string) || colors.text.subtle;
-          innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${color};"></span> ${key}</span><span class="tooltip-breakdown-value">${value}</span></li>`;
-        });
-      } else if (currentFilters.secondaryView === 'Status' && currentFilters.primaryView === 'Submissions') {
-        innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.status.accepted};"></span> Accepted</span><span class="tooltip-breakdown-value">${tooltipData.breakdown['Accepted'] || 0}</span></li>`;
-        if (tooltipData.acceptanceRate !== undefined) {
-          innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label">Acceptance Rate</span><span class="tooltip-breakdown-value">${tooltipData.acceptanceRate.toFixed(1)}%</span></li>`;
+        const divider = document.createElement('div');
+        divider.className = 'tooltip-divider';
+        tooltipEl.appendChild(divider);
+
+        const list = document.createElement('ul');
+        list.className = 'tooltip-breakdown-list';
+
+        const createBreakdownItem = (label: string, value: string | number, color?: string) => {
+            const item = document.createElement('li');
+            item.className = 'tooltip-breakdown-item';
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'tooltip-breakdown-label';
+            if (color) {
+                const dot = document.createElement('span');
+                dot.className = 'status-dot';
+                dot.style.backgroundColor = color;
+                labelSpan.appendChild(dot);
+            }
+            labelSpan.appendChild(createText(` ${label}`));
+            const valueSpan = document.createElement('span');
+            valueSpan.className = 'tooltip-breakdown-value';
+            valueSpan.textContent = String(value);
+            item.appendChild(labelSpan);
+            item.appendChild(valueSpan);
+            return item;
+        };
+
+        if (currentFilters.secondaryView === 'Difficulty') {
+            Object.entries(tooltipData.breakdown).forEach(([key, value]) => {
+                const difficultyKey = key.toLowerCase() as keyof typeof colors.problems;
+                list.appendChild(createBreakdownItem(key, value, colors.problems[difficultyKey]));
+            });
+        } else if (currentFilters.secondaryView === 'Language') {
+            Object.entries(tooltipData.breakdown).sort((a, b) => b[1] - a[1]).forEach(([key, value]) => {
+                const dataset = mainChart?.data.datasets.find(d => d.label === key);
+                const color = (dataset?.backgroundColor as string) || colors.text.subtle;
+                list.appendChild(createBreakdownItem(key, value, color));
+            });
+        } else if (currentFilters.secondaryView === 'Status' && currentFilters.primaryView === 'Submissions') {
+            list.appendChild(createBreakdownItem('Accepted', tooltipData.breakdown['Accepted'] || 0, colors.status.accepted));
+            if (tooltipData.acceptanceRate !== undefined) {
+                list.appendChild(createBreakdownItem('Acceptance Rate', `${tooltipData.acceptanceRate.toFixed(1)}%`));
+            }
         }
-      }
-      innerHtml += `</ul>`;
+        tooltipEl.appendChild(list);
     }
-    tooltipEl.innerHTML = innerHtml;
 
     const position = context.chart.canvas.getBoundingClientRect();
     const tooltipWidth = tooltipEl.offsetWidth;

@@ -98,19 +98,21 @@ export function renderPageLayout(processedData: ProcessedData, username: string)
 
     if (processedData.submissions.length === 0) {
         const imageUrl = chrome.runtime.getURL('assets/images/null_dark.png');
-        statsPane.innerHTML = `
-            <div class="mb-[70px] mt-[57px] flex-1">
-                <div class="flex h-full flex-col items-center justify-center">
-                    <img
-                        class="w-[200px]"
-                        alt="数据为空"
-                        src="${imageUrl}"
-                    >
-                    <span class="mt-3 text-sm font-medium text-label-4 dark:text-dark-label-4">
-                        No stats
-                    </span>
-                </div>
-            </div>`;
+        const wrapper = document.createElement('div');
+        wrapper.className = 'mb-[70px] mt-[57px] flex-1';
+        const innerWrapper = document.createElement('div');
+        innerWrapper.className = 'flex h-full flex-col items-center justify-center';
+        const img = document.createElement('img');
+        img.className = 'w-[200px]';
+        img.alt = '数据为空';
+        img.src = imageUrl;
+        const span = document.createElement('span');
+        span.className = 'mt-3 text-sm font-medium text-label-4 dark:text-dark-label-4';
+        span.textContent = 'No stats';
+        innerWrapper.appendChild(img);
+        innerWrapper.appendChild(span);
+        wrapper.appendChild(innerWrapper);
+        statsPane.appendChild(wrapper);
     } else {
         const grid = createStatsPaneWithGrid(username);
         while (grid.firstChild) {
@@ -233,109 +235,190 @@ function renderLegacySection(processedData: ProcessedData) {
     const legacyContainer = document.getElementById('legacy-section');
     if (!legacyContainer || !legacyStats) return;
 
-    legacyContainer.innerHTML = `
-        <div class="${styles.sectionHeader}">Legacy</div>
-        <div class="flex flex-col lg:flex-row gap-4 h-full">
-            <!-- Left Half: Milestones -->
-            <div class="flex-1 rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-                <div class="${styles.subSectionHeader}">Milestones</div>
-                <div class="mt-4 relative">
-                    <div class="absolute left-3 top-0 bottom-0 w-0.5 bg-fill-3 dark:bg-dark-fill-3"></div>
-                    <div class="space-y-4">
-                        ${legacyStats.milestones.map((milestone: any) => {
-                            const milestoneColor = getMilestoneColor(milestone.type);
-                            return `
-                                <div class="relative">
-                                    <div class="absolute left-2 top-2 w-2.5 h-2.5 rounded-full" style="background-color: ${milestoneColor}"></div>
-                                    <div class="ml-10">
-                                        <div class="${styles.milestoneEvent}" style="color: ${milestoneColor}">
-                                            ${milestone.milestone}${getOrdinalSuffix(milestone.milestone)} ${formatMilestoneType(milestone.type)}
-                                        </div>
-                                        <div class="${styles.milestoneDate}">
-                                            ${milestone.date.toLocaleDateString('en-GB')}
-                                        </div>
-                                        ${milestone.type === 'submissions' ? `
-                                            <a href="https://leetcode.com/submissions/detail/${milestone.submissionId || milestone.id}/"
-                                               class="inline-flex items-center gap-1 ${styles.milestoneProblem}" target="_blank" rel="noopener noreferrer">
-                                                Submission #${milestone.submissionId || milestone.id}
-                                            </a>
-                                        ` : milestone.problemTitle ? `
-                                            <a href="https://leetcode.com/problems/${milestone.problemSlug}/"
-                                               class="inline-flex items-center gap-1 ${styles.milestoneProblem}" target="_blank" rel="noopener noreferrer">
-                                                ${milestone.problemTitle}
-                                            </a>
-                                        ` : ''}
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                </div>
-            </div>
+    while (legacyContainer.firstChild) {
+        legacyContainer.removeChild(legacyContainer.firstChild);
+    }
+    
+    const sectionHeader = document.createElement('div');
+    sectionHeader.className = styles.sectionHeader;
+    sectionHeader.textContent = 'Legacy';
+    legacyContainer.appendChild(sectionHeader);
 
-            <!-- Right Half -->
-            <div class="flex-1 flex flex-col gap-4">
-                <div class="rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-                    <div class="${styles.subSectionHeader}">Trophies</div>
-                    <div class="mt-4 space-y-3">
-                        ${legacyStats.trophies.map((trophy: any) => `
-                            <div class="flex items-center space-x-4 p-3 rounded-lg bg-[rgba(0,0,0,0.02)] dark:bg-[rgba(255,255,255,0.06)] ${!trophy.achieved ? 'opacity-75' : ''}">
-                                <img src="${chrome.runtime.getURL(trophy.icon)}" alt="${trophy.title} Trophy" class="w-10 h-10 flex-shrink-0" />
-                                <div class="flex-1 flex flex-col space-y-1">
-                                    <div class="${styles.trophyName}">${trophy.title}</div>
-                                    <div class="border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b"></div>
-                                    ${trophy.achieved && trophy.problemSlug !== 'placeholder' ? `
-                                        <a href="https://leetcode.com/problems/${trophy.problemSlug}/" class="${styles.trophyProblem}" target="_blank" rel="noopener noreferrer">
-                                            ${trophy.problemTitle}
-                                        </a>
-                                    ` : `
-                                        <div class="${styles.trophyProblem} trophy-hidden cursor-default">
-                                            ${trophy.problemTitle}
-                                        </div>
-                                    `}
-                                    <div class="${styles.trophyDescription} pt-1 ${!trophy.achieved ? 'trophy-hidden' : ''}">
-                                        ${trophy.subtitle}
-                                    </div>
-                                    ${trophy.personalNote ? `
-                                        <div class="${styles.trophyPersonalNote} pt-1.5 ${!trophy.achieved ? 'trophy-hidden' : ''}">
-                                            ${trophy.personalNote}
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
+    const mainFlexContainer = document.createElement('div');
+    mainFlexContainer.className = 'flex flex-col lg:flex-row gap-4 h-full';
 
-                <!-- Records -->
-                <div class="flex-1 rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4">
-                    <div class="${styles.subSectionHeader}">Records</div>
-                    <div class="mt-4 space-y-2">
-                        ${legacyStats.records.map((record: any) => `
-                            <div class="flex justify-between items-start p-2 rounded-md">
-                                <span class="${styles.recordLabel}">${record.name}</span>
-                                <div class="flex flex-col items-end">
-                                    ${record.mainStat ? `
-                                        <span class="${styles.recordValue}">${record.mainStat}</span>
-                                    ` : `
-                                        <div class="flex items-center">
-                                            <span class="${styles.recordValue}">${record.value}</span>
-                                            ${record.subStats ? `
-                                                <div class="ml-2 w-12 h-6" style="transform: translateY(-5px);">
-                                                    <canvas id="mini-chart-${record.name.replace(/\s+/g, '-').toLowerCase()}" width="48" height="24"></canvas>
-                                                </div>
-                                            ` : ''}
-                                        </div>
-                                    `}
-                                    <span class="${styles.recordContext}">${record.dateStat || '&nbsp;'}</span>
-                                </div>
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+    // Left Half: Milestones
+    const milestonesContainer = document.createElement('div');
+    milestonesContainer.className = 'flex-1 rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4';
+    const milestonesHeader = document.createElement('div');
+    milestonesHeader.className = styles.subSectionHeader;
+    milestonesHeader.textContent = 'Milestones';
+    const milestonesContent = document.createElement('div');
+    milestonesContent.className = 'mt-4 relative';
+    const timelineBar = document.createElement('div');
+    timelineBar.className = 'absolute left-3 top-0 bottom-0 w-0.5 bg-fill-3 dark:bg-dark-fill-3';
+    const milestonesList = document.createElement('div');
+    milestonesList.className = 'space-y-4';
+
+    legacyStats.milestones.forEach((milestone: any) => {
+        const milestoneColor = getMilestoneColor(milestone.type);
+        const item = document.createElement('div');
+        item.className = 'relative';
+        const dot = document.createElement('div');
+        dot.className = 'absolute left-2 top-2 w-2.5 h-2.5 rounded-full';
+        dot.style.backgroundColor = milestoneColor;
+        const textContainer = document.createElement('div');
+        textContainer.className = 'ml-10';
+        const eventDiv = document.createElement('div');
+        eventDiv.className = styles.milestoneEvent;
+        eventDiv.style.color = milestoneColor;
+        eventDiv.textContent = `${milestone.milestone}${getOrdinalSuffix(milestone.milestone)} ${formatMilestoneType(milestone.type)}`;
+        const dateDiv = document.createElement('div');
+        dateDiv.className = styles.milestoneDate;
+        dateDiv.textContent = milestone.date.toLocaleDateString('en-GB');
+        textContainer.appendChild(eventDiv);
+        textContainer.appendChild(dateDiv);
+        if (milestone.type === 'submissions' || milestone.problemTitle) {
+            const link = document.createElement('a');
+            link.className = `inline-flex items-center gap-1 ${styles.milestoneProblem}`;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            if (milestone.type === 'submissions') {
+                link.href = `https://leetcode.com/submissions/detail/${milestone.submissionId || milestone.id}/`;
+                link.textContent = `Submission #${milestone.submissionId || milestone.id}`;
+            } else {
+                link.href = `https://leetcode.com/problems/${milestone.problemSlug}/`;
+                link.textContent = milestone.problemTitle;
+            }
+            textContainer.appendChild(link);
+        }
+        item.appendChild(dot);
+        item.appendChild(textContainer);
+        milestonesList.appendChild(item);
+    });
+    
+    milestonesContent.appendChild(timelineBar);
+    milestonesContent.appendChild(milestonesList);
+    milestonesContainer.appendChild(milestonesHeader);
+    milestonesContainer.appendChild(milestonesContent);
+    mainFlexContainer.appendChild(milestonesContainer);
+
+    // Right Half
+    const rightHalfContainer = document.createElement('div');
+    rightHalfContainer.className = 'flex-1 flex flex-col gap-4';
+
+    // Trophies
+    const trophiesContainer = document.createElement('div');
+    trophiesContainer.className = 'rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4';
+    const trophiesHeader = document.createElement('div');
+    trophiesHeader.className = styles.subSectionHeader;
+    trophiesHeader.textContent = 'Trophies';
+    const trophiesList = document.createElement('div');
+    trophiesList.className = 'mt-4 space-y-3';
+    legacyStats.trophies.forEach((trophy: any) => {
+        const item = document.createElement('div');
+        item.className = `flex items-center space-x-4 p-3 rounded-lg bg-[rgba(0,0,0,0.02)] dark:bg-[rgba(255,255,255,0.06)] ${!trophy.achieved ? 'opacity-75' : ''}`;
+        const img = document.createElement('img');
+        img.src = chrome.runtime.getURL(trophy.icon);
+        img.alt = `${trophy.title} Trophy`;
+        img.className = 'w-10 h-10 flex-shrink-0';
+        item.appendChild(img);
+
+        const textContainer = document.createElement('div');
+        textContainer.className = 'flex-1 flex flex-col space-y-1';
+        const titleDiv = document.createElement('div');
+        titleDiv.className = styles.trophyName;
+        titleDiv.textContent = trophy.title;
+        textContainer.appendChild(titleDiv);
+        const divider = document.createElement('div');
+        divider.className = 'border-divider-3 dark:border-dark-divider-3 mb-4 mt-4 h-px w-full border-b';
+        textContainer.appendChild(divider);
+
+        const problemEl = (trophy.achieved && trophy.problemSlug !== 'placeholder') ? document.createElement('a') : document.createElement('div');
+        if (problemEl.tagName === 'A') {
+            (problemEl as HTMLAnchorElement).href = `https://leetcode.com/problems/${trophy.problemSlug}/`;
+            problemEl.className = styles.trophyProblem;
+            (problemEl as HTMLAnchorElement).target = '_blank';
+            (problemEl as HTMLAnchorElement).rel = 'noopener noreferrer';
+        } else {
+            problemEl.className = `${styles.trophyProblem} trophy-hidden cursor-default`;
+        }
+        problemEl.textContent = trophy.problemTitle;
+        textContainer.appendChild(problemEl);
+        
+        const subtitleDiv = document.createElement('div');
+        subtitleDiv.className = `${styles.trophyDescription} pt-1 ${!trophy.achieved ? 'trophy-hidden' : ''}`;
+        subtitleDiv.textContent = trophy.subtitle;
+        textContainer.appendChild(subtitleDiv);
+
+        if (trophy.personalNote) {
+            const noteDiv = document.createElement('div');
+            noteDiv.className = `${styles.trophyPersonalNote} pt-1.5 ${!trophy.achieved ? 'trophy-hidden' : ''}`;
+            noteDiv.textContent = trophy.personalNote;
+            textContainer.appendChild(noteDiv);
+        }
+        item.appendChild(textContainer);
+        trophiesList.appendChild(item);
+    });
+    trophiesContainer.appendChild(trophiesHeader);
+    trophiesContainer.appendChild(trophiesList);
+    rightHalfContainer.appendChild(trophiesContainer);
+
+    // Records
+    const recordsContainer = document.createElement('div');
+    recordsContainer.className = 'flex-1 rounded-lg bg-layer-1 dark:bg-dark-layer-1 p-4';
+    const recordsHeader = document.createElement('div');
+    recordsHeader.className = styles.subSectionHeader;
+    recordsHeader.textContent = 'Records';
+    const recordsList = document.createElement('div');
+    recordsList.className = 'mt-4 space-y-2';
+    legacyStats.records.forEach((record: any) => {
+        const item = document.createElement('div');
+        item.className = 'flex justify-between items-start p-2 rounded-md';
+        const labelSpan = document.createElement('span');
+        labelSpan.className = styles.recordLabel;
+        labelSpan.textContent = record.name;
+        item.appendChild(labelSpan);
+        const valueContainer = document.createElement('div');
+        valueContainer.className = 'flex flex-col items-end';
+        if (record.mainStat) {
+            const valueSpan = document.createElement('span');
+            valueSpan.className = styles.recordValue;
+            valueSpan.textContent = record.mainStat;
+            valueContainer.appendChild(valueSpan);
+        } else {
+            const innerFlex = document.createElement('div');
+            innerFlex.className = 'flex items-center';
+            const valueSpan = document.createElement('span');
+            valueSpan.className = styles.recordValue;
+            valueSpan.textContent = record.value;
+            innerFlex.appendChild(valueSpan);
+            if (record.subStats) {
+                const chartDiv = document.createElement('div');
+                chartDiv.className = 'ml-2 w-12 h-6';
+                chartDiv.style.transform = 'translateY(-5px)';
+                const canvas = document.createElement('canvas');
+                canvas.id = `mini-chart-${record.name.replace(/\s+/g, '-').toLowerCase()}`;
+                canvas.width = 48;
+                canvas.height = 24;
+                chartDiv.appendChild(canvas);
+                innerFlex.appendChild(chartDiv);
+            }
+            valueContainer.appendChild(innerFlex);
+        }
+        const contextSpan = document.createElement('span');
+        contextSpan.className = styles.recordContext;
+        contextSpan.innerHTML = record.dateStat || '&nbsp;';
+        valueContainer.appendChild(contextSpan);
+        item.appendChild(valueContainer);
+        recordsList.appendChild(item);
+    });
+    recordsContainer.appendChild(recordsHeader);
+    recordsContainer.appendChild(recordsList);
+    rightHalfContainer.appendChild(recordsContainer);
+
+    mainFlexContainer.appendChild(rightHalfContainer);
+    legacyContainer.appendChild(mainFlexContainer);
 }
 
 /**
@@ -887,12 +970,18 @@ function createStatsTab(): HTMLElement {
     tab.className = 'cursor-pointer';
     const iconUrl = chrome.runtime.getURL('assets/icons/sparkles.svg');
 
-    tab.innerHTML = `
-    <div class="lc-md:space-x-2 flex items-center rounded-[5px] px-5 py-[10px] font-medium hover:text-label-1 dark:hover:text-dark-label-1">
-      <img src="${iconUrl}" alt="Stats Icon" class="lc-md:inline hidden w-6 h-6" />
-      <span class="whitespace-nowrap">Stats</span>
-    </div>
-  `;
+    const div = document.createElement('div');
+    div.className = 'lc-md:space-x-2 flex items-center rounded-[5px] px-5 py-[10px] font-medium hover:text-label-1 dark:hover:text-dark-label-1';
+    const img = document.createElement('img');
+    img.src = iconUrl;
+    img.alt = 'Stats Icon';
+    img.className = 'lc-md:inline hidden w-6 h-6';
+    const span = document.createElement('span');
+    span.className = 'whitespace-nowrap';
+    span.textContent = 'Stats';
+    div.appendChild(img);
+    div.appendChild(span);
+    tab.appendChild(div);
     return tab;
 }
 
@@ -904,7 +993,9 @@ function createGenerateCardButton(): HTMLElement {
     button.id = 'generate-card-btn';
     button.className = 'animated-border-btn ml-auto inline-flex items-center px-5 py-[10px] text-sm font-medium text-label-2 dark:text-dark-label-2 rounded-lg focus:outline-none transition-all';
     button.style.display = 'none';
-    button.innerHTML = `<span>Share Stats</span>`;
+    const span = document.createElement('span');
+    span.textContent = 'Share Stats';
+    button.appendChild(span);
 
     if (!document.querySelector('#animated-border-styles')) {
         const styleSheet = document.createElement('style');

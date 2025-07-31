@@ -156,21 +156,72 @@ export function renderOrUpdateDoughnutChart(
     const label = reversedLabels[dataIndex];
     const color = reversedColors[dataIndex];
 
-    let innerHtml = `<div class="tooltip-header"><span class="status-dot" style="background-color: ${color};"></span><span>${label}</span></div>`;
-    innerHtml += `<div class="tooltip-subheader">Count: <span class="tooltip-subheader-value">${tooltipData.count} (${tooltipData.percent})</span></div>`;
-
-    if (filters.difficulty === 'All' && tooltipData.breakdown) {
-      innerHtml += `<div class="tooltip-divider"></div>`;
-      innerHtml += `<ul class="tooltip-breakdown-list">`;
-      const breakdown = tooltipData.breakdown;
-
-      innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.easy};"></span> Easy</span><span class="tooltip-breakdown-value">${breakdown.E || 0}</span></li>`;
-      innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.medium};"></span> Medium</span><span class="tooltip-breakdown-value">${breakdown.M || 0}</span></li>`;
-      innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.hard};"></span> Hard</span><span class="tooltip-breakdown-value">${breakdown.H || 0}</span></li>`;
-      innerHtml += `</ul>`;
+    // Clear previous tooltip content safely
+    while (tooltipEl.firstChild) {
+        tooltipEl.removeChild(tooltipEl.firstChild);
     }
 
-    tooltipEl.innerHTML = innerHtml;
+    // Create elements programmatically to avoid innerHTML
+    const createText = (text: string) => document.createTextNode(text);
+
+    // Header
+    const header = document.createElement('div');
+    header.className = 'tooltip-header';
+    const dot = document.createElement('span');
+    dot.className = 'status-dot';
+    dot.style.backgroundColor = color;
+    const labelSpan = document.createElement('span');
+    labelSpan.textContent = label;
+    header.appendChild(dot);
+    header.appendChild(labelSpan);
+    tooltipEl.appendChild(header);
+
+    // Subheader
+    const subheader = document.createElement('div');
+    subheader.className = 'tooltip-subheader';
+    subheader.appendChild(createText('Count: '));
+    const valueSpan = document.createElement('span');
+    valueSpan.className = 'tooltip-subheader-value';
+    valueSpan.textContent = `${tooltipData.count} (${tooltipData.percent})`;
+    subheader.appendChild(valueSpan);
+    tooltipEl.appendChild(subheader);
+
+    // Breakdown section
+    if (filters.difficulty === 'All' && tooltipData.breakdown) {
+        const divider = document.createElement('div');
+        divider.className = 'tooltip-divider';
+        tooltipEl.appendChild(divider);
+
+        const list = document.createElement('ul');
+        list.className = 'tooltip-breakdown-list';
+
+        const createBreakdownItem = (difficultyLabel: string, value: number, difficultyColor: string) => {
+            const item = document.createElement('li');
+            item.className = 'tooltip-breakdown-item';
+
+            const breakdownLabel = document.createElement('span');
+            breakdownLabel.className = 'tooltip-breakdown-label';
+            const breakdownDot = document.createElement('span');
+            breakdownDot.className = 'status-dot';
+            breakdownDot.style.backgroundColor = difficultyColor;
+            breakdownLabel.appendChild(breakdownDot);
+            breakdownLabel.appendChild(createText(` ${difficultyLabel}`));
+
+            const breakdownValue = document.createElement('span');
+            breakdownValue.className = 'tooltip-breakdown-value';
+            breakdownValue.textContent = String(value);
+
+            item.appendChild(breakdownLabel);
+            item.appendChild(breakdownValue);
+            return item;
+        };
+        
+        const breakdown = tooltipData.breakdown;
+        list.appendChild(createBreakdownItem('Easy', breakdown.E || 0, colors.problems.easy));
+        list.appendChild(createBreakdownItem('Medium', breakdown.M || 0, colors.problems.medium));
+        list.appendChild(createBreakdownItem('Hard', breakdown.H || 0, colors.problems.hard));
+        tooltipEl.appendChild(list);
+    }
 
     const chartContainer = context.chart.canvas.parentNode as HTMLElement;
     let newLeft = tooltipModel.caretX + 10;

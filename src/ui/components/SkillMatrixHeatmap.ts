@@ -142,18 +142,27 @@ export function renderOrUpdateSkillMatrixHeatmap(
 
   /** Renders the initial table structure. */
   function renderInitialTable() {
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
+    
     if (data.topics.length === 0) {
       const imageUrl = chrome.runtime.getURL('assets/images/null_dark.png');
-      container.innerHTML = `
-        <div class="flex h-full flex-col items-center justify-center py-16">
-          <img class="w-[200px]" src="${imageUrl}" alt="No data available">
-          <span class="mt-3 text-sm font-medium text-label-4 dark:text-dark-label-4">
-            No data for the selected period
-          </span>
-        </div>
-      `;
+      const wrapper = document.createElement('div');
+      wrapper.className = 'flex h-full flex-col items-center justify-center py-16';
+      const img = document.createElement('img');
+      img.className = 'w-[200px]';
+      img.src = imageUrl;
+      img.alt = 'No data available';
+      const span = document.createElement('span');
+      span.className = 'mt-3 text-sm font-medium text-label-4 dark:text-dark-label-4';
+      span.textContent = 'No data for the selected period';
+      wrapper.appendChild(img);
+      wrapper.appendChild(span);
+      container.appendChild(wrapper);
       return;
     }
+
     const metrics = ['problemsSolved', 'avgTries', 'firstAceRate'] as const;
     const metricLabels = {
       problemsSolved: 'Problems Solved',
@@ -161,40 +170,78 @@ export function renderOrUpdateSkillMatrixHeatmap(
       firstAceRate: 'First Ace Rate'
     };
 
-    container.innerHTML = `
-      <div class="w-full">
-        <div class="overflow-x-auto rounded-lg bg-layer-1 dark:bg-dark-layer-1">
-          <table class="w-full border-collapse" style="table-layout: fixed;">
-            <thead>
-              <tr class="bg-layer-1 dark:bg-dark-layer-1">
-                <th class="text-left p-3 text-base font-semibold text-gray-200" style="width: 30%;"></th>
-                ${metrics.map(metric => `<th class="text-center p-3 text-base font-semibold text-gray-200" style="width: ${70/3}%;">${metricLabels[metric]}</th>`).join('')}
-                <th style="width: 40px;"></th>
-              </tr>
-            </thead>
-            <tbody id="skill-matrix-tbody">
-              ${data.topics.map(topic => `
-                <tr class="topic-row last:border-b-0" data-topic-row="${topic}">
-                  <td class="p-3 text-base font-semibold text-gray-200">${formatTopicName(topic)}</td>
-                  ${metrics.map(metric => {
-                    const value = data.metrics[metric][topic] || 0;
-                    const color = getHeatmapColor(value, metric);
-                    return `<td class="p-0 text-center text-base font-semibold text-gray-200" style="background-color: ${color}; color: ${getTextColor(color)};">
-                      <div class="p-2">${formatMetricValue(value, metric)}</div>
-                    </td>`;
-                  }).join('')}
-                  <td class="p-3 text-center">
-                    <button class="expand-btn w-6 h-6 flex items-center justify-center cursor-pointer" data-topic="${topic}">
-                      <span class="text-xl font-light text-label-1 dark:text-dark-label-1">+</span>
-                    </button>
-                  </td>
-                </tr>
-              `).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `;
+    const mainWrapper = document.createElement('div');
+    mainWrapper.className = 'w-full';
+    const tableContainer = document.createElement('div');
+    tableContainer.className = 'overflow-x-auto rounded-lg bg-layer-1 dark:bg-dark-layer-1';
+    const table = document.createElement('table');
+    table.className = 'w-full border-collapse';
+    table.style.tableLayout = 'fixed';
+    
+    const thead = document.createElement('thead');
+    const headerRow = document.createElement('tr');
+    headerRow.className = 'bg-layer-1 dark:bg-dark-layer-1';
+    const th1 = document.createElement('th');
+    th1.className = 'text-left p-3 text-base font-semibold text-gray-200';
+    th1.style.width = '30%';
+    headerRow.appendChild(th1);
+    metrics.forEach(metric => {
+      const th = document.createElement('th');
+      th.className = 'text-center p-3 text-base font-semibold text-gray-200';
+      th.style.width = `${70/3}%`;
+      th.textContent = metricLabels[metric];
+      headerRow.appendChild(th);
+    });
+    const thLast = document.createElement('th');
+    thLast.style.width = '40px';
+    headerRow.appendChild(thLast);
+    thead.appendChild(headerRow);
+
+    const tbody = document.createElement('tbody');
+    tbody.id = 'skill-matrix-tbody';
+    data.topics.forEach(topic => {
+      const row = document.createElement('tr');
+      row.className = 'topic-row last:border-b-0';
+      row.dataset.topicRow = topic;
+
+      const topicCell = document.createElement('td');
+      topicCell.className = 'p-3 text-base font-semibold text-gray-200';
+      topicCell.textContent = formatTopicName(topic);
+      row.appendChild(topicCell);
+
+      metrics.forEach(metric => {
+        const value = data.metrics[metric][topic] || 0;
+        const color = getHeatmapColor(value, metric);
+        const cell = document.createElement('td');
+        cell.className = 'p-0 text-center text-base font-semibold text-gray-200';
+        cell.style.backgroundColor = color;
+        cell.style.color = getTextColor(color);
+        const div = document.createElement('div');
+        div.className = 'p-2';
+        div.textContent = formatMetricValue(value, metric);
+        cell.appendChild(div);
+        row.appendChild(cell);
+      });
+
+      const buttonCell = document.createElement('td');
+      buttonCell.className = 'p-3 text-center';
+      const button = document.createElement('button');
+      button.className = 'expand-btn w-6 h-6 flex items-center justify-center cursor-pointer';
+      button.dataset.topic = topic;
+      const span = document.createElement('span');
+      span.className = 'text-xl font-light text-label-1 dark:text-dark-label-1';
+      span.textContent = '+';
+      button.appendChild(span);
+      buttonCell.appendChild(button);
+      row.appendChild(buttonCell);
+      tbody.appendChild(row);
+    });
+
+    table.appendChild(thead);
+    table.appendChild(tbody);
+    tableContainer.appendChild(table);
+    mainWrapper.appendChild(tableContainer);
+    container.appendChild(mainWrapper);
     addEventListeners();
   }
 
@@ -248,7 +295,11 @@ export function renderOrUpdateSkillMatrixHeatmap(
 
       const newRow = document.createElement('tr');
       newRow.className = 'expanded-row';
-      newRow.innerHTML = getChartRowHtml(topic, currentChartOptions);
+      const cell = document.createElement('td');
+      cell.colSpan = 5;
+      cell.className = 'p-0 bg-layer-1 dark:bg-dark-layer-1';
+      cell.innerHTML = getChartRowHtml(topic, currentChartOptions); // UNSAFE_VAR_ASSIGNMENT
+      newRow.appendChild(cell);
 
       topicRow.insertAdjacentElement('afterend', newRow);
       addChartControlListeners(newRow, topic);
@@ -555,21 +606,59 @@ export function renderOrUpdateSkillMatrixHeatmap(
                 return Math.round(val).toString();
               };
 
-              let innerHtml = `<div class="tooltip-header">${formattedDate}</div>`;
-              innerHtml += `<div class="tooltip-subheader">${metricLabels[localOpts.metric]}:<span class="tooltip-subheader-value">${formatValue(dataPoint.value, localOpts.metric)}</span></div>`;
+              while (tooltipEl.firstChild) {
+                  tooltipEl.removeChild(tooltipEl.firstChild);
+              }
+              
+              const createText = (text: string) => document.createTextNode(text);
+
+              const header = document.createElement('div');
+              header.className = 'tooltip-header';
+              header.textContent = formattedDate;
+              tooltipEl.appendChild(header);
+
+              const subheader = document.createElement('div');
+              subheader.className = 'tooltip-subheader';
+              subheader.appendChild(createText(`${metricLabels[localOpts.metric]}:`));
+              const subValue = document.createElement('span');
+              subValue.className = 'tooltip-subheader-value';
+              subValue.textContent = formatValue(dataPoint.value, localOpts.metric);
+              subheader.appendChild(subValue);
+              tooltipEl.appendChild(subheader);
 
               if (localOpts.split) {
-                innerHtml += `<div class="tooltip-divider"></div><ul class="tooltip-breakdown-list">`;
-                (['Easy', 'Medium', 'Hard'] as const).forEach(diff => {
-                  const value = dataPoint[diff.toLowerCase() as 'easy' | 'medium' | 'hard'];
-                  const diffKey = diff.toLowerCase() as keyof typeof colors.problems;
-                  if (value !== undefined && value !== null && value > 0) {
-                    innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems[diffKey]};"></span>${diff}</span><span class="tooltip-breakdown-value">${formatValue(value, localOpts.metric)}</span></li>`;
-                  }
-                });
-                innerHtml += `</ul>`;
+                  const divider = document.createElement('div');
+                  divider.className = 'tooltip-divider';
+                  tooltipEl.appendChild(divider);
+
+                  const list = document.createElement('ul');
+                  list.className = 'tooltip-breakdown-list';
+
+                  (['Easy', 'Medium', 'Hard'] as const).forEach(diff => {
+                      const value = dataPoint[diff.toLowerCase() as 'easy' | 'medium' | 'hard'];
+                      const diffKey = diff.toLowerCase() as keyof typeof colors.problems;
+                      if (value === undefined || value === null || value <= 0) return;
+
+                      const item = document.createElement('li');
+                      item.className = 'tooltip-breakdown-item';
+                      const label = document.createElement('span');
+                      label.className = 'tooltip-breakdown-label';
+                      const dot = document.createElement('span');
+                      dot.className = 'status-dot';
+                      dot.style.backgroundColor = colors.problems[diffKey];
+                      label.appendChild(dot);
+                      label.appendChild(createText(diff));
+
+                      const itemValue = document.createElement('span');
+                      itemValue.className = 'tooltip-breakdown-value';
+                      itemValue.textContent = formatValue(value, localOpts.metric);
+
+                      item.appendChild(label);
+                      item.appendChild(itemValue);
+                      list.appendChild(item);
+                  });
+                  tooltipEl.appendChild(list);
               }
-              tooltipEl.innerHTML = innerHtml;
 
               const chartContainer = context.chart.canvas.parentNode as HTMLElement;
               if (!chartContainer) return;

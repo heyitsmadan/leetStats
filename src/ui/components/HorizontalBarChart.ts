@@ -141,27 +141,87 @@ export function renderOrUpdateHorizontalBarChart(
         const tooltipData = data.tooltipsData[dataIndex];
         const breakdown = tooltipData.solvedBreakdown;
 
-        let innerHtml = `<div class="tooltip-header">${tooltipData.label}</div>`;
-        innerHtml += `<div class="tooltip-row"><span class="tooltip-label">Total Submissions</span><span class="tooltip-value">${tooltipData.totalSubmissions}</span></div>`;
-        innerHtml += `<div class="tooltip-row"><span class="tooltip-label">Acceptance Rate</span><span class="tooltip-value">${tooltipData.acceptanceRate}</span></div>`;
-
-        if (filters.difficulty === 'All' && breakdown) {
-            innerHtml += `<div class="tooltip-divider"></div>`;
-            innerHtml += `<div class="tooltip-breakdown-header">Problems Solved</div>`;
-            innerHtml += `<ul class="tooltip-breakdown-list">`;
-            innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.easy};"></span> Easy</span><span class="tooltip-breakdown-value">${breakdown.E || 0}</span></li>`;
-            innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.medium};"></span> Medium</span><span class="tooltip-breakdown-value">${breakdown.M || 0}</span></li>`;
-            innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label"><span class="status-dot" style="background-color: ${colors.problems.hard};"></span> Hard</span><span class="tooltip-breakdown-value">${breakdown.H || 0}</span></li>`;
-            innerHtml += `</ul>`;
+        // Clear previous tooltip content safely
+        while (tooltipEl.firstChild) {
+            tooltipEl.removeChild(tooltipEl.firstChild);
         }
 
-        innerHtml += `<div class="tooltip-divider"></div>`;
-        innerHtml += `<ul class="tooltip-breakdown-list">`;
-        innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label">First used</span><span class="tooltip-breakdown-value">${tooltipData.firstUsed}</span></li>`;
-        innerHtml += `<li class="tooltip-breakdown-item"><span class="tooltip-breakdown-label">Last used</span><span class="tooltip-breakdown-value">${tooltipData.lastUsed}</span></li>`;
-        innerHtml += `</ul>`;
+        const createText = (text: string) => document.createTextNode(text);
 
-        tooltipEl.innerHTML = innerHtml;
+        // Header
+        const header = document.createElement('div');
+        header.className = 'tooltip-header';
+        header.textContent = tooltipData.label;
+        tooltipEl.appendChild(header);
+
+        // Main info rows
+        const createRow = (label: string, value: string | number) => {
+            const row = document.createElement('div');
+            row.className = 'tooltip-row';
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'tooltip-label';
+            labelSpan.textContent = label;
+            const valueSpan = document.createElement('span');
+            valueSpan.className = 'tooltip-value';
+            valueSpan.textContent = String(value);
+            row.appendChild(labelSpan);
+            row.appendChild(valueSpan);
+            return row;
+        };
+        tooltipEl.appendChild(createRow('Total Submissions', tooltipData.totalSubmissions));
+        tooltipEl.appendChild(createRow('Acceptance Rate', tooltipData.acceptanceRate));
+
+        // Helper for breakdown lists
+        const createBreakdownItem = (label: string, value: string | number, color?: string) => {
+            const item = document.createElement('li');
+            item.className = 'tooltip-breakdown-item';
+            const labelSpan = document.createElement('span');
+            labelSpan.className = 'tooltip-breakdown-label';
+            if (color) {
+                const dot = document.createElement('span');
+                dot.className = 'status-dot';
+                dot.style.backgroundColor = color;
+                labelSpan.appendChild(dot);
+                labelSpan.appendChild(createText(` ${label}`));
+            } else {
+                labelSpan.textContent = label;
+            }
+            const valueSpan = document.createElement('span');
+            valueSpan.className = 'tooltip-breakdown-value';
+            valueSpan.textContent = String(value);
+            item.appendChild(labelSpan);
+            item.appendChild(valueSpan);
+            return item;
+        };
+
+        const createDivider = () => {
+            const divider = document.createElement('div');
+            divider.className = 'tooltip-divider';
+            return divider;
+        };
+
+        // Problems solved breakdown
+        if (filters.difficulty === 'All' && breakdown) {
+            tooltipEl.appendChild(createDivider());
+            const breakdownHeader = document.createElement('div');
+            breakdownHeader.className = 'tooltip-breakdown-header';
+            breakdownHeader.textContent = 'Problems Solved';
+            tooltipEl.appendChild(breakdownHeader);
+            const list = document.createElement('ul');
+            list.className = 'tooltip-breakdown-list';
+            list.appendChild(createBreakdownItem('Easy', breakdown.E || 0, colors.problems.easy));
+            list.appendChild(createBreakdownItem('Medium', breakdown.M || 0, colors.problems.medium));
+            list.appendChild(createBreakdownItem('Hard', breakdown.H || 0, colors.problems.hard));
+            tooltipEl.appendChild(list);
+        }
+
+        // Usage dates
+        tooltipEl.appendChild(createDivider());
+        const usageList = document.createElement('ul');
+        usageList.className = 'tooltip-breakdown-list';
+        usageList.appendChild(createBreakdownItem('First used', tooltipData.firstUsed));
+        usageList.appendChild(createBreakdownItem('Last used', tooltipData.lastUsed));
+        tooltipEl.appendChild(usageList);
 
         const activeElement = context.tooltip.dataPoints[0]?.element as BarElement;
         if (!activeElement) {
