@@ -44,13 +44,13 @@
 
 ## 📚 Table of Contents
 
-- [✨ Key Features](#-key-features)
-- [📸 Screenshots](#-screenshots)
-- [🚀 Installation](#-installation)
-- [💡 How to Use](#-how-to-use)
-- [🛠️ Built With](#-built-with)
-- [🤝 Contributing](#-contributing)
-- [📜 License](#-license)
+- ✨ [Key Features](#-key-features)
+- 📸 [Screenshots](#-screenshots)
+- 🚀 [Installation](#-installation)
+- 💡 [How to Use](#-how-to-use)
+- 🛠️ [Built With](#-built-with)
+- 🤝 [Contributing](#-contributing)
+- 📜 [License](#-license)
 
 ---
 
@@ -63,7 +63,7 @@
 | 📈 **In-Depth Analytics**    | Visualize your growth, discover your most productive times, and analyze submission verdicts. |
 | 🧠 **Skills Analysis**       | Granular topic-wise tracking of solved problems, average attempts, and more. |
 | 🖼️ **Custom Shareable Card** | Generate a beautiful, bento-style card showcasing your favorite stats. |
-| 🔒 **Privacy-Focused**       | 100% local. No data ever leaves your browser. [Read Privacy Policy](https://heyitsmadan.github.io/leetStats/privacy.html). |
+| 🔒 **Privacy-Focused**       | 100% local. No data ever leaves your browser. <a href="https://heyitsmadan.github.io/leetStats/privacy.html" target="_blank" rel="noopener noreferrer">Read Privacy Policy</a>. |
 
 ---
 
@@ -73,27 +73,27 @@
 <summary><b>Click to view more screenshots</b></summary>
 <br>
 
-<p align="center"><b>Main Dashboard View</b></p>
+<p align="center"><b>History Chart</b></p>
 <p align="center">
   <img src="https://github.com/user-attachments/assets/35c4c4f0-e200-4188-a0d2-dabf7495b88b" width="700" />
 </p>
 
-<p align="center"><b>Skills Analysis</b></p>
+<p align="center"><b>Activity Charts</b></p>
 <p align="center">
   <img src="https://github.com/user-attachments/assets/b14b23c1-0120-4b7d-8e94-c8dbd337be45" width="700" />
 </p>
 
-<p align="center"><b>Trophies & Records</b></p>
+<p align="center"><b>Milestones & Trophies</b></p>
 <p align="center">
   <img src="https://github.com/user-attachments/assets/1cb66d1c-a3c3-4d49-9724-c2fcf36d7ed9" width="700" />
 </p>
 
-<p align="center"><b>Milestones Timeline</b></p>
+<p align="center"><b>Milestones & Records</b></p>
 <p align="center">
   <img src="https://github.com/user-attachments/assets/0d428c08-e29c-4036-a840-83a2809ebc49" width="700" />
 </p>
 
-<p align="center"><b>Shareable Card Customizer</b></p>
+<p align="center"><b>Skills</b></p>
 <p align="center">
   <img src="https://github.com/user-attachments/assets/c845206b-47ff-4590-9e48-ad5495cf62cb" width="700" />
 </p>
@@ -137,8 +137,8 @@ Then load the extension manually:
 1. Install the extension from your preferred store or from source.
 2. Log into your LeetCode account.
 3. Navigate to your profile page.
-4. The extension will fetch and cache your submission history the first time you open it.
-5. Click the new **"Stats"** tab next to "Discuss" to explore your insights.
+4. The extension will automatically fetch and locally cache your submission history.
+5. Click the new **"Stats"** tab next to **"Discuss"** to explore your insights.
 
 ---
 
@@ -148,7 +148,6 @@ Then load the extension manually:
 - [TypeScript](https://www.typescriptlang.org/)
 - [Chart.js](https://www.chartjs.org/)
 - [D3.js](https://d3js.org/)
-- [CRXJS Vite Plugin](https://crxjs.dev/)
 
 ---
 
