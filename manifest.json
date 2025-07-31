@@ -9,6 +9,11 @@
   "host_permissions": [
     "https://leetcode.com/*"
   ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "leetstats@example.com"
+    }
+  },
   "content_scripts": [
     {
       "matches": [
