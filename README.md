@@ -102,7 +102,7 @@ Install the latest stable version:
 - [Chrome Web Store](https://chromewebstore.google.com/detail/leetstats/caipeabgogcpmihgldebnaalinnaaeda)
 - [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/leetstats/)
 - [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/leetstats/fcnelmphghognkimkhpannacikgnieaa)
-- [Brave Web Store](https://chromewebstore.google.com/detail/leetstats/caipeabgogcpmihgldebnaalinnaaeda)
+- [Available For Brave](https://chromewebstore.google.com/detail/leetstats/caipeabgogcpmihgldebnaalinnaaeda)
 
 ### 🧑‍💻 From Source (Developers)
 
