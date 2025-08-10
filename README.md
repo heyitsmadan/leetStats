@@ -15,20 +15,17 @@
 </div>
 
 <p align="center">
-  <a href="https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID">
+  <a href="https://chromewebstore.google.com/detail/leetstats/caipeabgogcpmihgldebnaalinnaaeda">
     <img src="https://img.shields.io/badge/Chrome_Web_Store-v1.0.0-blue?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Chrome Web Store">
   </a>
-  <a href="https://addons.mozilla.org/en-US/firefox/addon/YOUR_ADDON_ID/">
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/leetstats/">
     <img src="https://img.shields.io/badge/Firefox_Add--ons-v1.0.0-orange?style=for-the-badge&logo=firefox-browser&logoColor=white" alt="Firefox Add-ons">
   </a>
-  <a href="https://microsoftedge.microsoft.com/addons/detail/YOUR_EDGE_ID">
+  <a href="https://microsoftedge.microsoft.com/addons/detail/leetstats/fcnelmphghognkimkhpannacikgnieaa">
     <img src="https://img.shields.io/badge/Edge_Add--ons-v1.0.0-blue?style=for-the-badge&logo=microsoft-edge&logoColor=white" alt="Edge Add-ons">
   </a>
-  <a href="https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID">
+  <a href="https://chromewebstore.google.com/detail/leetstats/caipeabgogcpmihgldebnaalinnaaeda">
     <img src="https://img.shields.io/badge/Available_for_Brave-v1.0.0-orange?style=for-the-badge&logo=brave&logoColor=white" alt="Available for Brave">
-  </a>
-  <a href="https://addons.opera.com/en/extensions/details/YOUR_OPERA_ID/">
-    <img src="https://img.shields.io/badge/Opera_Addons-v1.0.0-red?style=for-the-badge&logo=opera&logoColor=white" alt="Opera Addons">
   </a>
   <br />
   <img src="https://img.shields.io/github/license/heyitsmadan/leetStats?style=for-the-badge" alt="License">
@@ -108,11 +105,10 @@
 
 Install the latest stable version:
 
-- [Chrome Web Store](https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID)
-- [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/YOUR_ADDON_ID/)
-- [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/YOUR_EDGE_ID)
-- [Brave Web Store](https://chrome.google.com/webstore/detail/YOUR_EXTENSION_ID)
-- [Opera Addons](https://addons.opera.com/en/extensions/details/YOUR_OPERA_ID/)
+- [Chrome Web Store](https://chromewebstore.google.com/detail/leetstats/caipeabgogcpmihgldebnaalinnaaeda)
+- [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/leetstats/)
+- [Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/leetstats/fcnelmphghognkimkhpannacikgnieaa)
+- [Brave Web Store](https://chromewebstore.google.com/detail/leetstats/caipeabgogcpmihgldebnaalinnaaeda)
 
 ### 🧑‍💻 From Source (Developers)
 
@@ -128,7 +124,6 @@ Then load the extension manually:
 - **Chrome / Brave**: Go to `chrome://extensions`, enable "Developer mode", and click **Load unpacked** → select the `dist/` folder.
 - **Edge**: Go to `edge://extensions`, enable "Developer mode", and click **Load unpacked** → select the `dist/` folder.
 - **Firefox**: Go to `about:debugging`, click **This Firefox**, then **Load Temporary Add-on** → select `dist/manifest.json`.
-- **Opera**: Go to `opera://extensions`, enable "Developer Mode", then click **Load unpacked extension** and select the `dist/` folder.
 
 ---
 
