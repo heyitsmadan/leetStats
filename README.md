@@ -15,20 +15,14 @@
 </div>
 
 <p align="center">
-  <a href="https://chromewebstore.google.com/detail/leetstats/caipeabgogcpmihgldebnaalinnaaeda">
-    <img src="https://img.shields.io/badge/Chrome_Web_Store-v1.0.0-blue?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Chrome Web Store">
-  </a>
-  <a href="https://addons.mozilla.org/en-US/firefox/addon/leetstats/">
-    <img src="https://img.shields.io/badge/Firefox_Add--ons-v1.0.0-orange?style=for-the-badge&logo=firefox-browser&logoColor=white" alt="Firefox Add-ons">
-  </a>
-  <a href="https://microsoftedge.microsoft.com/addons/detail/leetstats/fcnelmphghognkimkhpannacikgnieaa">
-    <img src="https://img.shields.io/badge/Edge_Add--ons-v1.0.0-blue?style=for-the-badge&logo=microsoft-edge&logoColor=white" alt="Edge Add-ons">
-  </a>
-  <a href="https://chromewebstore.google.com/detail/leetstats/caipeabgogcpmihgldebnaalinnaaeda">
-    <img src="https://img.shields.io/badge/Available_for_Brave-v1.0.0-orange?style=for-the-badge&logo=brave&logoColor=white" alt="Available for Brave">
-  </a>
+  <a href="https://chromewebstore.google.com/detail/leetstats/caipeabgogcpmihgldebnaalinnaaeda"><img src="https://img.shields.io/badge/Chrome_Web_Store-v1.0.0-blue?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Chrome Web Store"></a>
+  <a href="https://addons.mozilla.org/en-US/firefox/addon/leetstats/"><img src="https://img.shields.io/badge/Firefox_Add--ons-v1.0.0-orange?style=for-the-badge&logo=firefox-browser&logoColor=white" alt="Firefox Add-ons"></a>
+  <a href="https://microsoftedge.microsoft.com/addons/detail/leetstats/fcnelmphghognkimkhpannacikgnieaa"><img src="https://img.shields.io/badge/Edge_Add--ons-v1.0.0-blue?style=for-the-badge&logo=microsoftedge&logoColor=white"></a>
+  <a href="https://chromewebstore.google.com/detail/leetstats/caipeabgogcpmihgldebnaalinnaaeda"><img src="https://img.shields.io/badge/Available_for_Brave-v1.0.0-orange?style=for-the-badge&logo=brave&logoColor=white" alt="Available for Brave"></a>
   <br />
-  <img src="https://img.shields.io/github/license/heyitsmadan/leetStats?style=for-the-badge" alt="License">
+  <a href="https://github.com/heyitsmadan/leetStats/blob/main/LICENSE">
+    <img src="https://img.shields.io/github/license/heyitsmadan/leetStats?style=for-the-badge" alt="License">
+  </a>
 </p>
 
 ---
